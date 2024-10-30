@@ -1,0 +1,5 @@
+1. 有无安装python 3.12
+2. 创建虚拟环境venv
+3. 安装python 软件包 torch、torchvision、opencv-python、pillow、Matplotlib、scikit-learn、albumentations、tqdm
+4. 编写一份图像分类的train.py代码文件，开放部分参数
+5. 编写一份值预测train.py代码文件，开发参数

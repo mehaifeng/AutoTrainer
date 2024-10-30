@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AutoTrainer.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+        mc:Ignorable="d" 
+		d:DesignWidth="1000" 
+		d:DesignHeight="650"
+		Width="1000"
+		Height="650"
+		WindowStartupLocation="CenterScreen"
+		Closed="Window_Closed"
+        x:Class="AutoTrainer.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="AutoTrainer">
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+	<TabControl AutoScrollToSelectedItem="True" Theme="{StaticResource ScrollableTabControl}">
+		<TabControl.Items>
+			<TabItem Header="模型">
+				<TextBlock Classes="Centered" Text="Page 1" />
+			</TabItem>
+			<TabItem Header="训练集">
+				<TextBlock Classes="Centered" Text="Page 2" />
+			</TabItem>
+			<TabItem Header="参数配置">
+				<TextBlock Classes="Centered" Text="Page 3" />
+			</TabItem>
+			<TabItem Header="训练">
+				<TextBlock Classes="Centered" Text="Page 4" />
+			</TabItem>
+			<TabItem Header="人工验证">
+				<TextBlock Classes="Centered" Text="Page 5" />
+			</TabItem>
+			<TabItem Header="导出">
+				<TextBlock Classes="Centered" Text="Page 6" />
+			</TabItem>
+		</TabControl.Items>
+	</TabControl>
+</Window>
