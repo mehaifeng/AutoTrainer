@@ -3,6 +3,7 @@
         xmlns:vm="using:AutoTrainer.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:local="clr-namespace:AutoTrainer;assembly=AutoTrainer"
 		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
         mc:Ignorable="d" 
 		d:DesignWidth="1000" 
@@ -22,7 +23,7 @@
 	<TabControl AutoScrollToSelectedItem="True" Theme="{StaticResource ScrollableTabControl}">
 		<TabControl.Items>
 			<TabItem Header="模型">
-				<TextBlock Classes="Centered" Text="Page 1" />
+				<local:ModelConfigView/>
 			</TabItem>
 			<TabItem Header="训练集">
 				<TextBlock Classes="Centered" Text="Page 2" />

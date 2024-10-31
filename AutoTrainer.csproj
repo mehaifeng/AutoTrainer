@@ -27,11 +27,21 @@
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
     <PackageReference Include="Material.Avalonia" Version="3.7.4" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="2.1.10" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Views\SelectTrainingTypeView.axaml.cs">
       <DependentUpon>SelectTrainingTypeView.axaml</DependentUpon>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="PyScripts\testdevice.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\train.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

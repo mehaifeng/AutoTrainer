@@ -2,11 +2,144 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+			 xmlns:vm="using:AutoTrainer.ViewModels"
              mc:Ignorable="d" 
 			 d:DesignWidth="1000" 
 			 d:DesignHeight="620"
-             x:Class="AutoTrainer.ModelConfigView">
+             x:Class="AutoTrainer.ModelConfigView"
+			 x:DataType="vm:ModelConfigViewModel">
 	<Grid>
-		
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width=".3*"/>
+			<ColumnDefinition Width=".7*"/>
+		</Grid.ColumnDefinitions>
+		<Border  Grid.Column="0" Padding="10" BorderThickness="0,0,2,0" BorderBrush="Black">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="50"/>
+				</Grid.RowDefinitions>
+				<StackPanel Grid.Row="0" Orientation="Vertical">
+					<!--python path-->
+					<TextBox 
+						UseFloatingWatermark="True" 
+						Classes="outline" 
+						Theme="{StaticResource OutlineTextBox}" 
+						Text="{Binding PythonPath}"
+						p1:TextFieldAssist.Label="Python path" />
+					<!--python venv path-->
+					<TextBox
+						Margin="0,10,0,0"
+						UseFloatingWatermark="True"
+						Classes="outline"
+						Theme="{StaticResource OutlineTextBox}"
+						Text="{Binding PythonVenvPath}"
+						p1:TextFieldAssist.Label="Venv path" />
+					<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+						<RadioButton 
+							GroupName="1" 
+							Content="Global" 
+							IsChecked="{Binding IsCheckedGlobal}"/>
+						<RadioButton 
+							GroupName="1"
+							Content="Venv"
+							Margin="10,0,0,0"
+							IsChecked="{Binding IsCheckedVenv}"/>
+					</StackPanel>
+					<!--Pip list-->
+					<TextBox 
+						UseFloatingWatermark="True" 
+						p1:TextFieldAssist.Label="Pip list" 
+						Classes="outline" 
+						Theme="{StaticResource OutlineTextBox}" 
+						Text="{Binding PipApps}"
+						MinHeight="100"
+						MaxHeight="200"
+						AcceptsReturn="True" 
+						TextWrapping="Wrap"  />
+					<!--reuirements-->
+					<TextBox
+						Margin="0,10,0,0"
+						UseFloatingWatermark="True"
+						p1:TextFieldAssist.Label="Requirements"
+						Classes="outline"
+						Theme="{StaticResource OutlineTextBox}"
+						Text="{Binding Requirements}"
+						IsReadOnly="True"
+						AcceptsReturn="True"
+						TextWrapping="Wrap"  />
+				</StackPanel>
+				<!--Enviroment State-->
+				<TextBlock 
+					Grid.Row="1"
+					HorizontalAlignment="Center"
+					Margin="10"
+					Text="{Binding EnviromentState}"
+					Foreground="{Binding StateForeground}"/>
+			</Grid>
+		</Border>
+		<Border Grid.Column="1">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height=".75*"/>
+					<RowDefinition Height=".25*"/>
+				</Grid.RowDefinitions>
+				<Grid Grid.Row="0">
+					<Border Padding="10">
+						<StackPanel 
+							Orientation="Vertical" 
+							HorizontalAlignment="Center" 
+							VerticalAlignment="Center">
+							<ComboBox 
+								Width="160"
+								Theme="{StaticResource MaterialOutlineComboBox}" 
+								p1:ComboBoxAssist.Label="Select Model">
+								<TextBlock Text="Item 1" />
+								<TextBlock Text="Item 2" />
+								<TextBlock Text="Item 3" />
+								<TextBlock Text="Item 4" />
+							</ComboBox>
+						</StackPanel>
+					</Border>
+				</Grid>
+				<Border Grid.Row="1" BorderBrush="Black" BorderThickness="0,2,0,0">
+					<Grid>
+						<!--Output-->
+						<TextBox 
+							Classes="Floating" 
+							AcceptsReturn="True" 
+							TextWrapping="Wrap"
+							UseFloatingWatermark="True"
+							Text="{Binding Outputs}"/>
+						<!--Start Execute-->
+						<controls:FloatingButton 
+							Classes="Accent Mini" 
+							HorizontalAlignment="Right" 
+							VerticalAlignment="Bottom" 
+							Margin="10"
+							Command="{Binding ExecutePyCommand}">
+							<controls:FloatingButton.Styles>
+								<Style Selector="controls|FloatingButton">
+									<Setter Property="Content">
+										<Setter.Value>
+											<Template>
+												<Viewbox Stretch="Fill"
+														 HorizontalAlignment="Stretch"
+														 VerticalAlignment="Stretch">
+													<avalonia:MaterialIcon Kind="Play" Width="24" Height="24" />
+												</Viewbox>
+											</Template>
+										</Setter.Value>
+									</Setter>
+								</Style>
+							</controls:FloatingButton.Styles>
+						</controls:FloatingButton>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
 	</Grid>
 </UserControl>
