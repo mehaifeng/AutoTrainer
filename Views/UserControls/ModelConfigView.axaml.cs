@@ -12,4 +12,9 @@ public partial class ModelConfigView : UserControl
         InitializeComponent();
         DataContext = new ModelConfigViewModel();
     }
+
+    private void Outout_tb_TextChanged(object? sender, Avalonia.Controls.TextChangedEventArgs e)
+    {
+        Outout_tb.CaretIndex = int.MaxValue;
+    }
 }

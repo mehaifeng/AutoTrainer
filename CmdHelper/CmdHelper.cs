@@ -53,7 +53,7 @@ namespace AutoTrainer.CmdHelper
             return false;
         }
         /// <summary>
-        /// 执行一条指令
+        /// 执行一条指令 具有返回的方法
         /// </summary>
         /// <param name="fileName"></param>
         /// <param name="arguments"></param>
@@ -88,7 +88,7 @@ namespace AutoTrainer.CmdHelper
 
         }
         /// <summary>
-        /// 执行多条指令
+        /// 执行多条指令 具有返回的方法
         /// </summary>
         /// <param name="commands"></param>
         /// <returns></returns>
@@ -100,34 +100,101 @@ namespace AutoTrainer.CmdHelper
                 FileName = fileName,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,  // 也重定向错误输出
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            // 启动进程
-            return await Task.Factory.StartNew(() =>
-            {
-                using (Process process = new Process())
-                {
-                    process.StartInfo = startInfo;
-                    process.Start();
 
-                    // 激活虚拟环境
-                    using (var writer = process.StandardInput)
+            // 创建输出缓冲区
+            var output = new StringBuilder();
+            var error = new StringBuilder();
+
+            using (var process = new Process())
+            {
+                process.StartInfo = startInfo;
+
+                // 异步处理输出
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
                     {
-                        if (writer.BaseStream.CanWrite)
-                        {
-                            foreach (var command in commands)
-                            {
-                                writer.WriteLine(command);
-                            }
-                        }
+                        output.AppendLine(e.Data);
                     }
-                    // 读取输出
-                    string output = process.StandardOutput.ReadToEnd();
-                    process.WaitForExit();
-                    return (process.ExitCode, output);
+                };
+
+                // 异步处理错误
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        error.AppendLine(e.Data);
+                    }
+                };
+
+                // 启动进程
+                process.Start();
+
+                // 开始异步读取
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                // 写入命令
+                using (var writer = process.StandardInput)
+                {
+                    if (writer.BaseStream.CanWrite)
+                    {
+                        foreach (var command in commands)
+                        {
+                            await writer.WriteLineAsync(command);
+                        }
+                        await writer.FlushAsync();
+                        writer.Close(); // 重要：关闭标准输入流
+                    }
                 }
-            });
+
+                // 等待进程结束
+                await process.WaitForExitAsync();
+
+                // 返回结果
+                return (process.ExitCode, output.ToString() + error.ToString());
+            }
+        }
+        /// <summary>
+        /// 打开终端，执行命令,无返回
+        /// </summary>
+        /// <param name="command"></param>
+        public async static Task ExecuteCmdWindow(string command)
+
+        {
+            // 创建进程启动信息
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = "cmd.exe";
+            startInfo.Arguments = "/c " + command;
+
+            // 关键修改：设置进程输出配置
+            startInfo.RedirectStandardInput = false;   // 改为false，允许直接输入
+            startInfo.RedirectStandardOutput = false;  // 改为false，允许直接输出到控制台
+            startInfo.RedirectStandardError = false;   // 改为false，允许直接输出错误到控制台
+            startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = false;          // 显示控制台窗口
+
+            try
+            {
+                await Task.Factory.StartNew(() =>
+                {
+                    // 启动进程
+                    using (Process process = Process.Start(startInfo))
+                    {
+                        // 等待进程结束
+                        process.WaitForExit();
+                        Console.WriteLine($"\n命令执行完成，退出代码: {process.ExitCode}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"执行命令时出错: {ex.Message}");
+            }
         }
     }
 }
