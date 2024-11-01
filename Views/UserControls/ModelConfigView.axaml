@@ -11,6 +11,7 @@
              mc:Ignorable="d" 
 			 d:DesignWidth="1000" 
 			 d:DesignHeight="700"
+			 x:Name="ModelTabItem"
              x:Class="AutoTrainer.ModelConfigView"
 			 x:DataType="vm:ModelConfigViewModel">
 	<Grid>
@@ -121,18 +122,25 @@
 					<RowDefinition Height=".25*"/>
 				</Grid.RowDefinitions>
 				<Grid Grid.Row="0">
-					<Border Padding="10">
-						<Grid 
-							HorizontalAlignment="Center" 
+					<Border>
+						<Grid
+							HorizontalAlignment="Center"
 							VerticalAlignment="Center">
 							<Grid.RowDefinitions>
-								<RowDefinition Height="60"/>
+								<RowDefinition Height="70"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
-							<StackPanel Grid.Row="0" Orientation="Horizontal">
-								<ComboBox 
+							<Grid Grid.Row="0" Margin="10,5,0,10">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition/>
+									<ColumnDefinition/>
+								</Grid.ColumnDefinitions>
+								<ComboBox
+									Grid.Column="0"
 									Width="200"
-									Theme="{StaticResource MaterialOutlineComboBox}" 
+									HorizontalAlignment="Left"
+									VerticalAlignment="Center"
+									Theme="{StaticResource MaterialOutlineComboBox}"
 									p1:ComboBoxAssist.Label="Select Model"
 									SelectedItem="{Binding SelectModel}"
 									ItemsSource="{Binding ModelList}">
@@ -142,21 +150,57 @@
 										</ia:EventTriggerBehavior>
 									</i:Interaction.Behaviors>
 								</ComboBox>
-								<ProgressBar
-									Margin="10,0,0,0"
+								<controls:FloatingButton
+									Grid.Column="1"
+									Margin="0,10,0,0"
+									Width="150"
+									Command="{Binding GoToNextTabCommand}"
+									CommandParameter="{Binding ElementName=ModelTabItem}"
+									HorizontalAlignment="Right"
 									VerticalAlignment="Center"
-									Classes="circular" 
-									IsVisible="{Binding IsLoadingModelList}"
-									IsIndeterminate="{Binding IsLoadingModelList}"/>
-							</StackPanel>
-							<TextBox 
+									IsVisible="{Binding IsVisibleIntroduce}"
+									Classes="Light"
+									IsExtended="True">
+									<controls:FloatingButton.Styles>
+										<Style Selector="controls|FloatingButton">
+											<Setter Property="Content">
+												<Setter.Value>
+													<Template>
+														<StackPanel Orientation="Horizontal">
+															<Viewbox Stretch="None"
+																	 HorizontalAlignment="Left"
+																	 VerticalAlignment="Stretch">
+																<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
+															</Viewbox>
+															<TextBlock
+																Margin="10,0,0,0"
+																FontSize="20"
+																VerticalAlignment="Stretch"
+																Text="Next Step"/>
+														</StackPanel>
+													</Template>
+												</Setter.Value>
+											</Setter>
+										</Style>
+									</controls:FloatingButton.Styles>
+								</controls:FloatingButton>
+							</Grid>
+							<ProgressBar
+								Grid.Row="1"
+								Margin="0,60,0,0"
+								IsVisible="{Binding IsLoadingModelList}"
+								IsIndeterminate="{Binding IsLoadingModelList}"
+								Classes="circular"
+								Height="35"
+								Width="35"/>
+							<TextBox
 								Margin="10"
 								Grid.Row="1"
 								CornerRadius="10"
-								UseFloatingWatermark="True" 
-								p1:TextFieldAssist.Label="Multiline textfield" 
-								Classes="filled" Theme="{StaticResource FilledTextBox}" 
-								AcceptsReturn="True" 
+								UseFloatingWatermark="True"
+								p1:TextFieldAssist.Label="Multiline textfield"
+								Classes="filled" Theme="{StaticResource FilledTextBox}"
+								AcceptsReturn="True"
 								TextWrapping="Wrap"
 								IsVisible="{Binding IsVisibleIntroduce}"
 								Text="{Binding SelectModelIntroduce}" />

@@ -59,7 +59,7 @@ class ModelInfoAPI:
         return [name for name in all_models if query.lower() in name.lower()]
 
     @staticmethod
-    def format_model_info(info: Dict[str, Any], width: int = 60) -> str:
+    def format_model_info(info: Dict[str, Any], width: int = 30) -> str:
         """格式化模型信息为易读的文本格式"""
         if "error" in info:
             return f"Error: {info['error']}"

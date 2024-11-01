@@ -1,5 +1,8 @@
 ﻿using AutoTrainer.CmdHelper;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -235,6 +238,20 @@ namespace AutoTrainer.ViewModels
                         SelectModelIntroduce = result.Item2.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
                         IsVisibleIntroduce = true;
                     }
+                }
+            }
+        }
+        [RelayCommand]
+        public async Task GoToNextTab(UserControl o)
+        {
+            if (o != null && o.Parent != null)
+            {
+                if(o.Parent.Parent is TabControl control)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        control.SelectedIndex = 1;
+                    });
                 }
             }
         }
