@@ -1,0 +1,169 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+			 xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+             mc:Ignorable="d" 
+			 d:DesignWidth="1000" 
+			 d:DesignHeight="700"
+			 Padding="10"
+			 x:DataType="vm:DataPickerViewModel"
+             x:Class="AutoTrainer.DataPickerView">
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="7*"/>
+			<ColumnDefinition Width="3*"/>
+		</Grid.ColumnDefinitions>
+		<Grid Grid.Column="0">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="60"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="60"/>
+			</Grid.RowDefinitions>
+			<Grid Grid.Row="0">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="2*"/>
+					<ColumnDefinition Width="4*"/>
+					<ColumnDefinition Width="4*"/>
+				</Grid.ColumnDefinitions>
+				<Button
+					Grid.Column="0"
+					Height="40"
+					HorizontalAlignment="Left"
+					Classes="light"
+					Command="{Binding AddCroppingConfigCommand}"
+					CommandParameter="{Binding ElementName=DragCanvas}"
+					Content="增加裁剪配置"/>
+				<TextBlock 
+					Grid.Column="1"
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Text="{Binding CropConfigTitle}"/>
+				<Button
+					Grid.Column="2"
+					Height="40"
+					HorizontalAlignment="Left"
+					Classes="light"
+					Content="快速裁剪"/>
+				<TextBlock
+					Grid.Column="2"
+					VerticalAlignment="Center"
+					Margin="100,0,0,0"
+					Text="输出目录"/>
+			</Grid>
+			<Grid Grid.Row="1">
+				<!--Image area-->
+				<Border
+					CornerRadius="5"
+					BorderBrush="LightGray" 
+					BorderThickness="1">
+					<Grid>
+						<Image 
+							x:Name="TargetImage"
+							Source="{Binding Imagepath}"
+							Stretch="Fill"/>
+						<Canvas
+							x:Name="DragCanvas"/>
+					</Grid>
+				</Border>
+				<!--Plus button-->
+				<controls:FloatingButton
+					x:Name="AddRectangle_Btn"
+					Classes="Light Mini"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Bottom"
+					Command="{Binding AddCropRectangleCommand}"
+					CommandParameter="{Binding ElementName=DragCanvas}"
+					Margin="10">
+					<controls:FloatingButton.Styles>
+						<Style Selector="controls|FloatingButton">
+							<Setter Property="Content">
+								<Setter.Value>
+									<Template>
+										<Viewbox Stretch="Fill"
+												 HorizontalAlignment="Stretch"
+												 VerticalAlignment="Stretch">
+											<avalonia:MaterialIcon Kind="Plus" Width="24" Height="24" />
+										</Viewbox>
+									</Template>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</controls:FloatingButton.Styles>
+				</controls:FloatingButton>
+			</Grid>
+			<Border
+				Grid.Row="1"
+				Height="45"
+				Width="190"
+				Padding="10,0,10,0"
+				Background="LightGray"
+				BorderBrush="LightGray"
+				BorderThickness="0,0,1,1"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Top"
+				CornerRadius="0,0,5,0">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width=".3*"/>
+						<ColumnDefinition Width=".4*"/>
+						<ColumnDefinition Width=".3*"/>
+					</Grid.ColumnDefinitions>
+					<Button
+						Grid.Column="0"
+						IsEnabled="{Binding IsEnableLeftBtn}"
+						Command="{Binding LeftCommand}"
+						Theme="{StaticResource MaterialFlatButton}">
+						<Button.Styles>
+							<Style Selector="Button">
+								<Setter Property="Content">
+									<Setter.Value>
+										<Template>
+											<Viewbox Stretch="None"
+													 HorizontalAlignment="Stretch"
+													 VerticalAlignment="Center">
+												<avalonia:MaterialIcon Kind="ArrowLeftBold" Width="24" Height="24" />
+											</Viewbox>
+										</Template>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</Button.Styles>
+					</Button>
+					<TextBlock
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Grid.Column="1"
+						Text="裁剪配置1"/>
+					<Button
+						Grid.Column="2"
+						IsEnabled="{Binding IsEnableRightBtn}"
+						Command="{Binding RightCommand}"
+						Theme="{StaticResource MaterialFlatButton}">
+						<Button.Styles>
+							<Style Selector="Button">
+								<Setter Property="Content">
+									<Setter.Value>
+										<Template>
+											<Viewbox Stretch="None"
+													 HorizontalAlignment="Stretch"
+													 VerticalAlignment="Center">
+												<avalonia:MaterialIcon Kind="ArrowRightBold" Width="24" Height="24" />
+											</Viewbox>
+										</Template>
+									</Setter.Value>
+								</Setter>
+							</Style>
+						</Button.Styles>
+					</Button>
+				</Grid>
+			</Border>
+		</Grid>
+		<Grid Grid.Column="1">
+			
+		</Grid>
+	</Grid>
+</UserControl>

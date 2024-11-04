@@ -176,7 +176,7 @@
 							TextChanged="Outout_tb_TextChanged"/>
 						<!--Start Execute-->
 						<controls:FloatingButton 
-							Classes="Accent Mini" 
+							Classes="Light Mini" 
 							HorizontalAlignment="Right" 
 							VerticalAlignment="Bottom" 
 							Margin="10"
