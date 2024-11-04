@@ -13,6 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaXaml Remove="Models\**" />
+    <Compile Remove="Models\**" />
+    <EmbeddedResource Remove="Models\**" />
+    <None Remove="Models\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Assets\ImageClassify.webp" />
     <None Remove="Assets\ValuePredict.webp" />
   </ItemGroup>

@@ -1,9 +1,24 @@
-﻿namespace AutoTrainer.ViewModels
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace AutoTrainer.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase
     {
-#pragma warning disable CA1822 // Mark members as static
-        public string Greeting => "Welcome to Avalonia!";
-#pragma warning restore CA1822 // Mark members as static
+        MainWindowViewModel()
+        {
+
+        }
+        [ObservableProperty]
+        private int selectTabIndex = 0;
+        [ObservableProperty]
+        private bool isEnableModelTab = true;
+        [ObservableProperty]
+        private bool isEnableParaTab = false;
+        [ObservableProperty]
+        private bool isEnableTrainTab = false;
+        [ObservableProperty]
+        private bool isEnableValidTab = false;
+        [ObservableProperty]
+        private bool isEnableExportTab = false;
     }
 }
