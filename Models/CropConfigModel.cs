@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
-    public class CorpConfigModel
+    public class CropConfigModel
     {
         public string Name { get; set; }
-        public List<SingleCorpArea> Coprs { get; set; } = [];
+        public List<SingleCropArea> Coprs { get; set; } = [];
     }
-    public class SingleCorpArea
+    public class SingleCropArea
     {
         public string Name { get; set; }
         public int X1 { get; set; }

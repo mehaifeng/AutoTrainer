@@ -26,6 +26,7 @@
 			<Grid Grid.Row="0">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="2*"/>
+					<ColumnDefinition Width="2*"/>
 					<ColumnDefinition Width="4*"/>
 					<ColumnDefinition Width="4*"/>
 				</Grid.ColumnDefinitions>
@@ -37,19 +38,27 @@
 					Command="{Binding AddCroppingConfigCommand}"
 					CommandParameter="{Binding ElementName=DragCanvas}"
 					Content="增加裁剪配置"/>
-				<TextBlock 
+				<Button
 					Grid.Column="1"
+					Height="40"
+					Margin="20,0,0,0"
+					HorizontalAlignment="Left"
+					Classes="light"
+					Command="{Binding SelectPictureCommand}"
+					Content="选择图片"/>
+				<TextBlock 
+					Grid.Column="2"
 					HorizontalAlignment="Center"
 					VerticalAlignment="Center"
 					Text="{Binding CropConfigTitle}"/>
 				<Button
-					Grid.Column="2"
+					Grid.Column="3"
 					Height="40"
 					HorizontalAlignment="Left"
 					Classes="light"
 					Content="快速裁剪"/>
 				<TextBlock
-					Grid.Column="2"
+					Grid.Column="3"
 					VerticalAlignment="Center"
 					Margin="100,0,0,0"
 					Text="输出目录"/>
@@ -116,6 +125,7 @@
 						Grid.Column="0"
 						IsEnabled="{Binding IsEnableLeftBtn}"
 						Command="{Binding LeftCommand}"
+						CommandParameter="{Binding ElementName=DragCanvas}"
 						Theme="{StaticResource MaterialFlatButton}">
 						<Button.Styles>
 							<Style Selector="Button">
@@ -137,11 +147,12 @@
 						HorizontalAlignment="Center"
 						VerticalAlignment="Center"
 						Grid.Column="1"
-						Text="裁剪配置1"/>
+						Text="{Binding CropConfigTitle}"/>
 					<Button
 						Grid.Column="2"
 						IsEnabled="{Binding IsEnableRightBtn}"
 						Command="{Binding RightCommand}"
+						CommandParameter="{Binding ElementName=DragCanvas}"
 						Theme="{StaticResource MaterialFlatButton}">
 						<Button.Styles>
 							<Style Selector="Button">

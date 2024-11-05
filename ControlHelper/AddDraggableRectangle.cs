@@ -17,7 +17,7 @@ namespace AutoTrainer.ControlHelper
     {
         private static Point? dragStart;
         private static bool isDragging = false;
-        public static void AddDraggableRectangle(SingleCorpArea area, Canvas DragCanvas)
+        public static void AddDraggableRectangle(SingleCropArea area, Canvas DragCanvas)
         {
             var container = new Canvas();
 
