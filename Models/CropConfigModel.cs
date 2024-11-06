@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AutoTrainer.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,17 +8,24 @@ using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
-    public class CropConfigModel
+    public partial class CropConfigModel : ViewModelBase
     {
-        public string Name { get; set; }
-        public List<SingleCropArea> Coprs { get; set; } = [];
+        [ObservableProperty]
+        public string name;
+        [ObservableProperty]
+        public List<SingleCropArea> coprs = [];
     }
-    public class SingleCropArea
+    public partial class SingleCropArea : ViewModelBase
     {
-        public string Name { get; set; }
-        public int X1 { get; set; }
-        public int Y1 { get; set; }
-        public int X2 { get; set; }
-        public int Y2 { get; set; }
+        [ObservableProperty]
+        public string name;
+        [ObservableProperty]
+        public int x1;
+        [ObservableProperty]
+        public int y1;
+        [ObservableProperty]
+        public int x2;
+        [ObservableProperty]
+        public int y2;
     }
 }

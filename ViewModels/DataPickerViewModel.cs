@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Shapes;
+using Avalonia.Data;
 using Avalonia.Dialogs;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -12,6 +13,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,23 +22,27 @@ namespace AutoTrainer.ViewModels
 {
     public partial class DataPickerViewModel : ViewModelBase
     {
-        private int RectCounter { get; set; }
-        private List<CropConfigModel> CropConfigs { get; set; }
         private int ConfigCount { get; set; } = 0;
-        public CropConfigModel CropConfig { get; set; }
+
         public DataPickerViewModel()
         {
             CropConfigs = [];
         }
         #region
         [ObservableProperty]
-        private IImage imagepath;
+        private ObservableCollection<CropConfigModel> cropConfigs;
         [ObservableProperty]
-        private string cropConfigTitle;
+        private CropConfigModel cropConfig;
+        [ObservableProperty]
+        private IImage imagepath;
         [ObservableProperty]
         private bool isEnableLeftBtn;
         [ObservableProperty]
         private bool isEnableRightBtn;
+        [ObservableProperty]
+        private bool isEnablePlusRectBtn = false;
+        [ObservableProperty]
+        private bool isEnableDeleteBtn = false;
         #endregion
 
         #region 命令
@@ -58,6 +64,7 @@ namespace AutoTrainer.ViewModels
                 });
                 if (file.Count == 1)
                 {
+                    IsEnablePlusRectBtn = true;
                     Imagepath = new Bitmap(file[0].Path.AbsolutePath);
                     //先清除方框
                     canvas.Children.Clear();
@@ -71,8 +78,11 @@ namespace AutoTrainer.ViewModels
                         Coprs = CropConfig.Coprs,
                     });
                     ConfigCount++;
-                    IsEnableLeftBtn = true;
-                    CropConfigTitle = CropConfig.Name;
+                    IsEnableDeleteBtn = true;
+                    if (CropConfigs.Count > 1)
+                    {
+                        IsEnableLeftBtn = true;
+                    }
                 }
             }
         }
@@ -85,14 +95,15 @@ namespace AutoTrainer.ViewModels
         {
             var newArea = new SingleCropArea
             {
-                Name = $"Area{RectCounter++}",
-                X1 = 50,
-                Y1 = 50,
-                X2 = 150,
-                Y2 = 150
+                Name = "Class",
+                X1 = 100,
+                Y1 = 100,
+                X2 = 270,
+                Y2 = 270
             };
             CropConfig.Coprs.Add(newArea);
-            DraggableRectangle.AddDraggableRectangle(newArea, canvas);
+            var displayImage = (canvas.Parent as Grid).Children[0] as Image;
+            DraggableRectangle.AddDraggableRectangle(newArea, canvas, Imagepath as Bitmap, displayImage, "Class");
         }
         /// <summary>
         /// 选择图片
@@ -126,7 +137,7 @@ namespace AutoTrainer.ViewModels
             if (CropConfigs == null || CropConfigs.Count == 0)
                 return;
 
-            var currentIndex = CropConfigs.FindIndex(t => string.Equals(t.Name, CropConfigTitle));
+            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
             if (currentIndex == -1)
                 return;
 
@@ -134,30 +145,15 @@ namespace AutoTrainer.ViewModels
             if (previewIndex < 0)
                 return;
 
-            foreach (var crop in CropConfigs)
-            {
-                if (string.Equals(crop.Name, CropConfigTitle))
-                {
-                    crop.Coprs = CropConfig.Coprs;
-                }
-            }
-            // 更新标题
-            CropConfigTitle = CropConfigs[previewIndex].Name;
             canvas.Children.Clear();
-            CropConfig = new CropConfigModel();
-            foreach (var crop in CropConfigs[previewIndex].Coprs)
+            CropConfig = CropConfigs[previewIndex];
+
+            foreach (var crop in CropConfig.Coprs)
             {
-                var newArea = new SingleCropArea
-                {
-                    Name = crop.Name,
-                    X1 = crop.X1,
-                    Y1 = crop.Y1,
-                    X2 = crop.X2,
-                    Y2 = crop.Y2
-                };
-                CropConfig.Coprs.Add(crop);
-                DraggableRectangle.AddDraggableRectangle(newArea, canvas);
+                var displayImage = (canvas.Parent as Grid).Children[0] as Image;
+                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name);
             }
+
             // 更新按钮状态
             IsEnableRightBtn = true; // 既然能往左,说明右边一定有元素
             IsEnableLeftBtn = previewIndex > 0; // 检查是否还能继续往左
@@ -172,7 +168,7 @@ namespace AutoTrainer.ViewModels
             if (CropConfigs == null || CropConfigs.Count == 0)
                 return;
 
-            var currentIndex = CropConfigs.FindIndex(t => string.Equals(t.Name, CropConfigTitle));
+            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
             if (currentIndex == -1)
                 return;
 
@@ -180,33 +176,50 @@ namespace AutoTrainer.ViewModels
             if (nextIndex >= CropConfigs.Count)
                 return;
 
-            foreach (var crop in CropConfigs)
-            {
-                if (string.Equals(crop.Name, CropConfigTitle))
-                {
-                    crop.Coprs = CropConfig.Coprs;
-                }
-            }
-            // 更新标题
-            CropConfigTitle = CropConfigs[nextIndex].Name;
             canvas.Children.Clear();
-            CropConfig = new CropConfigModel();
-            foreach (var crop in CropConfigs[nextIndex].Coprs)
+            CropConfig = CropConfigs[nextIndex];
+
+            foreach (var crop in CropConfig.Coprs)
             {
-                var newArea = new SingleCropArea
-                {
-                    Name = crop.Name,
-                    X1 = crop.X1,
-                    Y1 = crop.Y1,
-                    X2 = crop.X2,
-                    Y2 = crop.Y2
-                };
-                CropConfig.Coprs.Add(crop);
-                DraggableRectangle.AddDraggableRectangle(newArea, canvas);
+                var displayImage = (canvas.Parent as Grid).Children[0] as Image;
+                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name);
             }
+
             // 更新按钮状态
             IsEnableLeftBtn = true; // 既然能往右,说明左边一定有元素
             IsEnableRightBtn = nextIndex < CropConfigs.Count - 1; // 检查是否还能继续往右
+        }
+        /// <summary>
+        /// 删除
+        /// </summary>
+        /// <param name="canvas"></param>
+        [RelayCommand]
+        private void Delete(Canvas canvas)
+        {
+            if (string.IsNullOrEmpty(CropConfig.Name) || CropConfigs.Count == 0)
+                return;
+
+            var index = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
+            if (index == -1) return;
+
+            if (CropConfigs.Count > 1)
+            {
+                if (index != CropConfigs.Count - 1)
+                    Right(canvas);
+                else
+                    Left(canvas);
+            }
+            else
+            {
+                // 清空配置和状态
+                CropConfig = new CropConfigModel();
+                canvas.Children.Clear();
+                Imagepath = null;
+                IsEnableLeftBtn = false;
+                IsEnableDeleteBtn = false;
+            }
+
+            CropConfigs.RemoveAt(index);
         }
         #endregion
     }
