@@ -1,4 +1,5 @@
 ﻿using AutoTrainer.ControlHelper;
+using AutoTrainer.Helpers;
 using AutoTrainer.Models;
 using Avalonia;
 using Avalonia.Controls;
@@ -11,26 +12,33 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MsBox.Avalonia;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AutoTrainer.ViewModels
 {
     public partial class DataPickerViewModel : ViewModelBase
     {
+        private readonly string appPath = AppDomain.CurrentDomain.BaseDirectory;
         private int ConfigCount { get; set; } = 0;
-
+        private CancellationTokenSource cts = new();
         public DataPickerViewModel()
         {
             CropConfigs = [];
+            ImageCategories = [];
         }
         #region
         [ObservableProperty]
         private ObservableCollection<CropConfigModel> cropConfigs;
+        [ObservableProperty]
+        public ObservableCollection<PreviewImageModel> imageCategories;
         [ObservableProperty]
         private CropConfigModel cropConfig;
         [ObservableProperty]
@@ -43,6 +51,18 @@ namespace AutoTrainer.ViewModels
         private bool isEnablePlusRectBtn = false;
         [ObservableProperty]
         private bool isEnableDeleteBtn = false;
+        [ObservableProperty]
+        private string cropOutputPath;
+        [ObservableProperty]
+        private int progressValue;
+        [ObservableProperty]
+        private int progressMax;
+        [ObservableProperty]
+        private string progressState = "0/0";
+        [ObservableProperty]
+        private bool isEnableEndBtn = false;
+        [ObservableProperty]
+        private bool isVisibleFuncArea = false;
         #endregion
 
         #region 命令
@@ -117,7 +137,7 @@ namespace AutoTrainer.ViewModels
             {
                 var file = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
                 {
-                    Title = "Select a Image",
+                    Title = "选择一张图片",
                     AllowMultiple = false,
                     FileTypeFilter = [FilePickerFileTypes.ImageAll],
                 });
@@ -200,7 +220,8 @@ namespace AutoTrainer.ViewModels
                 return;
 
             var index = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
-            if (index == -1) return;
+            if (index == -1)
+                return;
 
             if (CropConfigs.Count > 1)
             {
@@ -220,6 +241,148 @@ namespace AutoTrainer.ViewModels
             }
 
             CropConfigs.RemoveAt(index);
+        }
+        /// <summary>
+        /// 快速裁剪
+        /// </summary>
+        [RelayCommand]
+        private async Task QuickCrop()
+        {
+            if (CropConfig != null)
+            {
+                try
+                {
+                    await Task.Run(() => CropImage(cts.Token));
+                }
+                catch (Exception ex)
+                {
+                    var messagebox = MessageBoxManager.GetMessageBoxStandard("Caption", $"{ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.YesNo);
+                    await messagebox.ShowAsync();
+                }
+            }
+        }
+        /// <summary>
+        /// 中止裁剪
+        /// </summary>
+        [RelayCommand]
+        private void End()
+        {
+            cts.Cancel();
+            cts = new CancellationTokenSource();
+            IsEnableEndBtn = false;
+            IsVisibleFuncArea = false;
+            //LoadPreviewImage("D:\\VsSources\\AutoTrainer\\bin\\Debug\\net8.0\\CropImages\\1");
+        }
+        [RelayCommand]
+        private async Task PreviewImageAsync()
+        {
+            var thisWindow = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var toplevel = TopLevel.GetTopLevel(thisWindow?.MainWindow);
+            if (toplevel != null)
+            {
+                var folder = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+                {
+                    Title = "选择文件夹",
+                    AllowMultiple = false,
+                });
+                if (folder.Count == 1)
+                {
+                    LoadPreviewImage(folder[0].Path.AbsolutePath);
+                }
+            }
+        }
+        #endregion
+
+        #region 函数
+        /// <summary>
+        /// 裁剪图片
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        private async Task CropImage(CancellationToken token)
+        {
+            var thisWindow = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var toplevel = TopLevel.GetTopLevel(thisWindow?.MainWindow);
+            CropOutputPath = System.IO.Path.Combine(appPath, "CropImages");
+            if (toplevel != null)
+            {
+                var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+                {
+                    Title = "选择文件夹",
+                    AllowMultiple = true,
+                });
+                if (folders != null)
+                {
+                    ProgressState = "0/0";//开始时，进度设置为0/0
+                    IsEnableEndBtn = true;//中止按钮设置为可见
+                    IsVisibleFuncArea = true;
+                    List<string> files = [];
+                    foreach (var folder in folders)
+                    {
+                        files.AddRange(Directory.GetFiles(folder.Path.AbsolutePath));
+                    }
+                    ProgressMax = files.Count;//进度条最大值设置为文件数目
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        if (!token.IsCancellationRequested)
+                        {
+                            int index = files[i].LastIndexOf('.');
+                            string extents = files[i].Substring(index);
+                            if (extents == ".jpeg" || extents == ".jpg" || extents == ".png" || extents == ".bmp")
+                            {
+                                CropImageHelper.CropImage(files[i], CropOutputPath, CropConfig);
+                                ProgressValue = i + 1;
+                                ProgressState = $"{i + 1}/{ProgressMax}";
+                            }
+                        }
+                    }
+                    IsVisibleFuncArea = false;
+                    IsEnableEndBtn = false;
+                }
+            }
+        }
+        private void LoadPreviewImage(string folderPath)
+        {
+            if (Directory.Exists(folderPath))
+            {
+                var typeClasses = Directory.GetDirectories(folderPath);
+                if (typeClasses.Length > 0)
+                {
+                    foreach (var typePath in typeClasses)
+                    {
+                        var files = Directory.GetFiles(typePath, "*.png"); // 可根据需求选择文件类型
+                        int count = files.Length;
+                        var toFiles = files.Take(20);
+                        PreviewImageModel model = new()
+                        {
+                            Name = typePath
+                        };
+                        foreach (var file in toFiles)
+                        {
+                            using (var stream = File.OpenRead(file))
+                            {
+                                var bitmap = new Bitmap(stream);
+                                var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
+                                model.Thumbnails.Add(thumbnail);
+                                ImageCategories.Add(model);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// 缩放图片
+        /// </summary>
+        /// <param name="bitmap"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        private Bitmap ResizeBitmap(Bitmap bitmap, int width, int height)
+        {
+            // 缩放图片
+            var resizedBitmap = bitmap.CreateScaledBitmap(new PixelSize(width, height), BitmapInterpolationMode.MediumQuality);
+            return resizedBitmap;
         }
         #endregion
     }

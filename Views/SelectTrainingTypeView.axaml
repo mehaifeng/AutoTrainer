@@ -8,6 +8,7 @@
 		d:DesignHeight="650"
 		Width="1000"
 		Height="650"
+		Background="LightGray"
 		WindowStartupLocation="CenterScreen"
         x:Class="AutoTrainer.SelectTrainingTypeView"
         Title="SelectTrainingTypeView">

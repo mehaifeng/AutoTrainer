@@ -1,4 +1,4 @@
-﻿using AutoTrainer.CmdHelper;
+﻿using AutoTrainer.Helpers;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -77,7 +77,7 @@ namespace AutoTrainer.ViewModels
         {
             string command = "/c where python";
             string fileName = "cmd.exe";
-            (int, string, string) result = await CmdHelper.CmdHelper.ExecuteLine(fileName, command);
+            (int, string, string) result = await CmdHelper.ExecuteLine(fileName, command);
             if (result.Item1 == 0)
             {
                 if (!string.IsNullOrEmpty(result.Item2))
@@ -99,7 +99,7 @@ namespace AutoTrainer.ViewModels
             if (!string.IsNullOrEmpty(PythonVenvPath))
             {
                 List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", $"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py list", $"{PythonVenvPath}\\Scripts\\deactivate.bat"];
-                var result = await CmdHelper.CmdHelper.ExecuteMultiLines("cmd.exe", commands);
+                var result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                 if (result.Item1 == 0)
                 {
                     if (result.Item2.Contains("###Models###"))
@@ -123,11 +123,11 @@ namespace AutoTrainer.ViewModels
             if (IsCheckedVenv && !string.IsNullOrEmpty(PythonVenvPath))
             {
                 //验证所填venv环境是否可用
-                bool isVenvValid = CmdHelper.CmdHelper.IsVenvValid(PythonVenvPath);
+                bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
                     List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", "pip list"];
-                    (int, string) result = await CmdHelper.CmdHelper.ExecuteMultiLines("cmd.exe", commands);
+                    (int, string) result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                     if (result.Item1 == 0)
                     {
                         string envName = $"({PythonVenvPath.Split("\\").Last()})";
@@ -205,7 +205,7 @@ namespace AutoTrainer.ViewModels
 
 
                     // 创建并等待所有任务完成
-                    Task[] commonTasks = [CmdHelper.CmdHelper.ExecuteCmdWindow(commands.ToString()), ExecutePy()];
+                    Task[] commonTasks = [CmdHelper.ExecuteCmdWindow(commands.ToString()), ExecutePy()];
 
                     // 等待所有任务完成
                     await Task.WhenAll(commonTasks);
@@ -229,7 +229,7 @@ namespace AutoTrainer.ViewModels
             {
                 IsLoadingModelList = true;
                 List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", $"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py info {SelectModel}", $"{PythonVenvPath}\\Scripts\\deactivate.bat"];
-                var result = await CmdHelper.CmdHelper.ExecuteMultiLines("cmd.exe", commands);
+                var result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                 IsLoadingModelList = false;
                 if (result.Item1 == 0)
                 {
@@ -246,7 +246,7 @@ namespace AutoTrainer.ViewModels
         {
             if (o != null && o.Parent != null)
             {
-                if(o.Parent.Parent is TabControl control)
+                if (o.Parent.Parent is TabControl control)
                 {
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
