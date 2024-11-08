@@ -10,9 +10,11 @@ using Avalonia.Dialogs;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -33,6 +35,7 @@ namespace AutoTrainer.ViewModels
         {
             CropConfigs = [];
             ImageCategories = [];
+            LoadConfig();
         }
         #region
         [ObservableProperty]
@@ -63,6 +66,10 @@ namespace AutoTrainer.ViewModels
         private bool isEnableEndBtn = false;
         [ObservableProperty]
         private bool isVisibleFuncArea = false;
+        [ObservableProperty]
+        private string previewState;
+        [ObservableProperty]
+        private bool isVisibleIntroduce = false;
         #endregion
 
         #region 命令
@@ -88,6 +95,11 @@ namespace AutoTrainer.ViewModels
                     Imagepath = new Bitmap(file[0].Path.AbsolutePath);
                     //先清除方框
                     canvas.Children.Clear();
+                    //保存之前的配置
+                    if (CropConfigs.Count > 0)
+                    {
+                        await SaveConfig();
+                    }
                     CropConfig = new CropConfigModel()
                     {
                         Name = "Config" + ConfigCount,
@@ -144,6 +156,13 @@ namespace AutoTrainer.ViewModels
                 if (file.Count == 1)
                 {
                     Imagepath = new Bitmap(file[0].Path.AbsolutePath);
+                    if (CropConfigs != null)
+                    {
+                        if (CropConfig != CropConfigs.Last() && CropConfigs.Count > 1)
+                        {
+                            IsEnableRightBtn = true;
+                        }
+                    }
                 }
             }
         }
@@ -252,7 +271,13 @@ namespace AutoTrainer.ViewModels
             {
                 try
                 {
+                    //先保存
+                    if (CropConfigs.Count > 0)
+                    {
+                        await SaveConfig();
+                    }
                     await Task.Run(() => CropImage(cts.Token));
+                    LoadPreviewImage(CropOutputPath);
                 }
                 catch (Exception ex)
                 {
@@ -273,6 +298,10 @@ namespace AutoTrainer.ViewModels
             IsVisibleFuncArea = false;
             //LoadPreviewImage("D:\\VsSources\\AutoTrainer\\bin\\Debug\\net8.0\\CropImages\\1");
         }
+        /// <summary>
+        /// 预览图像
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task PreviewImageAsync()
         {
@@ -288,6 +317,25 @@ namespace AutoTrainer.ViewModels
                 if (folder.Count == 1)
                 {
                     LoadPreviewImage(folder[0].Path.AbsolutePath);
+                }
+            }
+        }
+        [RelayCommand]
+        private void TabChanged(PreviewImageModel selectItem)
+        {
+
+        }
+        [RelayCommand]
+        private async Task GoToNextTab(UserControl o)
+        {
+            if (o != null && o.Parent != null)
+            {
+                if (o.Parent.Parent is TabControl control)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        control.SelectedIndex = 2;
+                    });
                 }
             }
         }
@@ -341,6 +389,10 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
+        /// <summary>
+        /// 预览图片
+        /// </summary>
+        /// <param name="folderPath"></param>
         private void LoadPreviewImage(string folderPath)
         {
             if (Directory.Exists(folderPath))
@@ -355,7 +407,8 @@ namespace AutoTrainer.ViewModels
                         var toFiles = files.Take(20);
                         PreviewImageModel model = new()
                         {
-                            Name = typePath
+                            Name = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+
                         };
                         foreach (var file in toFiles)
                         {
@@ -364,10 +417,12 @@ namespace AutoTrainer.ViewModels
                                 var bitmap = new Bitmap(stream);
                                 var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
                                 model.Thumbnails.Add(thumbnail);
-                                ImageCategories.Add(model);
                             }
                         }
+                        PreviewState += $"{model.Name}:{count}张; ";
+                        ImageCategories.Add(model);
                     }
+                    IsVisibleIntroduce = true;
                 }
             }
         }
@@ -383,6 +438,29 @@ namespace AutoTrainer.ViewModels
             // 缩放图片
             var resizedBitmap = bitmap.CreateScaledBitmap(new PixelSize(width, height), BitmapInterpolationMode.MediumQuality);
             return resizedBitmap;
+        }
+        /// <summary>
+        /// 加载配置
+        /// </summary>
+        private async void LoadConfig()
+        {
+            string configPath = System.IO.Path.Combine(appPath, "CropConfig.json");
+            if (File.Exists(configPath))
+            {
+                string jsonStr = await File.ReadAllTextAsync(configPath);
+                CropConfigs = JsonConvert.DeserializeObject<ObservableCollection<CropConfigModel>>(jsonStr);
+                ConfigCount = CropConfigs.Count;
+                CropConfig = CropConfigs.First();
+            }
+        }
+        /// <summary>
+        /// 保存配置
+        /// </summary>
+        private async Task SaveConfig()
+        {
+            string jsonStr = JsonConvert.SerializeObject(CropConfigs);
+            var configPath = System.IO.Path.Combine(appPath, "CropConfig.json");
+            await File.WriteAllTextAsync(configPath, jsonStr);
         }
         #endregion
     }

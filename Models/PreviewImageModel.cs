@@ -1,4 +1,5 @@
 ﻿using AutoTrainer.ViewModels;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -15,6 +16,6 @@ namespace AutoTrainer.Models
         [ObservableProperty]
         private string? name;
         [ObservableProperty]
-        private ObservableCollection<Bitmap> thumbnails = [];
+        private ObservableCollection<IImage> thumbnails = [];
     }
 }

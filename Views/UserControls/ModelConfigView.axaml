@@ -10,7 +10,7 @@
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
              mc:Ignorable="d" 
 			 d:DesignWidth="1000" 
-			 d:DesignHeight="700"
+			 d:DesignHeight="650"
 			 x:Name="ModelTabItem"
              x:Class="AutoTrainer.ModelConfigView"
 			 x:DataType="vm:ModelConfigViewModel">
@@ -174,7 +174,7 @@
 															</Viewbox>
 															<TextBlock
 																Margin="10,0,0,0"
-																FontSize="20"
+																FontSize="16"
 																VerticalAlignment="Stretch"
 																Text="Next Step"/>
 														</StackPanel>

@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+			 xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions" 
+             mc:Ignorable="d"
+			 Padding="5"
+			 d:DesignWidth="1000"
+			 d:DesignHeight="650"
+             x:Class="AutoTrainer.ParameterConfigView">
+	<Grid RowDefinitions="60,*">
+		<Grid Grid.Row="0">
+			<StackPanel
+				HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Orientation="Horizontal">
+				<Button
+					Classes="light"
+					Height="35"
+					Content="Reset Defaut" />
+				<Button
+					Classes="light"
+					Height="35"
+					Margin="10,0,0,0"
+					Content="Save Config" />
+				<controls:FloatingButton
+					Grid.Row="0"
+					Margin="10,0,10,0"
+					Width="150"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Classes="Light"
+					IsExtended="True">
+					<controls:FloatingButton.Styles>
+						<Style Selector="controls|FloatingButton">
+							<Setter Property="Content">
+								<Setter.Value>
+									<Template>
+										<StackPanel Orientation="Horizontal">
+											<Viewbox Stretch="None"
+													 HorizontalAlignment="Left"
+													 VerticalAlignment="Center">
+												<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
+											</Viewbox>
+											<TextBlock
+												Margin="10,0,0,0"
+												FontSize="16"
+												VerticalAlignment="Center"
+												Text="Next Step"/>
+										</StackPanel>
+									</Template>
+								</Setter.Value>
+							</Setter>
+						</Style>
+					</controls:FloatingButton.Styles>
+				</controls:FloatingButton>
+			</StackPanel>
+		</Grid>
+		<Grid 
+			Grid.Row="1"
+			Margin="15,0,0,0"
+			ColumnDefinitions="*,*">
+			<Grid
+				Grid.Column="0"
+				VerticalAlignment="Center"
+				RowDefinitions="*,*,*,*,*,*">
+				<TextBlock 
+					Grid.Row="0" 
+					Margin="0,0,0,30"
+					Text="基础参数"
+					FontWeight="Bold"/>
+				<ComboBox 
+					Grid.Row="1"
+					Margin="0,0,0,20"
+					Theme="{StaticResource MaterialOutlineComboBox}" 
+					p1:ComboBoxAssist.Label="学习率" />
+				<ComboBox
+					Grid.Row="2"
+					Margin="0,0,0,20"
+					Theme="{StaticResource MaterialOutlineComboBox}"
+					p1:ComboBoxAssist.Label="Batch Size" />
+				<NumericUpDown
+					Grid.Row="3"
+					Margin="0,0,0,20"
+					Watermark="训练轮数"
+					Theme="{StaticResource OutlineNumericUpDown}"
+					ButtonSpinnerLocation="Left"/>
+				<ComboBox
+					Grid.Row="4"
+					Margin="0,0,0,20"
+					Theme="{StaticResource MaterialOutlineComboBox}"
+					p1:ComboBoxAssist.Label="优化器" />
+				<ComboBox
+					Grid.Row="5"
+					Theme="{StaticResource MaterialOutlineComboBox}"
+					p1:ComboBoxAssist.Label="验证集比例" />
+			</Grid>
+			<Grid Grid.Column="1">
+				
+			</Grid>
+		</Grid>
+	</Grid>
+</UserControl>

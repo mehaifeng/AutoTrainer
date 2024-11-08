@@ -7,9 +7,9 @@
 		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
         mc:Ignorable="d" 
 		d:DesignWidth="1000" 
-		d:DesignHeight="600"
+		d:DesignHeight="650"
 		Width="1000"
-		Height="600"
+		Height="650"
 		WindowStartupLocation="CenterScreen"
 		Closed="Window_Closed"
         x:Class="AutoTrainer.Views.MainWindow"
@@ -25,7 +25,7 @@
 				<local:DataPickerView/>
 			</TabItem>
 			<TabItem Header="参数配置" IsEnabled="{Binding IsEnableParaTab}">
-				<TextBlock Classes="Centered" Text="Page 3" />
+				<local:ParameterConfigView/>
 			</TabItem>
 			<TabItem Header="训练" IsEnabled="{Binding IsEnableTrainTab}">
 				<TextBlock Classes="Centered" Text="Page 4" />

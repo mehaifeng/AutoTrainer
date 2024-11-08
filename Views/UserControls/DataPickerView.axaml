@@ -4,13 +4,16 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:model="using:AutoTrainer.Models"
 			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
 			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
              mc:Ignorable="d" 
 			 d:DesignWidth="1000" 
-			 d:DesignHeight="600"
-			 Padding="10"
+			 d:DesignHeight="650"
+			 Padding="10,0,10,0"
+			 x:Name="DataTabItem"
 			 x:DataType="vm:DataPickerViewModel"
              x:Class="AutoTrainer.DataPickerView">
 	<Grid>
@@ -39,12 +42,12 @@
 					Width="40" 
 					Height="40" />
 			</Border>
-			<Grid Grid.Row="0">
+			<Grid Grid.Row="0" Margin="0,0,0,5">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="2*"/>
 					<ColumnDefinition Width="2*"/>
-					<ColumnDefinition Width="4*"/>
-					<ColumnDefinition Width="4*"/>
+					<ColumnDefinition Width="3*"/>
+					<ColumnDefinition Width="5*"/>
 				</Grid.ColumnDefinitions>
 				<Button
 					Grid.Column="0"
@@ -58,6 +61,7 @@
 					Grid.Column="1"
 					Height="35"
 					Margin="20,0,0,0"
+					VerticalAlignment="Center"
 					HorizontalAlignment="Left"
 					Classes="light"
 					Command="{Binding SelectPictureCommand}"
@@ -269,70 +273,119 @@
 				<RowDefinition Height="60"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
-			<Grid Grid.Row="1" Margin="10,0,0,0">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="60"/>
-					<RowDefinition Height="20"/>
-					<RowDefinition Height="*"/>
-				</Grid.RowDefinitions>
-				<Grid Grid.Row="0">
-					<Button
-						Height="35"
-						VerticalAlignment="Top"
-						HorizontalAlignment="Left"
-						Command="{Binding PreviewImageCommand}"
-						Classes="light"
-						Content="打开文件夹"/>
-				</Grid>
-				<StackPanel Grid.Row="1" Orientation="Horizontal">
-					<TextBlock
-						Text="数据预览"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"/>
-					<TextBlock
-						Margin="10,0,0,0"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center"
-						Text="{Binding IsEnableDeleteBtn}"/>
-				</StackPanel>
-				<TabControl Grid.Row="2" ItemsSource="{Binding ImageCategories}">
-					<TabControl.ItemTemplate>
-						<DataTemplate>
-							<!-- 设置 TabItem 的标题 -->
-							<TabItem Header="{Binding Name}">
+			<controls:FloatingButton
+					Grid.Row="0"
+					Margin="0,0,10,0"
+					Width="150"
+					Command="{Binding GoToNextTabCommand}"
+					CommandParameter="{Binding ElementName=DataTabItem}"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Classes="Light"
+					IsVisible="{Binding IsVisibleIntroduce}"
+					IsExtended="True">
+				<controls:FloatingButton.Styles>
+					<Style Selector="controls|FloatingButton">
+						<Setter Property="Content">
+							<Setter.Value>
+								<Template>
+									<StackPanel Orientation="Horizontal">
+										<Viewbox Stretch="None"
+												 HorizontalAlignment="Left"
+												 VerticalAlignment="Center">
+											<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
+										</Viewbox>
+										<TextBlock
+											Margin="10,0,0,0"
+											FontSize="16"
+											VerticalAlignment="Center"
+											Text="Next Step"/>
+									</StackPanel>
+								</Template>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</controls:FloatingButton.Styles>
+			</controls:FloatingButton>
+			<Border 
+				Grid.Row="1"
+				Margin="5,0,0,0"
+				BorderBrush="LightGray"
+				CornerRadius="5"
+				BorderThickness="1"
+				Padding="5">
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="60"/>
+						<RowDefinition Height="40"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Grid Grid.Row="0">
+						<Button
+							Height="35"
+							VerticalAlignment="Top"
+							HorizontalAlignment="Left"
+							Command="{Binding PreviewImageCommand}"
+							Classes="light"
+							Content="选择文件夹"/>
+					</Grid>
+					<StackPanel Grid.Row="1" Orientation="Vertical">
+						<TextBlock
+							Text="数据预览"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"/>
+						<ScrollViewer Margin="0,5,0,5">
+							<Border>
+								<TextBlock
+								
+									HorizontalAlignment="Left"
+									VerticalAlignment="Center"
+									ToolTip.IsOpen="True"
+									ToolTip.Tip="{Binding PreviewState}"
+									Text="{Binding PreviewState}"/>
+							</Border>
+						</ScrollViewer>
+					</StackPanel>
+					<TabControl
+						Theme="{StaticResource ScrollableTabControl}"
+						x:Name="PreviewTab"
+						Grid.Row="2"
+						ItemsSource="{Binding ImageCategories}">
+						<i:Interaction.Behaviors>
+							<ia:EventTriggerBehavior EventName="SelectionChanged">
+								<ia:InvokeCommandAction Command="{Binding TabChangedCommand}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}"/>
+							</ia:EventTriggerBehavior>
+						</i:Interaction.Behaviors>
+						<!-- 设置 TabItem 的标题 -->
+						<TabControl.ItemTemplate>
+							<DataTemplate DataType="model:PreviewImageModel">
+								<TextBlock Text="{Binding Name}" />
+							</DataTemplate>
+						</TabControl.ItemTemplate>
+
+						<!-- 设置每个 TabItem 的内容 -->
+						<TabControl.ContentTemplate>
+							<DataTemplate DataType="model:PreviewImageModel">
 								<!-- 绑定并展示该类别的缩略图 -->
-								<ItemsControl ItemsSource="{Binding Thumbnails}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Image Source="{Binding}" Width="100" Height="100" Margin="5"/>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</TabItem>
-						</DataTemplate>
-					</TabControl.ItemTemplate>
-				</TabControl>
-				<!--<Border 
-					Grid.Row="2"
-					BorderBrush="LightGray"
-					BorderThickness="1"
-					CornerRadius="5">
-					<ScrollViewer>
-						<ItemsControl ItemsSource="{Binding Thumbnails}">
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<WrapPanel/>
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<Image Source="{Binding}" Width="64" Height="64" Margin="5"/>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
-				</Border>-->
-			</Grid>
+								<ScrollViewer>
+									<ItemsControl ItemsSource="{Binding Thumbnails}">
+										<ItemsControl.ItemsPanel>
+											<ItemsPanelTemplate>
+												<WrapPanel/>
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<Image Source="{Binding}" Width="64" Height="64" Margin="5"/>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</ScrollViewer>
+							</DataTemplate>
+						</TabControl.ContentTemplate>
+					</TabControl>
+				</Grid>
+			</Border>
 		</Grid>
 	</Grid>
 </UserControl>

@@ -242,7 +242,7 @@ namespace AutoTrainer.ViewModels
             }
         }
         [RelayCommand]
-        public async Task GoToNextTab(UserControl o)
+        public static async Task GoToNextTab(UserControl o)
         {
             if (o != null && o.Parent != null)
             {
