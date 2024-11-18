@@ -23,7 +23,7 @@ namespace AutoTrainer.ControlHelper
         private static double originalHeight;
 
         public static void AddDraggableRectangle(SingleCropArea area, Canvas DragCanvas,
-            Bitmap sourceImage, Image displayImage, string label = "")
+            Bitmap? sourceImage, Image? displayImage, string label = "")
         {
             // 计算显示坐标和原始图像坐标之间的比例
             double scaleX = sourceImage.PixelSize.Width / displayImage.Bounds.Width;

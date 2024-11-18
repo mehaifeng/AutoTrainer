@@ -28,7 +28,7 @@
 				<local:ParameterConfigView/>
 			</TabItem>
 			<TabItem Header="训练" IsEnabled="{Binding IsEnableTrainTab}">
-				<TextBlock Classes="Centered" Text="Page 4" />
+				<local:TrainingView/>
 			</TabItem>
 			<TabItem Header="人工验证" IsEnabled="{Binding IsEnableValidTab}">
 				<TextBlock Classes="Centered" Text="Page 5" />

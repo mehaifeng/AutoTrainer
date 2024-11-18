@@ -12,6 +12,8 @@
 			 Padding="5"
 			 d:DesignWidth="1000"
 			 d:DesignHeight="650"
+			 x:Name="ParameterPage"
+			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">
 	<Grid RowDefinitions="60,*">
 		<Grid Grid.Row="0">
@@ -26,10 +28,14 @@
 				<Button
 					Classes="light"
 					Height="35"
-					Margin="10,0,0,0"
+					Margin="10,0,10,0"
+					Command="{Binding SaveConfigCommand}"
 					Content="Save Config" />
 				<controls:FloatingButton
 					Grid.Row="0"
+					Command="{Binding GoToNextTabCommand}"
+					CommandParameter="{Binding ElementName=ParameterPage}"
+					IsVisible="{Binding IsVisibleNextStep}"
 					Margin="10,0,10,0"
 					Width="150"
 					HorizontalAlignment="Right"
@@ -64,11 +70,13 @@
 		<Grid 
 			Grid.Row="1"
 			Margin="15,0,0,0"
-			ColumnDefinitions="*,*">
+			ColumnDefinitions="*,20,*">
 			<Grid
 				Grid.Column="0"
-				VerticalAlignment="Center"
-				RowDefinitions="*,*,*,*,*,*">
+				Height="450"
+				Margin="0,20,0,0"
+				VerticalAlignment="Top"
+				RowDefinitions="20,80,80,80,80,80">
 				<TextBlock 
 					Grid.Row="0" 
 					Margin="0,0,0,30"
@@ -77,31 +85,114 @@
 				<ComboBox 
 					Grid.Row="1"
 					Margin="0,0,0,20"
+					ItemsSource="{Binding LearningRates}"
+					SelectedItem="{Binding SelectedLearningRate}"
 					Theme="{StaticResource MaterialOutlineComboBox}" 
 					p1:ComboBoxAssist.Label="学习率" />
 				<ComboBox
 					Grid.Row="2"
 					Margin="0,0,0,20"
+					ItemsSource="{Binding BatchSizes}"
+					SelectedItem="{Binding SelectedBatchSize}"
 					Theme="{StaticResource MaterialOutlineComboBox}"
 					p1:ComboBoxAssist.Label="Batch Size" />
-				<NumericUpDown
+				<StackPanel	
 					Grid.Row="3"
-					Margin="0,0,0,20"
+					Margin="0,0,0,20" 
+					Orientation="Vertical">
+					<TextBlock Text="训练轮数"/>
+				<NumericUpDown
+					Increment="1"
+					Text="1"
+					Value="{Binding Epochs}"
 					Watermark="训练轮数"
-					Theme="{StaticResource OutlineNumericUpDown}"
-					ButtonSpinnerLocation="Left"/>
+					Theme="{StaticResource OutlineNumericUpDown}"/>
+				</StackPanel>
 				<ComboBox
 					Grid.Row="4"
 					Margin="0,0,0,20"
+					ItemsSource="{Binding Optimizers}"
+					SelectedItem="{Binding SelectedOptimizer}"
 					Theme="{StaticResource MaterialOutlineComboBox}"
 					p1:ComboBoxAssist.Label="优化器" />
 				<ComboBox
 					Grid.Row="5"
+					ItemsSource="{Binding ValidationSetRates}"
+					SelectedItem="{Binding SelectedValidationSetRate}"
+					SelectedIndex="1"
 					Theme="{StaticResource MaterialOutlineComboBox}"
 					p1:ComboBoxAssist.Label="验证集比例" />
 			</Grid>
-			<Grid Grid.Column="1">
-				
+			<Grid 
+				Grid.Column="2"
+				VerticalAlignment="Top"
+				Height="450"
+				Margin="0,20,0,0"
+				RowDefinitions="20,80,80,80,185">
+				<TextBlock
+					Grid.Row="0"
+					Margin="0,0,0,30"
+					Text="高级参数"
+					FontWeight="Bold"/>
+				<ComboBox
+					Grid.Row="1"
+					Margin="0,0,0,20"
+					ItemsSource="{Binding SchedulingStrategies}"
+					SelectedItem="{Binding SelectedStrategy,StringFormat={}{0:P1}}"
+					Theme="{StaticResource MaterialOutlineComboBox}"
+					p1:ComboBoxAssist.Label="学习率调度策略" />
+				<StackPanel
+					Grid.Row="2"
+					Margin="0,0,0,20"
+					Orientation="Vertical">
+					<TextBlock Text="权重衰减"/>
+					<NumericUpDown
+						Increment="0.0001"
+						Value="{Binding WeightDecay}"
+						Theme="{StaticResource OutlineNumericUpDown}"
+						Watermark="权重衰减" />
+				</StackPanel>
+				<StackPanel
+					Grid.Row="3"
+					Margin="0,0,0,20"
+					Orientation="Vertical">
+					<TextBlock Text="早停轮数"/>
+					<NumericUpDown
+						Increment="1"
+						Value="{Binding EarlyStopRound}"
+						Theme="{StaticResource OutlineNumericUpDown}"
+						Watermark="早停轮数" />
+				</StackPanel>
+				<Grid 
+					Grid.Row="4" 
+					RowDefinitions="*,5*">
+					<TextBlock 
+						Text="数据增强"/>
+					<Border
+						Grid.Row="1"
+						CornerRadius="5"
+						BorderThickness="1"
+						Padding="8"
+						BorderBrush="LightGray">
+						<StackPanel Orientation="Vertical">
+							<CheckBox 
+								Margin="0,0,0,0"
+								Content="随机水平翻转"/>
+							<CheckBox 
+								Margin="0,5,0,0"
+								Content="随机垂直翻转"/>
+							<CheckBox 
+								Margin="0,5,0,0"
+								Content="随机旋转"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								Content="随机亮度"/>
+							<CheckBox 
+								Margin="0,5,0,0"
+								Content="随机对比度"/>
+						</StackPanel>
+					</Border>
+				</Grid>
 			</Grid>
 		</Grid>
 	</Grid>
