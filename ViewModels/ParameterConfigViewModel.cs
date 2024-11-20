@@ -8,6 +8,7 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +19,7 @@ namespace AutoTrainer.ViewModels
     {
         public ParameterConfigViewModel()
         {
-            LearningRates = [0.1, 0.01, 0.001, 0.0001];
+            LearningRates = [0.1f, 0.01f, 0.001f, 0.0001f];
             BatchSizes = [8, 16, 32, 64];
             Optimizers = ["Adam", "SGD"];
             ValidationSetRates = [0.1, 0.2, 0.3];
@@ -36,12 +37,12 @@ namespace AutoTrainer.ViewModels
         /// 学习率集合
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<double> learningRates;
+        private ObservableCollection<float> learningRates;
         /// <summary>
         /// 选择的学习率
         /// </summary>
         [ObservableProperty]
-        private double selectedLearningRate;
+        private float selectedLearningRate;
         /// <summary>
         /// 批处理大小集合
         /// </summary>
@@ -140,20 +141,27 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void SaveConfig()
         {
-            TrainModel trainModel = new()
-            {
-                BatchSize = 100,
-                DataDir = "D:\\Sources\\ModelTraining",
-                Epochs = 100,
-                LearningRate = 0.001f,
-                ModelName = "resnet-18",
-                ModelSavePath = "D:\\Sources\\ModelTraining\\model.pth",
-                NumClasses = 5,
-                Optimizer = "adam",
-                StatusFile = "D:\\Sources\\ModelTraining\\statusFile.json",
-                UseDataAugmentation = true,
-            };
-            string jsonStr = JsonConvert.SerializeObject(trainModel);
+            App.TrainModel.LearningRate = SelectedLearningRate;
+            App.TrainModel.BatchSize = SelectedBatchSize;
+            App.TrainModel.Optimizer = SelectedOptimizer;
+            App.TrainModel.UseDataAugmentation = false;
+            App.TrainModel.Epochs = Epochs;
+            //TrainModel trainModel = new()
+            //{
+            //    BatchSize = SelectedBatchSize,
+            //    DataDir = "D:\\Sources\\ModelTraining",
+            //    Epochs = Epochs,
+            //    LearningRate = SelectedLearningRate,
+            //    ModelName = "resnet-18",
+            //    ModelSavePath = "D:\\Sources\\ModelTraining\\model.pth",
+            //    NumClasses = 5,
+            //    Optimizer = "adam",
+            //    StatusFile = "D:\\Sources\\ModelTraining\\statusFile.json",
+            //    UseDataAugmentation = true,
+            //};
+            string jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
+            File.WriteAllTextAsync(jsonStr, configPath);
         }
         #endregion
 

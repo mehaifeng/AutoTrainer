@@ -274,6 +274,7 @@ namespace AutoTrainer.ViewModels
                     //先保存
                     if (CropConfigs.Count > 0)
                     {
+                        App.TrainModel.DataDir = CropOutputPath;
                         await SaveConfig();
                     }
                     await Task.Run(() => CropImage(cts.Token));
@@ -400,6 +401,8 @@ namespace AutoTrainer.ViewModels
                 var typeClasses = Directory.GetDirectories(folderPath);
                 if (typeClasses.Length > 0)
                 {
+                    App.TrainModel.NumClasses = typeClasses.Length;
+                    App.TrainModel.DataDir = folderPath;
                     foreach (var typePath in typeClasses)
                     {
                         var files = Directory.GetFiles(typePath, "*.png"); // 可根据需求选择文件类型
@@ -408,7 +411,6 @@ namespace AutoTrainer.ViewModels
                         PreviewImageModel model = new()
                         {
                             Name = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
-
                         };
                         foreach (var file in toFiles)
                         {
@@ -444,7 +446,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async void LoadConfig()
         {
-            string configPath = System.IO.Path.Combine(appPath, "CropConfig.json");
+            string configPath = System.IO.Path.Combine(App.ConfigFolderPath, "CropConfig.json");
             if (File.Exists(configPath))
             {
                 string jsonStr = await File.ReadAllTextAsync(configPath);
@@ -459,7 +461,7 @@ namespace AutoTrainer.ViewModels
         private async Task SaveConfig()
         {
             string jsonStr = JsonConvert.SerializeObject(CropConfigs);
-            var configPath = System.IO.Path.Combine(appPath, "CropConfig.json");
+            var configPath = System.IO.Path.Combine(App.ConfigFolderPath, "CropConfig.json");
             await File.WriteAllTextAsync(configPath, jsonStr);
         }
         #endregion

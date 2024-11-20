@@ -17,11 +17,11 @@ namespace AutoTrainer;
 public partial class TrainingView : UserControl
 {
 
-    private DataPickerViewModel _viewmodel;
+    private TrainingViewModel _viewmodel;
     public TrainingView()
     {
         InitializeComponent();
-        _viewmodel = new DataPickerViewModel();
+        _viewmodel = new TrainingViewModel();
         DataContext = _viewmodel;
     }
 }

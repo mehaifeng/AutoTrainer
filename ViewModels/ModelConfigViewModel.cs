@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -228,6 +229,7 @@ namespace AutoTrainer.ViewModels
             if (!string.IsNullOrEmpty(SelectModel))
             {
                 IsLoadingModelList = true;
+                App.TrainModel.ModelName = SelectModel;
                 List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", $"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py info {SelectModel}", $"{PythonVenvPath}\\Scripts\\deactivate.bat"];
                 var result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                 IsLoadingModelList = false;

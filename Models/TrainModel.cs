@@ -31,4 +31,9 @@ namespace AutoTrainer.Models
         public float? ValLoss { get; set; }
         public float? ValAcc { get; set; }
     }
+    public class EpochState
+    {
+        public int currentEpoch { get; set; }
+        public int totallRpochs { get; set; }
+    }
 }
