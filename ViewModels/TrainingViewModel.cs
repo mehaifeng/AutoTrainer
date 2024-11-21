@@ -65,10 +65,16 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async void StartTraining()
         {
+            var currentPyLogfile = Path.Combine(App.PyLogsFolderPath, "Log"+DateTime.Now.ToString("yyyyMMdd_HHmmss")+".json");
+            App.TrainModel.LogOutputPath = currentPyLogfile;
+            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath,"ModelParam.json"), jsonStr);
+
             var sb = new StringBuilder();
             sb.Append($"{App.PythonVenvPath}\\Scripts\\activate.bat");
             sb.Append(" && ");
             sb.Append($"python {Environment.CurrentDirectory}\\PyScripts\\Train.py --config {Environment.CurrentDirectory}\\Configs\\ModelParam.json");
+            _ = Task.Run(() => ScanningThePyOutPut());
             await CmdHelper.ExecuteCmdWindow(sb.ToString());
         }
         #endregion
@@ -79,18 +85,26 @@ namespace AutoTrainer.ViewModels
         /// 扫描Py脚本执行输出文件
         /// </summary>
         /// <returns></returns>
-        private Task ScanningThePyOutPut()
+        private async void ScanningThePyOutPut()
         {
-            DateTime currentLoadTime;
+            //DateTime currentLoadTime;
             while (true)
             {
-                if (!File.Exists(App.TrainModel.ModelOutputPath)) continue;
+                if (!File.Exists(App.TrainModel.LogOutputPath))
+                {
+                    await Task.Delay(3000);
+                    continue;
+                }
                 var jsonStr = File.ReadAllText(App.TrainModel.LogOutputPath);
                 var pyExcuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
-                if (pyExcuteOutput.Entries.Count > 0)
+                if (pyExcuteOutput != null)
                 {
-                    
+                    if (pyExcuteOutput.Entries.Count > 0)
+                    {
+
+                    }
                 }
+                await Task.Delay(3000);
             }
         }
         

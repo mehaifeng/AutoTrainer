@@ -16,29 +16,27 @@ import json
 class BaseModelConfig(ABC):
     """模型配置的基类，定义了所有模型配置必须实现的接口"""
 
-def __init__(self):
+    def __init__(self):
 
-    @abstractmethod
-    def get_model(self) -> nn.Module:
-        """返回初始化好的模型"""
-        pass
+        @abstractmethod
+        def get_model(self) -> nn.Module:
+            """返回初始化好的模型"""
+            pass
 
-    @abstractmethod
-    def get_transforms(self) -> transforms.Compose:
-        """返回数据预处理转换"""
-        pass
+        @abstractmethod
+        def get_transforms(self) -> transforms.Compose:
+            """返回数据预处理转换"""
+            pass
 
-    @abstractmethod
-    def get_loss_function(self) -> nn.Module:
-        """返回损失函数"""
-        pass
+        @abstractmethod
+        def get_loss_function(self) -> nn.Module:
+            """返回损失函数"""
+            pass
 
-    @abstractmethod
-    def get_input_size(self) -> Tuple[int, int]:
-        """返回模型输入尺寸 (height, width)"""
-        pass
-
-
+        @abstractmethod
+        def get_input_size(self) -> Tuple[int, int]:
+            """返回模型输入尺寸 (height, width)"""
+            pass
 class TorchvisionModelConfig(BaseModelConfig):
     """torchvision预训练模型的配置类"""
 
@@ -99,7 +97,6 @@ class TorchvisionModelConfig(BaseModelConfig):
     def get_input_size(self) -> Tuple[int, int]:
         return self.model_input_sizes.get(self.model_name, (224, 224))
 
-
 class CustomModelConfig(BaseModelConfig):
     """自定义模型的配置类"""
 
@@ -129,13 +126,12 @@ class CustomModelConfig(BaseModelConfig):
 
     def get_input_size(self) -> Tuple[int, int]:
         return self._input_size
-
-
 # trainer.py
 class ModelTrainer:
     """模型训练器类"""
 
     def __init__(self, config: Dict[str, Any], model_config: BaseModelConfig, logger: Any):
+        self.symbolModelPath = None
         self.config = config
         self.model_config = model_config
         self.logger = logger
@@ -257,24 +253,42 @@ class ModelTrainer:
             'config': self.config,
             'best_val_acc': best_val_acc
         }
-        checkpoint_path = f"{self.config['model_output_path']}.checkpoint"
+        self.symbolModelPath = os.path.join(self.config['model_output_path'], f"{self.config['pretrained_model']}.pth")
+        checkpoint_path = f"{self.symbolModelPath}.checkpoint"
         torch.save(checkpoint, checkpoint_path)
         self.logger.log_entry("Status", f"保存检查点：epoch {epoch}")
 
     def save_best_model(self, val_acc: float, epoch: int):
-        torch.save(self.model.state_dict(), self.config['model_output_path'])
+        torch.save(self.model.state_dict(), f"{self.symbolModelPath}")
         self.logger.log_entry("Status", f"保存最佳模型，验证准确率: {val_acc:.4f}")
 
+def load_config():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, required=True, help='Path to config JSON file')
+    args = parser.parse_args()
+
+    if not os.path.exists(args.config):
+        raise FileNotFoundError(f"配置文件不存在: {args.config}")
+
+    with open(args.config, 'r', encoding='utf-8') as f:
+        return json.load(f)
 class TrainingLogger:
     def __init__(self, base_log_path):
-        # 生成唯一的日志文件名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = os.path.basename(base_log_path)
-        name, ext = os.path.splitext(filename)
-        self.log_path = os.path.join(
-            os.path.dirname(base_log_path),
-            f"{name}_{timestamp}{ext}"
-        )
+        # # 生成唯一的日志文件名
+        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # log_name = "log"
+        # log_ext = ".json"
+        # log_filename = f"{log_name}_{timestamp}{log_ext}"
+        #
+        # # 获取当天的日期并创建当天的文件夹
+        # today_folder = datetime.now().strftime("%Y%m%d")
+        # today_log_path = os.path.join(base_log_path, today_folder)
+        # os.makedirs(today_log_path, exist_ok=True)
+        #
+        # # 生成完整的日志路径
+        # self.log_path = os.path.join(today_log_path, log_filename)
+
+        self.log_path = base_log_path
 
         self.log_data = {
             "config": None,
@@ -290,7 +304,7 @@ class TrainingLogger:
         }
 
         # 确保日志目录存在
-        os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
+        # os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
     def update_status(self, **kwargs):
         self.log_data["status"].update(kwargs)
@@ -313,16 +327,7 @@ class TrainingLogger:
         with open(self.log_path, 'w', encoding='utf-8') as f:
             json.dump(self.log_data, f, ensure_ascii=False, indent=2)
 
-def load_config():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, required=True, help='Path to config JSON file')
-    args = parser.parse_args()
 
-    if not os.path.exists(args.config):
-        raise FileNotFoundError(f"配置文件不存在: {args.config}")
-
-    with open(args.config, 'r', encoding='utf-8') as f:
-        return json.load(f)
 # main.py
 def main():
     try:

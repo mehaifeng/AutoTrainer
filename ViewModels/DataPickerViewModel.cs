@@ -92,7 +92,7 @@ namespace AutoTrainer.ViewModels
                 if (file.Count == 1)
                 {
                     IsEnablePlusRectBtn = true;
-                    Imagepath = new Bitmap(file[0].Path.AbsolutePath);
+                    Imagepath = new Bitmap(file[0].Path.LocalPath);
                     //先清除方框
                     canvas.Children.Clear();
                     //保存之前的配置
@@ -155,10 +155,10 @@ namespace AutoTrainer.ViewModels
                 });
                 if (file.Count == 1)
                 {
-                    Imagepath = new Bitmap(file[0].Path.AbsolutePath);
-                    if (CropConfigs != null)
+                    Imagepath = new Bitmap(file[0].Path.LocalPath);
+                    if (CropConfigs != null && CropConfigs.Count > 1)
                     {
-                        if (CropConfig != CropConfigs.Last() && CropConfigs.Count > 1)
+                        if (CropConfig != CropConfigs.Last())
                         {
                             IsEnableRightBtn = true;
                         }
@@ -405,7 +405,9 @@ namespace AutoTrainer.ViewModels
                     App.TrainModel.TrainDataPath = folderPath;
                     foreach (var typePath in typeClasses)
                     {
-                        var files = Directory.GetFiles(typePath, "*.png"); // 可根据需求选择文件类型
+                        var files = Directory.GetFiles(typePath)
+                            .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp"))
+                            .ToArray(); // 可根据需求选择文件类型
                         int count = files.Length;
                         var toFiles = files.Take(20);
                         PreviewImageModel model = new()
