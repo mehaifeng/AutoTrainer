@@ -17,16 +17,24 @@ namespace AutoTrainer
         {
             AvaloniaXamlLoader.Load(this);
             CheckDirectory();
-            TrainModel = new TrainModel();
+            TrainModel = new TrainModel
+            {
+                ModelOutputPath = ModelOutputFolderPath,
+                LogOutputPath = PyLogsFolderPath
+            };
         }
         public static TrainModel TrainModel { get; set; }
+        public static string PythonVenvPath { get; set; }
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
+        public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
+        public static string PyLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyLogs");
+        public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\AppLogs");
         private void CheckDirectory()
         {
-            if (!Directory.Exists(ConfigFolderPath))
-            {
-                Directory.CreateDirectory(ConfigFolderPath);
-            }
+            if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
+            if (!Directory.Exists(ModelOutputFolderPath)) Directory.CreateDirectory(ModelOutputFolderPath);
+            if (!Directory.Exists(PyLogsFolderPath)) Directory.CreateDirectory(PyLogsFolderPath);
+            if (!Directory.Exists(AppLogsFolderPath)) Directory.CreateDirectory(AppLogsFolderPath);
         }
 
         public override void OnFrameworkInitializationCompleted()

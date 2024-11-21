@@ -22,8 +22,8 @@ namespace AutoTrainer.ViewModels
             LearningRates = [0.1f, 0.01f, 0.001f, 0.0001f];
             BatchSizes = [8, 16, 32, 64];
             Optimizers = ["Adam", "SGD"];
-            ValidationSetRates = [0.1, 0.2, 0.3];
-            SchedulingStrategies = ["不使用", "Step", "Cosine"];
+            ValidationSetRates = [0.1f, 0.2f, 0.3f];
+            SchedulingStrategies = ["ReduceLROnPlateau","StepLR"];
             SelectedLearningRate = LearningRates[0];
             SelectedBatchSize = BatchSizes[1];
             SelectedValidationSetRate = ValidationSetRates[1];
@@ -56,13 +56,13 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 训练轮数
         /// </summary>
-        private int _epochs;
+        private int epochs;
         public int Epochs
         {
-            get => _epochs;
+            get => epochs;
             set
             {
-                SetProperty(ref _epochs, value);
+                SetProperty(ref epochs, value);
                 OnPropertyChanged(nameof(Epochs));
                 ShowNextBtn();
             }
@@ -81,12 +81,12 @@ namespace AutoTrainer.ViewModels
         /// 验证集比例集合
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<double> validationSetRates;
+        private ObservableCollection<float> validationSetRates;
         /// <summary>
         /// 选择的验证集比例
         /// </summary>
         [ObservableProperty]
-        private double selectedValidationSetRate;
+        private float selectedValidationSetRate;
         /// <summary>
         /// 学习率调度策略集合
         /// </summary>
@@ -101,17 +101,17 @@ namespace AutoTrainer.ViewModels
         /// 权重衰减
         /// </summary>
         [ObservableProperty]
-        private double weightDecay;
+        private float weightDecay;
         /// <summary>
         /// 早停轮数
         /// </summary>
-        private int _earlyStopRound;
+        private int earlyStopRound;
         public int EarlyStopRound
         {
-            get => _earlyStopRound;
+            get => earlyStopRound;
             set
             {
-                SetProperty(ref _earlyStopRound, value);
+                SetProperty(ref earlyStopRound, value);
                 OnPropertyChanged(nameof(EarlyStopRound));
                 ShowNextBtn();
             }
@@ -125,43 +125,28 @@ namespace AutoTrainer.ViewModels
 
         #region 命令
         [RelayCommand]
-        private async Task GoToNextTab(UserControl o)
+        private static async Task GoToNextTab(UserControl o)
         {
-            if (o != null && o.Parent != null)
+            if (o.Parent != null && o.Parent.Parent is TabControl control)
             {
-                if (o.Parent.Parent is TabControl control)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        control.SelectedIndex = 3;
-                    });
-                }
+                await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 3);
             }
         }
         [RelayCommand]
-        private void SaveConfig()
+        private async void SaveConfig()
         {
             App.TrainModel.LearningRate = SelectedLearningRate;
+            App.TrainModel.LrScheduler = SelectedStrategy;
+            App.TrainModel.WeightDecay = WeightDecay;
             App.TrainModel.BatchSize = SelectedBatchSize;
             App.TrainModel.Optimizer = SelectedOptimizer;
             App.TrainModel.UseDataAugmentation = false;
             App.TrainModel.Epochs = Epochs;
-            //TrainModel trainModel = new()
-            //{
-            //    BatchSize = SelectedBatchSize,
-            //    DataDir = "D:\\Sources\\ModelTraining",
-            //    Epochs = Epochs,
-            //    LearningRate = SelectedLearningRate,
-            //    ModelName = "resnet-18",
-            //    ModelSavePath = "D:\\Sources\\ModelTraining\\model.pth",
-            //    NumClasses = 5,
-            //    Optimizer = "adam",
-            //    StatusFile = "D:\\Sources\\ModelTraining\\statusFile.json",
-            //    UseDataAugmentation = true,
-            //};
+            App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
+            App.TrainModel.ValidationSplit = SelectedValidationSetRate;
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
-            File.WriteAllTextAsync(jsonStr, configPath);
+            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json"); 
+            await File.WriteAllTextAsync(configPath,jsonStr);
         }
         #endregion
 

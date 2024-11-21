@@ -145,7 +145,7 @@
 									SelectedItem="{Binding SelectModel}"
 									ItemsSource="{Binding ModelList}">
 									<i:Interaction.Behaviors>
-										<ia:EventTriggerBehavior EventName="SelectionChanged" SourceObject="MoveLeftButton">
+										<ia:EventTriggerBehavior EventName="SelectionChanged">
 											<ia:InvokeCommandAction Command="{Binding SelectModelToShowCommand}" />
 										</ia:EventTriggerBehavior>
 									</i:Interaction.Behaviors>
@@ -168,14 +168,14 @@
 													<Template>
 														<StackPanel Orientation="Horizontal">
 															<Viewbox Stretch="None"
-																	 HorizontalAlignment="Left"
-																	 VerticalAlignment="Stretch">
+															         HorizontalAlignment="Left"
+															         VerticalAlignment="Center">
 																<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
 															</Viewbox>
 															<TextBlock
 																Margin="10,0,0,0"
 																FontSize="16"
-																VerticalAlignment="Stretch"
+																VerticalAlignment="Center"
 																Text="Next Step"/>
 														</StackPanel>
 													</Template>
@@ -215,7 +215,7 @@
 							Classes="Floating" 
 							AcceptsReturn="True" 
 							TextWrapping="Wrap"
-							UseFloatingWatermark="True"
+							UseFloatingWatermark="False"
 							Text="{Binding Outputs}"
 							TextChanged="Outout_tb_TextChanged"/>
 						<!--Start Execute-->

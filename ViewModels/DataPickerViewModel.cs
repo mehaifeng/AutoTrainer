@@ -274,7 +274,7 @@ namespace AutoTrainer.ViewModels
                     //先保存
                     if (CropConfigs.Count > 0)
                     {
-                        App.TrainModel.DataDir = CropOutputPath;
+                        App.TrainModel.TrainDataPath = CropOutputPath;
                         await SaveConfig();
                     }
                     await Task.Run(() => CropImage(cts.Token));
@@ -401,8 +401,8 @@ namespace AutoTrainer.ViewModels
                 var typeClasses = Directory.GetDirectories(folderPath);
                 if (typeClasses.Length > 0)
                 {
-                    App.TrainModel.NumClasses = typeClasses.Length;
-                    App.TrainModel.DataDir = folderPath;
+                    // App.TrainModel.NumClasses = typeClasses.Length;
+                    App.TrainModel.TrainDataPath = folderPath;
                     foreach (var typePath in typeClasses)
                     {
                         var files = Directory.GetFiles(typePath, "*.png"); // 可根据需求选择文件类型

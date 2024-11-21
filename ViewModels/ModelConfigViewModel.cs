@@ -127,6 +127,7 @@ namespace AutoTrainer.ViewModels
                 bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
+                    App.PythonVenvPath = PythonVenvPath;
                     List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", "pip list"];
                     (int, string) result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                     if (result.Item1 == 0)
@@ -229,7 +230,7 @@ namespace AutoTrainer.ViewModels
             if (!string.IsNullOrEmpty(SelectModel))
             {
                 IsLoadingModelList = true;
-                App.TrainModel.ModelName = SelectModel;
+                App.TrainModel.PretrainedModel = SelectModel;
                 List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", $"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py info {SelectModel}", $"{PythonVenvPath}\\Scripts\\deactivate.bat"];
                 var result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                 IsLoadingModelList = false;
