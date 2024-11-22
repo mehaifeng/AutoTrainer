@@ -256,7 +256,7 @@ class ModelTrainer:
         self.symbolModelPath = os.path.join(self.config['model_output_path'], f"{self.config['pretrained_model']}.pth")
         checkpoint_path = f"{self.symbolModelPath}.checkpoint"
         torch.save(checkpoint, checkpoint_path)
-        self.logger.log_entry("Status", f"保存检查点：epoch {epoch}")
+        # self.logger.log_entry("Status", f"保存检查点：epoch {epoch}")
 
     def save_best_model(self, val_acc: float, epoch: int):
         torch.save(self.model.state_dict(), f"{self.symbolModelPath}")

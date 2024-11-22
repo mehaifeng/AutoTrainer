@@ -212,10 +212,10 @@
 						<!--Output-->
 						<TextBox 
 						    x:Name="Outout_tb"
-							Classes="Floating" 
+							Classes="filled" 
 							AcceptsReturn="True" 
 							TextWrapping="Wrap"
-							UseFloatingWatermark="False"
+							Theme="{StaticResource FilledTextBox}"
 							Text="{Binding Outputs}"
 							TextChanged="Outout_tb_TextChanged"/>
 						<!--Start Execute-->

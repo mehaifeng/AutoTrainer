@@ -3,14 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoTrainer.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 
 namespace AutoTrainer.Models
 {
     public class TrainingLog
     {
+        [JsonProperty("config")]
         public TrainModel Config { get; set; }
+        [JsonProperty("status")]
         public Status Status { get; set; }
+        [JsonProperty("entries")]
         public List<Entry> Entries { get; set; }
     }
 
@@ -61,35 +66,51 @@ namespace AutoTrainer.Models
 
     public class Status
     {
+        [JsonProperty("is_training")]
         public bool IsTraining { get; set; }
+        [JsonProperty("current_epoch")]
         public int CurrentEpoch { get; set; }
+        [JsonProperty("total_epochs")]
         public int TotalEpochs { get; set; }
-        public double? BestValidationAccuracy { get; set; }
+        [JsonProperty("best_validation_accuracy")]
+        public float? BestValidationAccuracy { get; set; }
+        [JsonProperty("early_stopping_counter")]
         public int EarlyStoppingCounter { get; set; }
-        public double CurrentLearningRate { get; set; }
+        [JsonProperty("current_learning_rate")]
+        public float? CurrentLearningRate { get; set; }
     }
 
     public class Entry
     {
+        [JsonProperty("timestamp")]
         public DateTime Timestamp { get; set; }
+        [JsonProperty("type")]
         public string Type { get; set; }
+        [JsonProperty("message")]
         public string Message { get; set; }
+        [JsonProperty("epoch")]
         public int? Epoch { get; set; }
+        [JsonProperty("metrics")]
         public Metrics Metrics { get; set; }
     }
 
     public class Metrics
     {
-        public double TrainLoss { get; set; }
-        public double TrainAccuracy { get; set; }
-        public double ValidationLoss { get; set; }
-        public double ValidationAccuracy { get; set; }
-        public double LearningRate { get; set; }
+        [JsonProperty("train_loss")]
+        public float? TrainLoss { get; set; }
+        [JsonProperty("train_accuracy")]
+        public float? TrainAccuracy { get; set; }
+        [JsonProperty("validation_loss")]
+        public float? ValidationLoss { get; set; }
+        [JsonProperty("validation_accuracy")]
+        public float? ValidationAccuracy { get; set; }
+        [JsonProperty("learning_rate")]
+        public float? LearningRate { get; set; }
     }
 
-    public class EpochState
+    public partial class EpochState : ViewModelBase
     {
-        public int currentEpoch { get; set; }
-        public int totallRpochs { get; set; }
+        [ObservableProperty] private int? currentEpoch;
+        [ObservableProperty] private int? totalEpochs;
     }
 }

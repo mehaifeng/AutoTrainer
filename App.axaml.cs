@@ -29,7 +29,7 @@ namespace AutoTrainer
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
         public static string PyLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyLogs");
         public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\AppLogs");
-        private void CheckDirectory()
+        private static void CheckDirectory()
         {
             if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
             if (!Directory.Exists(ModelOutputFolderPath)) Directory.CreateDirectory(ModelOutputFolderPath);
@@ -46,7 +46,6 @@ namespace AutoTrainer
                 BindingPlugins.DataValidators.RemoveAt(0);
                 desktop.MainWindow = new SelectTrainingTypeView();
             }
-
             base.OnFrameworkInitializationCompleted();
         }
     }
