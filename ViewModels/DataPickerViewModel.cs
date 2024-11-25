@@ -317,15 +317,24 @@ namespace AutoTrainer.ViewModels
                 });
                 if (folder.Count == 1)
                 {
-                    LoadPreviewImage(folder[0].Path.AbsolutePath);
+                    LoadPreviewImage(folder[0].Path.LocalPath);
                 }
             }
         }
+        /// <summary>
+        /// 切换图像预览Tab页
+        /// </summary>
+        /// <param name="selectItem"></param>
         [RelayCommand]
         private void TabChanged(PreviewImageModel selectItem)
         {
 
         }
+        /// <summary>
+        /// 转到下一页
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         private async Task GoToNextTab(UserControl o)
         {
