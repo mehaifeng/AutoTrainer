@@ -33,7 +33,6 @@
 				BorderBrush="LightGray"
 				BorderThickness="1"
 				CornerRadius="5"
-				FontFamily="{StaticResource NunitoFont}"
 				UseFloatingWatermark="False" 
 				Text="{Binding ModelParamStr}">
 				

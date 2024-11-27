@@ -11,6 +11,7 @@ using Avalonia.Media;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 
 namespace AutoTrainer;
 
