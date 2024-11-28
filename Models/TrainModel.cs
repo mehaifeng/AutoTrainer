@@ -1,11 +1,11 @@
-﻿using System;
+﻿using AutoTrainer.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AutoTrainer.ViewModels;
-using CommunityToolkit.Mvvm.ComponentModel;
-using Newtonsoft.Json;
 
 namespace AutoTrainer.Models
 {
@@ -59,6 +59,8 @@ namespace AutoTrainer.Models
 
         [JsonProperty("val_data_path")]
         public string ValDataPath { get; set; }
+        [JsonProperty("mutation_data_path")]
+        public string MutationDataPath { get; set; }
 
         [JsonProperty("use_Data_augmentation")]
         public bool UseDataAugmentation { get; set; }

@@ -36,32 +36,32 @@ namespace AutoTrainer.ViewModels
         private int totalPages = 0;
 
         [RelayCommand]
-        public void Loaded()
+        public async Task Loaded()
         {
-            LoadMutationData(CurrentPage);
+            await LoadMutationData(CurrentPage);
         }
         [RelayCommand]
-        public void Left()
+        public async Task Left()
         {
             if (CurrentPage > 1)
             {
                 CurrentPage--;
-                LoadMutationData(CurrentPage);
+                await LoadMutationData(CurrentPage);
             }
         }
         [RelayCommand]
-        public void Right()
+        public async Task Right()
         {
             if (CurrentPage < totalPages)
             {
                 CurrentPage++;
-                LoadMutationData(CurrentPage);
+                await LoadMutationData(CurrentPage);
             }
         }
         /// <summary>
         /// 加载变异图像
         /// </summary>
-        public void LoadMutationData(int page)
+        public Task LoadMutationData(int page)
         {
             MutationImages = [];
             string dataSetPath = App.TrainModel.TrainDataPath;
@@ -76,16 +76,23 @@ namespace AutoTrainer.ViewModels
                     files.AddRange(Directory.GetFiles(typePath)
                         .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
                 }
-                var image = files[1];
                 Shuffle(files);
 
                 //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
                 var tofiles = files.Skip((page - 1) * 500).Take(500);
                 //TotalPages = (files.Count + 499) / 500;
-                foreach (var file in tofiles)
+                var mutationDatas = Directory.GetFiles(App.MutationDataPath);
+                if (mutationDatas.Length == 0)
                 {
-                    ImageAugmentation.AugmentImage(image, , 1);
-                    using (var stream = System.IO.File.OpenRead(file))
+                    foreach (var file in tofiles)
+                    {
+                        ImageAugmentation.AugmentImage(file, App.MutationDataPath, 1);
+                    }
+                    mutationDatas = Directory.GetFiles(App.MutationDataPath);
+                }
+                foreach (var mutationData in mutationDatas)
+                {
+                    using (var stream = System.IO.File.OpenRead(mutationData))
                     {
                         var bitmap = new Bitmap(stream);
                         var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
@@ -94,9 +101,13 @@ namespace AutoTrainer.ViewModels
                             //className = Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)),
                             thumbnail = thumbnail
                         });
-
                     }
                 }
+                return Task.CompletedTask;
+            }
+            else
+            {
+                return Task.CompletedTask;
             }
         }
         /// <summary>
