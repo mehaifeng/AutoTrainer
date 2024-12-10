@@ -359,7 +359,7 @@
 						<!-- 设置 TabItem 的标题 -->
 						<TabControl.ItemTemplate>
 							<DataTemplate DataType="model:PreviewImageModel">
-								<TextBlock Text="{Binding Name}" />
+								<TextBlock Text="{Binding ClassName}" />
 							</DataTemplate>
 						</TabControl.ItemTemplate>
 
@@ -376,7 +376,7 @@
 										</ItemsControl.ItemsPanel>
 										<ItemsControl.ItemTemplate>
 											<DataTemplate>
-												<Image Source="{Binding}" Width="64" Height="64" Margin="5"/>
+												<Image Source="{Binding Image}" Width="64" Height="64" Margin="5"/>
 											</DataTemplate>
 										</ItemsControl.ItemTemplate>
 									</ItemsControl>

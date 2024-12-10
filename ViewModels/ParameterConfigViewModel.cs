@@ -23,7 +23,7 @@ namespace AutoTrainer.ViewModels
             BatchSizes = [8, 16, 32, 64];
             Optimizers = ["Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
-            SchedulingStrategies = ["ReduceLROnPlateau","StepLR"];
+            SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];
             SelectedLearningRate = LearningRates[0];
             SelectedBatchSize = BatchSizes[1];
             SelectedValidationSetRate = ValidationSetRates[1];
@@ -144,9 +144,9 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.Epochs = Epochs;
             App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
             App.TrainModel.ValidationSplit = SelectedValidationSetRate;
-            string jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json"); 
-            await File.WriteAllTextAsync(configPath,jsonStr);
+            string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
+            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
+            await File.WriteAllTextAsync(configPath, jsonStr);
         }
         #endregion
 

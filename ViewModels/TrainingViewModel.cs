@@ -1,20 +1,20 @@
-﻿using AutoTrainer.Models;
+﻿using AutoTrainer.Helpers;
+using AutoTrainer.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
+using LiveChartsCore.Defaults;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
+using Newtonsoft.Json;
+using SkiaSharp;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoTrainer.Helpers;
-using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore.Defaults;
-using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView.Painting;
-using Newtonsoft.Json;
-using SkiaSharp;
 
 namespace AutoTrainer.ViewModels
 {
@@ -29,7 +29,7 @@ namespace AutoTrainer.ViewModels
             TrainLossValues = [];
             ValidationAccValues = [];
             ValidationLossValues = [];
-            Series = 
+            Series =
             [new LineSeries<ObservableValue>(TrainAccValues)
                 {
                     Name = "Train Acc Values",
@@ -83,17 +83,17 @@ namespace AutoTrainer.ViewModels
 
         #region 可绑定属性
 
-        [ObservableProperty] 
+        [ObservableProperty]
         private ObservableCollection<ISeries> series;
         /// <summary>
         /// 训练准确度
         /// </summary>
-        [ObservableProperty] 
+        [ObservableProperty]
         private ObservableCollection<ObservableValue> trainAccValues;
         /// <summary>
         /// 训练损失度
         /// </summary>
-        [ObservableProperty] 
+        [ObservableProperty]
         private ObservableCollection<ObservableValue> trainLossValues;
         /// <summary>
         /// 验证准确度
@@ -111,7 +111,7 @@ namespace AutoTrainer.ViewModels
         private string? pyOutput;
         [ObservableProperty]
         private EpochState epochState = new();
-        
+
         public ICartesianAxis[] XAxes { get; set; } = [
             new Axis
             {
@@ -148,7 +148,7 @@ namespace AutoTrainer.ViewModels
             sb.AppendLine("训练数据路径: " + modelParam.TrainDataPath);
             sb.AppendLine("验证数据路径: " + modelParam.ValDataPath);
             sb.AppendLine("模型保存路径: " + modelParam.ModelOutputPath);
-            sb.AppendLine("日志输出路径: " + modelParam.LogOutputPath);
+            sb.AppendLine("训练日志输出路径: " + modelParam.PyTrainLogOutputPath);
             EpochState.TotalEpochs = modelParam.Epochs;
             ModelParamStr = sb.ToString();
         }
@@ -158,17 +158,17 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task StartTraining()
         {
-            var currentPyLogfile = Path.Combine(App.PyLogsFolderPath, "Log"+DateTime.Now.ToString("yyyyMMdd_HHmmss")+".json");
-            App.TrainModel.LogOutputPath = currentPyLogfile;
+            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
             var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath,"ModelParam.json"), jsonStr);
+            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
             var sb = new StringBuilder();
             sb.Append($"{App.PythonVenvPath}\\Scripts\\activate.bat");
             sb.Append(" && ");
             sb.Append($"python {Environment.CurrentDirectory}\\PyScripts\\Train.py --config {Environment.CurrentDirectory}\\Configs\\ModelParam.json");
-            _ = Task.Run(()=>ScanningThePyOutPut(cancellationTokenSource.Token));
+            _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
-            await CmdHelper.ExecuteCmdWindow(sb.ToString());
+            await CmdHelper.ExecuteCmdWindow(sb.ToString(), false);
             isPyRunning = false;
             await cancellationTokenSource.CancelAsync();
             await ReadPyOutputAtMeantime();
@@ -188,14 +188,14 @@ namespace AutoTrainer.ViewModels
             {
                 try
                 {
-                    if (!File.Exists(App.TrainModel.LogOutputPath))
+                    if (!File.Exists(App.TrainModel.PyTrainLogOutputPath))
                     {
-                        await Task.Delay(3000,CancellationToken.None);
+                        await Task.Delay(3000, CancellationToken.None);
                         continue;
                     }
                     //
                     await ReadPyOutputAtMeantime();
-                    await Task.Delay(3000,CancellationToken.None);
+                    await Task.Delay(3000, CancellationToken.None);
                 }
                 catch (Exception ex)
                 {
@@ -209,7 +209,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task ReadPyOutputAtMeantime()
         {
-            var jsonStr = await File.ReadAllTextAsync(App.TrainModel.LogOutputPath);
+            var jsonStr = await File.ReadAllTextAsync(App.TrainModel.PyTrainLogOutputPath);
             var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
             if (pyExecuteOutput is { Entries.Count: > 0 })
             {
@@ -220,16 +220,16 @@ namespace AutoTrainer.ViewModels
                 for (var i = scanningIndex; i < pyExecuteOutput.Entries.Count; i++)
                 {
                     //画图方面，需要找到type为Validation的消息
-                    if (string.Equals(pyExecuteOutput.Entries[i].Type,"Validation"))
+                    if (string.Equals(pyExecuteOutput.Entries[i].Type, "Validation"))
                     {
                         TrainAccValues.Add(new ObservableValue()
-                            { Value = pyExecuteOutput.Entries[i].Metrics.TrainAccuracy });
+                        { Value = pyExecuteOutput.Entries[i].Metrics.TrainAccuracy });
                         TrainLossValues.Add(new ObservableValue()
-                            { Value = pyExecuteOutput.Entries[i].Metrics.TrainLoss });
+                        { Value = pyExecuteOutput.Entries[i].Metrics.TrainLoss });
                         ValidationAccValues.Add(new ObservableValue()
-                            { Value = pyExecuteOutput.Entries[i].Metrics.ValidationAccuracy });
+                        { Value = pyExecuteOutput.Entries[i].Metrics.ValidationAccuracy });
                         ValidationLossValues.Add(new ObservableValue()
-                            { Value = pyExecuteOutput.Entries[i].Metrics.ValidationLoss });
+                        { Value = pyExecuteOutput.Entries[i].Metrics.ValidationLoss });
                         EpochState.CurrentEpoch = pyExecuteOutput.Entries[i].Epoch;
                     }
                     //打印输出信息

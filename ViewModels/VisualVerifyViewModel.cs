@@ -1,15 +1,21 @@
 ﻿using AutoTrainer.Helpers;
 using AutoTrainer.Models;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Logging;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MsBox.Avalonia;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -26,88 +32,143 @@ namespace AutoTrainer.ViewModels
     {
         public VisualVerifyViewModel()
         {
-
+            ClassifiedImages = [];
         }
         [ObservableProperty]
         private ObservableCollection<MutationImage> mutationImages;
         [ObservableProperty]
-        private int currentPage = 1;
+        private ObservableCollection<PreviewImageModel> classifiedImages;
         [ObservableProperty]
-        private int totalPages = 0;
+        private bool isLoadingMutationData = false;
+        [ObservableProperty]
+        private Thumbnail selectImage;
+        [ObservableProperty]
+        private string describeImage;
 
         [RelayCommand]
-        public async Task Loaded()
+        public async Task Loaded(UserControl o)
         {
-            await LoadMutationData(CurrentPage);
+            IsLoadingMutationData = true;
+            await Task.Run(LoadMutationData);
+            IsLoadingMutationData = false;
         }
         [RelayCommand]
-        public async Task Left()
+        public async Task Classify()
         {
-            if (CurrentPage > 1)
+            var todayFolder = Path.Combine(App.PyClassifyLogFolderPath, DateTime.Now.ToString("yyyyMMdd"));
+            Directory.CreateDirectory(todayFolder);
+            var specialPyLogPath = Path.Combine(todayFolder, $"Predicted_{DateTime.Now.ToString("HHmmss")}.json");
+            var classifyPyFilePath = Path.Combine(Environment.CurrentDirectory, "PyScripts/ImageClassifier.py");
+            var modelPath = Path.Combine(App.ModelOutputFolderPath, App.TrainModel.PretrainedModel + ".pth");
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{App.PythonVenvPath}\\Scripts\\activate.bat && ");
+            sb.Append($" python {classifyPyFilePath}");
+            sb.Append($" --image-folder {App.MutationDataPath}");
+            sb.Append($" --model-path {modelPath}");
+            sb.Append($" --model-name {App.TrainModel.PretrainedModel}");
+            sb.Append($" --image-folder {App.MutationDataPath}");
+            sb.Append($" --num-classes {App.TrainModel.NumClasses}");
+            sb.Append($" --output-path {specialPyLogPath}");
+            sb.Append($" && {App.PythonVenvPath}\\Scripts\\deactivate.bat");
+            await CmdHelper.ExecuteCmdWindow(sb.ToString(), false);
+            if (System.IO.File.Exists(specialPyLogPath))
             {
-                CurrentPage--;
-                await LoadMutationData(CurrentPage);
+                var jsonStr = await System.IO.File.ReadAllTextAsync(specialPyLogPath);
+                var classifyResult = JsonConvert.DeserializeObject<List<ClassifyModel>>(jsonStr);
+                if (classifyResult != null)
+                {
+                    var imageGroup = classifyResult.GroupBy(x => x.predictedClass);
+                    foreach (var thisGroup in imageGroup)
+                    {
+                        List<Thumbnail> thumbnails = [];
+                        foreach (var result in thisGroup)
+                        {
+                            if (result.imagePath == null) continue;
+                            using (var stream = System.IO.File.OpenRead(result.imagePath))
+                            {
+                                var actualClass = Path.GetFileName(Path.GetDirectoryName(result.imagePath));
+
+                                var bitmap = new Bitmap(stream);
+                                var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
+                                thumbnails.Add(new Thumbnail
+                                {
+                                    Image = thumbnail,
+                                    ImagePath = result.imagePath,
+                                    ActualClass = actualClass ?? "NULL",
+                                    PredictClass = result.predictedClass ?? "NULL",
+                                    Confidence = result.confidence,
+                                });
+                            }
+                        }
+                        ClassifiedImages.Add(new PreviewImageModel
+                        {
+                            ClassName = thisGroup.First().predictedClass,
+                            Thumbnails = new ObservableCollection<Thumbnail>(thumbnails)
+                        });
+                    }
+                }
             }
         }
         [RelayCommand]
-        public async Task Right()
+        public void HitClassifiedImage(Thumbnail thumbnail)
         {
-            if (CurrentPage < totalPages)
-            {
-                CurrentPage++;
-                await LoadMutationData(CurrentPage);
-            }
+
         }
+
+
+        #region 函数
         /// <summary>
         /// 加载变异图像
         /// </summary>
-        public Task LoadMutationData(int page)
+        public void LoadMutationData()
         {
             MutationImages = [];
             string dataSetPath = App.TrainModel.TrainDataPath;
-            var typeClasses = Directory.GetDirectories(dataSetPath);
-            if (typeClasses.Length > 0)
+            if (dataSetPath == null)
             {
-                // App.TrainModel.NumClasses = typeClasses.Length;
-                App.TrainModel.TrainDataPath = dataSetPath;
-                var files = new List<string>();
-                foreach (var typePath in typeClasses)
-                {
-                    files.AddRange(Directory.GetFiles(typePath)
-                        .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
-                }
-                Shuffle(files);
+                return;
+            }
+            else
+            {
+                var typeClasses = Directory.GetDirectories(dataSetPath);
 
-                //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
-                var tofiles = files.Skip((page - 1) * 500).Take(500);
-                //TotalPages = (files.Count + 499) / 500;
-                var mutationDatas = Directory.GetFiles(App.MutationDataPath);
-                if (mutationDatas.Length == 0)
+                if (typeClasses.Length > 0)
                 {
+                    // App.TrainModel.NumClasses = typeClasses.Length;
+                    App.TrainModel.TrainDataPath = dataSetPath;
+                    var files = new List<string>();
+                    foreach (var typePath in typeClasses)
+                    {
+                        files.AddRange(Directory.GetFiles(typePath)
+                            .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
+                    }
+                    Shuffle(files);
+                    //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
+                    var tofiles = files.Take(200);
+                    var mutationDatas = Directory.GetFiles(App.MutationDataPath);
+                    foreach (var readyToDelete in mutationDatas)
+                    {
+                        System.IO.File.Delete(readyToDelete);
+                    }
                     foreach (var file in tofiles)
                     {
                         ImageAugmentation.AugmentImage(file, App.MutationDataPath, 1);
                     }
                     mutationDatas = Directory.GetFiles(App.MutationDataPath);
-                }
-                foreach (var mutationData in mutationDatas)
-                {
-                    using (var stream = System.IO.File.OpenRead(mutationData))
+                    foreach (var mutationData in mutationDatas)
                     {
-                        var bitmap = new Bitmap(stream);
-                        var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
-                        MutationImages.Add(new MutationImage
+                        using (var stream = System.IO.File.OpenRead(mutationData))
                         {
-                            //className = Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)),
-                            thumbnail = thumbnail
-                        });
+                            var bitmap = new Bitmap(stream);
+                            var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
+                            MutationImages.Add(new MutationImage
+                            {
+                                //className = Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)),
+                                thumbnail = thumbnail
+                            });
+                        }
                     }
                 }
-                return Task.CompletedTask;
-            }
-            else
-            {
-                return Task.CompletedTask;
             }
         }
         /// <summary>
@@ -136,5 +197,6 @@ namespace AutoTrainer.ViewModels
                 list[n] = value;
             }
         }
+        #endregion
     }
 }

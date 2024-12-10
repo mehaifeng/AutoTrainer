@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -42,6 +43,8 @@ namespace AutoTrainer.ViewModels
         private string pipApps;
         [ObservableProperty]
         private string requirements;
+        [ObservableProperty]
+        private bool isEnablePythonConfigView = true;
         [ObservableProperty]
         private string enviromentState = "Environment State";
         [ObservableProperty]
@@ -99,6 +102,7 @@ namespace AutoTrainer.ViewModels
         {
             if (!string.IsNullOrEmpty(PythonVenvPath))
             {
+                ModelList = new ObservableCollection<string>();
                 List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", $"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py list", $"{PythonVenvPath}\\Scripts\\deactivate.bat"];
                 var result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
                 if (result.Item1 == 0)
@@ -106,7 +110,14 @@ namespace AutoTrainer.ViewModels
                     if (result.Item2.Contains("###Models###"))
                     {
                         var modelNames = result.Item2.Split("###Models###")[1].TrimStart().TrimEnd().Split("\r\n");
-                        ModelList = new ObservableCollection<string>(modelNames);
+                        for (int i = 0; i < modelNames.Length; i++)
+                        {
+                            var name = modelNames[i].ToLower();
+                            if (name.StartsWith("resnet") || name.StartsWith("efficientnet") || name.StartsWith("mobilenet") || name.StartsWith("densenet") || name.StartsWith("vgg"))
+                            {
+                                ModelList.Add(name);
+                            }
+                        }
                     }
                 }
             }
@@ -114,6 +125,21 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 命令
+        /// <summary>
+        /// 创建Vevn环境
+        /// </summary>
+        /// <returns></returns>
+        [RelayCommand]
+        public async Task CreateVenv()
+        {
+            string venvFolder = Path.Combine(Environment.CurrentDirectory, "Venvs");
+            Directory.CreateDirectory(venvFolder);
+            string venvPath = Path.Combine(venvFolder, DateTime.Now.ToString("yyMMddHHmmss_Venv"));
+            IsEnablePythonConfigView = false;
+            await CmdHelper.ExecuteCmdWindow($"python -m venv {venvPath}", false);
+            IsEnablePythonConfigView = true;
+            PythonVenvPath = venvPath;
+        }
         /// <summary>
         /// 进入Venv环境，执行Pip List
         /// </summary>
@@ -207,7 +233,7 @@ namespace AutoTrainer.ViewModels
 
 
                     // 创建并等待所有任务完成
-                    Task[] commonTasks = [CmdHelper.ExecuteCmdWindow(commands.ToString()), ExecutePy()];
+                    Task[] commonTasks = [CmdHelper.ExecuteCmdWindow(commands.ToString(), true), ExecutePy()];
 
                     // 等待所有任务完成
                     await Task.WhenAll(commonTasks);
@@ -244,6 +270,11 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
+        /// <summary>
+        /// 转到下一页
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         public static async Task GoToNextTab(UserControl o)
         {

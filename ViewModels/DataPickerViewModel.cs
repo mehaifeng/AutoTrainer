@@ -410,7 +410,7 @@ namespace AutoTrainer.ViewModels
                 var typeClasses = Directory.GetDirectories(folderPath);
                 if (typeClasses.Length > 0)
                 {
-                    // App.TrainModel.NumClasses = typeClasses.Length;
+                    App.TrainModel.NumClasses = typeClasses.Length;
                     App.TrainModel.TrainDataPath = folderPath;
                     foreach (var typePath in typeClasses)
                     {
@@ -421,7 +421,7 @@ namespace AutoTrainer.ViewModels
                         var toFiles = files.Take(20);
                         PreviewImageModel model = new()
                         {
-                            Name = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+                            ClassName = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
                         };
                         foreach (var file in toFiles)
                         {
@@ -429,10 +429,14 @@ namespace AutoTrainer.ViewModels
                             {
                                 var bitmap = new Bitmap(stream);
                                 var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
-                                model.Thumbnails.Add(thumbnail);
+                                model.Thumbnails.Add(new Thumbnail
+                                {
+                                    ActualClass = typePath,
+                                    Image = thumbnail
+                                });
                             }
                         }
-                        PreviewState += $"{model.Name}:{count}张; ";
+                        PreviewState += $"{model.Thumbnails.Count}:{count}张; ";
                         ImageCategories.Add(model);
                     }
                     IsVisibleIntroduce = true;

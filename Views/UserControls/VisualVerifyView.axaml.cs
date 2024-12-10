@@ -25,4 +25,19 @@ public partial class VisualVerifyView : UserControl
         _viewmodel = new VisualVerifyViewModel();
         DataContext = _viewmodel;
     }
+
+    private void classifiedImage_btn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button)
+        {
+            var btn = (Button)sender;
+            var image = btn.Content as Image;
+            if (image != null)
+            {
+                Thumbnail imageInfo = (Thumbnail)image.DataContext;
+                _viewmodel.SelectImage = imageInfo;
+                _viewmodel.DescribeImage = $"识别类别:\n{imageInfo.PredictClass}\n置信度:\n{imageInfo.Confidence}\n实际类别:\n{imageInfo.ActualClass}\n图片路径:\n{imageInfo.ImagePath}";
+            }
+        }
+    }
 }

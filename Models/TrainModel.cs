@@ -48,8 +48,8 @@ namespace AutoTrainer.Models
         [JsonProperty("model_output_path")]
         public string ModelOutputPath { get; set; }
 
-        [JsonProperty("log_output_path")]
-        public string LogOutputPath { get; set; }
+        [JsonProperty("py_train_log_output_path")]
+        public string PyTrainLogOutputPath { get; set; }
 
         [JsonProperty("pretrained_model")]
         public string PretrainedModel { get; set; }
@@ -59,6 +59,8 @@ namespace AutoTrainer.Models
 
         [JsonProperty("val_data_path")]
         public string ValDataPath { get; set; }
+        [JsonProperty("num_classes")]
+        public int NumClasses { get; set; }
         [JsonProperty("mutation_data_path")]
         public string MutationDataPath { get; set; }
 

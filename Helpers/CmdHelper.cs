@@ -162,8 +162,10 @@ namespace AutoTrainer.Helpers
         /// <summary>
         /// 打开终端，执行命令,无返回
         /// </summary>
-        /// <param name="command"></param>
-        public async static Task ExecuteCmdWindow(string command)
+        /// <param name="command">命令</param>
+        /// <param name="isShowTerminal">是否显示终端</param>
+        /// <returns></returns>
+        public async static Task ExecuteCmdWindow(string command, bool isShowTerminal)
 
         {
             // 创建进程启动信息
@@ -176,7 +178,7 @@ namespace AutoTrainer.Helpers
             startInfo.RedirectStandardOutput = false;  // 改为false，允许直接输出到控制台
             startInfo.RedirectStandardError = false;   // 改为false，允许直接输出错误到控制台
             startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = false;          // 显示控制台窗口
+            startInfo.CreateNoWindow = !isShowTerminal;          // 显示控制台窗口
 
             try
             {

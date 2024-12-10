@@ -15,6 +15,9 @@
   <ItemGroup>
     <None Remove="Assets\ImageClassify.webp" />
     <None Remove="Assets\ValuePredict.webp" />
+    <None Update="PyScripts\ImageClassifier.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="PyScripts\Train.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

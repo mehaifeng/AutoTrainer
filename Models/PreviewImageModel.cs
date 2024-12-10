@@ -2,6 +2,7 @@
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,8 +15,22 @@ namespace AutoTrainer.Models
     public partial class PreviewImageModel : ViewModelBase
     {
         [ObservableProperty]
-        private string? name;
+        private string? className;
         [ObservableProperty]
-        private ObservableCollection<IImage> thumbnails = [];
+        private ObservableCollection<Thumbnail>? thumbnails = [];
+    }
+    public partial class Thumbnail : ViewModelBase
+    {
+        [ObservableProperty]
+        private IImage? image;
+        [ObservableProperty]
+        private string? imagePath;
+        [ObservableProperty]
+        private string? actualClass;
+        [ObservableProperty]
+        private string? predictClass;
+        [ObservableProperty]
+        private double confidence;
+
     }
 }
