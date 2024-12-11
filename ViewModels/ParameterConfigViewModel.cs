@@ -64,7 +64,6 @@ namespace AutoTrainer.ViewModels
             {
                 SetProperty(ref epochs, value);
                 OnPropertyChanged(nameof(Epochs));
-                ShowNextBtn();
             }
         }
         /// <summary>
@@ -113,7 +112,6 @@ namespace AutoTrainer.ViewModels
             {
                 SetProperty(ref earlyStopRound, value);
                 OnPropertyChanged(nameof(EarlyStopRound));
-                ShowNextBtn();
             }
         }
         /// <summary>
@@ -133,7 +131,7 @@ namespace AutoTrainer.ViewModels
             }
         }
         [RelayCommand]
-        private async void SaveConfig()
+        private async Task SaveConfig()
         {
             App.TrainModel.LearningRate = SelectedLearningRate;
             App.TrainModel.LrScheduler = SelectedStrategy;
@@ -147,13 +145,7 @@ namespace AutoTrainer.ViewModels
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
             string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
             await File.WriteAllTextAsync(configPath, jsonStr);
-        }
-        #endregion
-
-        #region 函数
-        private void ShowNextBtn()
-        {
-            IsVisibleNextStep = (Epochs > 0 && EarlyStopRound > 0) ? true : false;
+            IsVisibleNextStep = true;
         }
         #endregion
     }

@@ -14,7 +14,7 @@ namespace AutoTrainer.Helpers
         /// </summary>
         public static List<string> AugmentImage(string originalImagePath, string outputDirectory, int augmentationCount = 10)
         {
-            List<string> augmentedImagePaths = new List<string>();
+            List<string> augmentedImagePaths = [];
 
             // 确保输出目录存在
             Directory.CreateDirectory(outputDirectory);
@@ -74,8 +74,9 @@ namespace AutoTrainer.Helpers
                         // 保存增强后的图像
                         SKImage image = surface.Snapshot();
                         SKData data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
-
-                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}.jpg");
+                        var count = originalImagePath.Split("\\");
+                        var className = count[count.Length - 2];
+                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{className}_CLASS_.jpg");
                         using (FileStream stream = File.OpenWrite(outputPath))
                         {
                             data.SaveTo(stream);

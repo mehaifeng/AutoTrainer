@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Logging;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -41,9 +42,13 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isLoadingMutationData = false;
         [ObservableProperty]
+        private bool isInSortingTask = false;
+        [ObservableProperty]
         private Thumbnail selectImage;
         [ObservableProperty]
         private string describeImage;
+        [ObservableProperty]
+        private bool isShowNextPageBtn = false;
 
         [RelayCommand]
         public async Task Loaded(UserControl o)
@@ -70,6 +75,7 @@ namespace AutoTrainer.ViewModels
             sb.Append($" --num-classes {App.TrainModel.NumClasses}");
             sb.Append($" --output-path {specialPyLogPath}");
             sb.Append($" && {App.PythonVenvPath}\\Scripts\\deactivate.bat");
+            IsInSortingTask = true;
             await CmdHelper.ExecuteCmdWindow(sb.ToString(), false);
             if (System.IO.File.Exists(specialPyLogPath))
             {
@@ -86,8 +92,7 @@ namespace AutoTrainer.ViewModels
                             if (result.imagePath == null) continue;
                             using (var stream = System.IO.File.OpenRead(result.imagePath))
                             {
-                                var actualClass = Path.GetFileName(Path.GetDirectoryName(result.imagePath));
-
+                                var actualClass = result.imagePath.Split("_CLASS_")[1];
                                 var bitmap = new Bitmap(stream);
                                 var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
                                 thumbnails.Add(new Thumbnail
@@ -108,11 +113,16 @@ namespace AutoTrainer.ViewModels
                     }
                 }
             }
+            IsInSortingTask = false;
+            IsShowNextPageBtn = true;
         }
         [RelayCommand]
-        public void HitClassifiedImage(Thumbnail thumbnail)
+        private static async Task GoToExportPage(UserControl o)
         {
-
+            if (o.Parent != null && o.Parent.Parent is TabControl control)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 5);
+            }
         }
 
 
@@ -163,7 +173,7 @@ namespace AutoTrainer.ViewModels
                             var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
                             MutationImages.Add(new MutationImage
                             {
-                                //className = Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)),
+                                //className = mutationData.Split("_CLASS_")[1],
                                 thumbnail = thumbnail
                             });
                         }

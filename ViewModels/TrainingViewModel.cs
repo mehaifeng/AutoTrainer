@@ -168,7 +168,7 @@ namespace AutoTrainer.ViewModels
             sb.Append($"python {Environment.CurrentDirectory}\\PyScripts\\Train.py --config {Environment.CurrentDirectory}\\Configs\\ModelParam.json");
             _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
-            await CmdHelper.ExecuteCmdWindow(sb.ToString(), false);
+            await CmdHelper.ExecuteCmdWindow(sb.ToString(), true);
             isPyRunning = false;
             await cancellationTokenSource.CancelAsync();
             await ReadPyOutputAtMeantime();

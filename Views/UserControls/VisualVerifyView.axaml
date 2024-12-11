@@ -13,12 +13,12 @@
 			 d:DesignWidth="1200" 
 			 d:DesignHeight="820"
 			 Padding="10"
-			 x:Name="DataTabItem"
+			 x:Name="VerifyTabItem"
 			 x:DataType="vm:VisualVerifyViewModel"
              x:Class="AutoTrainer.VisualVerifyView">
 	<i:Interaction.Behaviors>
 		<ia:EventTriggerBehavior EventName="Loaded">
-			<InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=DataTabItem}"/>
+			<InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=VerifyTabItem}"/>
 		</ia:EventTriggerBehavior>
 	</i:Interaction.Behaviors>
 	<UserControl.Resources>
@@ -138,9 +138,10 @@
 					BorderThickness="2">
 					<Image Source="{Binding SelectImage.Image}"/>
 				</Border>
-				<TextBlock 
+				<TextBlock
 					Text="{Binding DescribeImage}"
 					HorizontalAlignment="Center"
+					TextWrapping="Wrap"
 					Margin="0,10,0,0"/>
 			</StackPanel>
 			<StackPanel
@@ -148,7 +149,7 @@
 				Orientation="Vertical"
 				HorizontalAlignment="Center"
 				VerticalAlignment="Center">
-				<Button 
+				<Button
 					Classes="light"
 					Height="35"
 					Width="100"
@@ -158,48 +159,92 @@
 			</StackPanel>
 		</Grid>
 		<Grid Grid.Column="2" RowDefinitions="100,*">
-			<TabControl
+			<controls:FloatingButton
+				Grid.Row="0"
+				Grid.Column="2"
+				Margin="0,0,10,0"
+				Width="150"
+				IsVisible="{Binding IsShowNextPageBtn}"
+				Command="{Binding GoToExportPageCommand}"
+				CommandParameter="{Binding ElementName=VerifyTabItem}"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Center"
+				Classes="Light"
+				IsExtended="True">
+				<controls:FloatingButton.Styles>
+					<Style Selector="controls|FloatingButton">
+						<Setter Property="Content">
+							<Setter.Value>
+								<Template>
+									<StackPanel Orientation="Horizontal">
+										<Viewbox Stretch="None"
+												 HorizontalAlignment="Left"
+												 VerticalAlignment="Center">
+											<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
+										</Viewbox>
+										<TextBlock
+											Margin="10,0,0,0"
+											FontSize="16"
+											VerticalAlignment="Center"
+											Text="Next Step"/>
+									</StackPanel>
+								</Template>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</controls:FloatingButton.Styles>
+			</controls:FloatingButton>
+			<Border
 				Grid.Row="1"
 				CornerRadius="5"
-				BorderBrush="LightGray"
-				BorderThickness="2"
-				Theme="{StaticResource ScrollableTabControl}"
-				x:Name="PreviewTab"
-				ItemsSource="{Binding ClassifiedImages}">
-				<i:Interaction.Behaviors>
-					<ia:EventTriggerBehavior EventName="SelectionChanged">
-						<ia:InvokeCommandAction Command="{Binding}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}"/>
-					</ia:EventTriggerBehavior>
-				</i:Interaction.Behaviors>
-				<!-- 设置 TabItem 的标题 -->
-				<TabControl.ItemTemplate>
-					<DataTemplate DataType="model:PreviewImageModel">
-						<TextBlock Text="{Binding ClassName}" />
-					</DataTemplate>
-				</TabControl.ItemTemplate>
-				<!-- 设置每个 TabItem 的内容 -->
-				<TabControl.ContentTemplate>
-					<DataTemplate DataType="model:PreviewImageModel">
-						<!-- 绑定并展示该类别的缩略图 -->
-						<ScrollViewer>
-							<ItemsControl ItemsSource="{Binding Thumbnails}">
-								<ItemsControl.ItemsPanel>
-									<ItemsPanelTemplate>
-										<WrapPanel/>
-									</ItemsPanelTemplate>
-								</ItemsControl.ItemsPanel>
-								<ItemsControl.ItemTemplate>
-									<DataTemplate>
-										<Button x:Name="classifiedImage_btn" Background="Transparent" BorderThickness="0" Click="classifiedImage_btn_Click"  CommandParameter="{Binding .}">
-											<Image Source="{Binding Image}" Width="64" Height="64"/>
-										</Button>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-						</ScrollViewer>
-					</DataTemplate>
-				</TabControl.ContentTemplate>
-			</TabControl>
+				Margin="0,100,0,0"
+				IsVisible="{Binding IsInSortingTask}">
+				<ProgressBar Classes="circular" IsIndeterminate="True" />
+			</Border>
+			<Grid Grid.Row="1">
+				<TabControl
+					Grid.Row="1"
+					CornerRadius="5"
+					BorderBrush="LightGray"
+					BorderThickness="2"
+					Theme="{StaticResource ScrollableTabControl}"
+					x:Name="PreviewTab"
+					ItemsSource="{Binding ClassifiedImages}">
+					<i:Interaction.Behaviors>
+						<ia:EventTriggerBehavior EventName="SelectionChanged">
+							<ia:InvokeCommandAction Command="{Binding}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}"/>
+						</ia:EventTriggerBehavior>
+					</i:Interaction.Behaviors>
+					<!-- 设置 TabItem 的标题 -->
+					<TabControl.ItemTemplate>
+						<DataTemplate DataType="model:PreviewImageModel">
+							<TextBlock Text="{Binding ClassName}" />
+						</DataTemplate>
+					</TabControl.ItemTemplate>
+					<!-- 设置每个 TabItem 的内容 -->
+					<TabControl.ContentTemplate>
+						<DataTemplate DataType="model:PreviewImageModel">
+							<!-- 绑定并展示该类别的缩略图 -->
+							<ScrollViewer>
+								<ItemsControl ItemsSource="{Binding Thumbnails}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Button x:Name="classifiedImage_btn" Background="Transparent" BorderThickness="0" Click="classifiedImage_btn_Click"  CommandParameter="{Binding .}">
+												<Image Source="{Binding Image}" Width="64" Height="64"/>
+											</Button>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</DataTemplate>
+					</TabControl.ContentTemplate>
+				</TabControl>
+			</Grid>
 		</Grid>
 	</Grid>
 </UserControl>
