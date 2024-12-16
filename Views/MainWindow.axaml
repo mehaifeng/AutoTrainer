@@ -34,7 +34,7 @@
 				<local:VisualVerifyView/>
 			</TabItem>
 			<TabItem Header="导出" IsEnabled="{Binding IsEnableExportTab}">
-				<TextBlock Classes="Centered" Text="Page 6" />
+				<local:ConvertToExportView/>
 			</TabItem>
 		</TabControl.Items>
 	</TabControl>

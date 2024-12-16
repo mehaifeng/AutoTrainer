@@ -18,7 +18,7 @@
     <None Update="PyScripts\ImageClassifier.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="PyScripts\Train.py">
+    <None Update="PyScripts\ModelTrainer.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

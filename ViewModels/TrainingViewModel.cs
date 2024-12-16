@@ -165,7 +165,7 @@ namespace AutoTrainer.ViewModels
             var sb = new StringBuilder();
             sb.Append($"{App.PythonVenvPath}\\Scripts\\activate.bat");
             sb.Append(" && ");
-            sb.Append($"python {Environment.CurrentDirectory}\\PyScripts\\Train.py --config {Environment.CurrentDirectory}\\Configs\\ModelParam.json");
+            sb.Append($"python {Environment.CurrentDirectory}\\PyScripts\\ModelTrainer.py --config {Environment.CurrentDirectory}\\Configs\\ModelParam.json");
             _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
             await CmdHelper.ExecuteCmdWindow(sb.ToString(), true);

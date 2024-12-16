@@ -29,7 +29,7 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 全局属性
-        private string[] RequireApps = ["torch", "torchvision", "opencv-python", "pillow", "Matplotlib", "scikit-learn", "albumentations", "tqdm"];
+        private string[] RequireApps = ["torch", "torchvision", "opencv-python", "pillow", "Matplotlib", "scikit-learn", "albumentations", "tqdm", "onnx2tf", "tensorflow"];
         private List<string> MissingApps = [];
         StringBuilder sb = new StringBuilder();
         #endregion

@@ -103,7 +103,7 @@
 					BorderBrush="LightGray"
 					BorderThickness="2"
 					CornerRadius="5">
-					<ScrollViewer>
+					<ScrollViewer Classes="no-auto-hide">
 						<ItemsControl ItemsSource="{Binding MutationImages}">
 							<ItemsControl.ItemsPanel>
 								<ItemsPanelTemplate>
@@ -225,7 +225,7 @@
 					<TabControl.ContentTemplate>
 						<DataTemplate DataType="model:PreviewImageModel">
 							<!-- 绑定并展示该类别的缩略图 -->
-							<ScrollViewer>
+							<ScrollViewer Classes="no-auto-hide">
 								<ItemsControl ItemsSource="{Binding Thumbnails}">
 									<ItemsControl.ItemsPanel>
 										<ItemsPanelTemplate>

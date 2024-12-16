@@ -1,11 +1,12 @@
 import argparse
 import torch
-import torch.onnx
+import torch.onnx as onnx
 import torchvision.models as models
 from pathlib import Path
 import json
 import logging
 import sys
+import onnx2tf
 
 # 配置日志
 logging.basicConfig(
@@ -33,7 +34,7 @@ SUPPORTED_MODELS = {
 }
 
 # 支持的转换格式
-SUPPORTED_FORMATS = ['onnx', 'tensorflow', 'caffe', 'coreml', 'torchscript', 'openvino', 'tensorrt']
+SUPPORTED_FORMATS = ['onnx', 'tensorflow']
 
 def load_model(model_name: str, weights_path: str = None) -> torch.nn.Module:
     """
@@ -102,17 +103,20 @@ def convert_to_tensorflow(model: torch.nn.Module, output_path: str):
         temp_onnx_path = output_path.replace('.pb', '.onnx')
         convert_to_onnx(model, temp_onnx_path)
 
+
         # 使用onnx2tf进行转换
-        try:
-            import onnx2tf
-            onnx2tf.convert(
-                input_onnx_file_path=temp_onnx_path,
-                output_folder_path=str(Path(output_path).parent)
-            )
-            logging.info(f"模型已成功转换为TensorFlow格式并保存到: {output_path}")
-        except ImportError:
-            logging.error("请安装onnx2tf: pip install onnx2tf")
-            raise
+        onnx2tf.convert(
+            input_onnx_file_path=temp_onnx_path,
+            output_folder_path=str(Path(output_path).parent),
+            output_tfv1_pb=True,
+            non_verbose=True
+        )
+        # 重命名 saved_model.pb 为目标文件名
+        saved_model_path = Path(output_path).parent / 'saved_model.pb'
+        if saved_model_path.exists():
+            saved_model_path.rename(output_path)
+        logging.info(f"模型已成功转换为TensorFlow格式并保存到: {output_path}")
+
 
         # 删除临时ONNX文件
         Path(temp_onnx_path).unlink()
@@ -162,9 +166,6 @@ def convert_model(
     elif target_format.lower() == 'tensorflow':
         output_path = f"{output_path}.pb"
         convert_to_tensorflow(model, output_path)
-    elif target_format.lower() in ['caffe', 'coreml', 'openvino', 'tensorrt']:
-        logging.error(f"暂不支持转换为 {target_format} 格式，请先转换为ONNX格式后使用专门的工具进行转换")
-        return
     
     logging.info(f"模型转换完成！输出路径: {output_path}")
 
