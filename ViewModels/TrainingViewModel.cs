@@ -1,5 +1,7 @@
 ﻿using AutoTrainer.Helpers;
 using AutoTrainer.Models;
+using Avalonia.Controls;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore;
@@ -106,6 +108,8 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private ObservableCollection<ObservableValue> validationLossValues;
         [ObservableProperty]
+        private bool isShowNextPage = false;
+        [ObservableProperty]
         private string? modelParamStr;
         [ObservableProperty]
         private string? pyOutput;
@@ -158,6 +162,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task StartTraining()
         {
+            IsShowNextPage = false;
             var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
             App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
             var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
@@ -172,6 +177,15 @@ namespace AutoTrainer.ViewModels
             isPyRunning = false;
             await cancellationTokenSource.CancelAsync();
             await ReadPyOutputAtMeantime();
+            IsShowNextPage = true;
+        }
+        [RelayCommand]
+        private async Task GotoNextPage(UserControl o)
+        {
+            if (o.Parent != null && o.Parent.Parent is TabControl control)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 4);
+            }
         }
         #endregion
 

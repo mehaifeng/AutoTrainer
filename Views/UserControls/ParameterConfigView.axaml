@@ -167,7 +167,7 @@
 					Grid.Row="4" 
 					RowDefinitions="*,5*">
 					<TextBlock 
-						Text="数据增强"/>
+						Text="数据增强(暂不可用)"/>
 					<Border
 						Grid.Row="1"
 						CornerRadius="5"

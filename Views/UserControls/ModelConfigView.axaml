@@ -23,7 +23,7 @@
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*"/>
-					<RowDefinition Height="80"/>
+					<RowDefinition Height="90"/>
 				</Grid.RowDefinitions>
 				<Grid Grid.Row="0">
 					<Grid.RowDefinitions>
@@ -60,7 +60,7 @@
 						HorizontalAlignment="Center">
 						<RadioButton 
 							GroupName="1" 
-							Content="Global" 
+							Content="Global"
 							VerticalAlignment="Center"
 							IsChecked="{Binding IsCheckedGlobal}"/>
 						<RadioButton 
@@ -101,6 +101,7 @@
 										</avalonia:MaterialIcon.Styles>
 									</avalonia:MaterialIcon>
 								</Panel>
+
 							</Button.Content>
 						</Button>
 					</StackPanel>
@@ -130,7 +131,7 @@
 				<!--Enviroment State-->
 				<StackPanel 
 					Grid.Row="1" 
-					Margin="0,20,0,0"
+					Margin="0,15,0,0"
 					Orientation="Vertical">
 					<TextBlock 
 						HorizontalAlignment="Center"
@@ -261,23 +262,40 @@
 							Classes="Light Mini" 
 							HorizontalAlignment="Right" 
 							VerticalAlignment="Bottom" 
+							IsEnabled="{Binding !IsExcutingPyScript}"
 							Margin="10"
 							Command="{Binding ExecutePyCommand}">
-							<controls:FloatingButton.Styles>
-								<Style Selector="controls|FloatingButton">
-									<Setter Property="Content">
-										<Setter.Value>
-											<Template>
-												<Viewbox Stretch="Fill"
-														 HorizontalAlignment="Stretch"
-														 VerticalAlignment="Stretch">
-													<avalonia:MaterialIcon Kind="Play" Width="24" Height="24" />
-												</Viewbox>
-											</Template>
-										</Setter.Value>
-									</Setter>
-								</Style>
-							</controls:FloatingButton.Styles>
+							<controls:FloatingButton.Content>
+								<Panel>
+									<!-- 默认文本 -->
+									<Viewbox>
+										<avalonia:MaterialIcon Kind="Play" IsVisible="{Binding !IsExcutingPyScript}"/>
+									</Viewbox>
+
+									<!-- Loading图标 -->
+									<avalonia:MaterialIcon Kind="Loading"
+														   Width="26"
+														   Height="26"
+														 IsVisible="{Binding IsExcutingPyScript}">
+										<avalonia:MaterialIcon.Styles>
+											<Style Selector="avalonia|MaterialIcon">
+												<Style.Animations>
+													<Animation Duration="0:0:1"
+															 IterationCount="INFINITE">
+														<KeyFrame Cue="0%">
+															<Setter Property="RotateTransform.Angle" Value="0.0"/>
+														</KeyFrame>
+														<KeyFrame Cue="100%">
+															<Setter Property="RotateTransform.Angle" Value="360.0"/>
+														</KeyFrame>
+													</Animation>
+												</Style.Animations>
+											</Style>
+										</avalonia:MaterialIcon.Styles>
+									</avalonia:MaterialIcon>
+								</Panel>
+
+							</controls:FloatingButton.Content>
 						</controls:FloatingButton>
 					</Grid>
 				</Border>

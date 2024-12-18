@@ -16,6 +16,6 @@
   
     <Application.Styles>
 	    <avalonia:MaterialIconStyles/>
-		<themes:MaterialTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Lime"/>
+		<themes:MaterialTheme BaseTheme="Light" PrimaryColor="Cyan" SecondaryColor="Indigo"/>
     </Application.Styles>
 </Application>

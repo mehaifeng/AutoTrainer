@@ -8,13 +8,21 @@
              xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
+			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
 			 d:DesignWidth="1000"
 			 d:DesignHeight="650"
 			 x:Name="ConverterView"
 			 x:DataType="vm:ConvertToExportViewModel"
              x:Class="AutoTrainer.ConvertToExportView">
-	<Grid RowDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+	<i:Interaction.Behaviors>
+		<ia:EventTriggerBehavior EventName="Loaded">
+			<ia:InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
+		</ia:EventTriggerBehavior>
+	</i:Interaction.Behaviors>
+	<controls:SnackbarHost x:Name="SnackBarHost" HostName="{Binding $self.Name}" HorizontalAlignment="Center">
+		<Grid RowDefinitions="Auto,Auto,80" VerticalAlignment="Center">
 		<Border
+			Grid.Row="0"
 			x:Name="PyTorchBorder"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Top"
@@ -50,19 +58,25 @@
 			<Button
 				BorderThickness="0"
 				Background="{x:Null}"
+				IsEnabled="{Binding IsEnableConvert}"
 				Command="{Binding ConvertToONNXCommand}"
+				CommandParameter="{Binding ElementName=SnackBarHost}"
 				Content="Convert to ONNX"
 				Margin="0,0,0,15"/>
 			<Button
 				BorderThickness="0"
 				Background="{x:Null}"
+				IsEnabled="{Binding IsEnableConvert}"
 				Command="{Binding ConvertToTensorFlowCommand}"
+				CommandParameter="{Binding ElementName=SnackBarHost}"
 				Content="Convert to TensorFlow"/>
 		</StackPanel>
-		<ProgressBar
-			Grid.Row="2" 
-			HorizontalAlignment="Center" 
-			IsIndeterminate="True" 
-			IsVisible="{Binding IsConverting}"/>
+		<Border Grid.Row="2">
+			<ProgressBar
+				Width="80"
+				IsIndeterminate="True"
+				IsVisible="{Binding IsConverting}"/>
+		</Border>
 	</Grid>
+	</controls:SnackbarHost>
 </UserControl>

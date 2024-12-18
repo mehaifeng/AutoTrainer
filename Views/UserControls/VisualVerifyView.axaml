@@ -83,7 +83,7 @@
 					Classes="light" 
 					Height="35"
 					Margin="10,0,0,0"
-					Content="选择路径"/>
+					Content="选择路径（不可用）"/>
 			</StackPanel>
 
 

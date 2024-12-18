@@ -29,12 +29,26 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 全局属性
-        private string[] RequireApps = ["torch", "torchvision", "opencv-python", "pillow", "Matplotlib", "scikit-learn", "albumentations", "tqdm", "onnx2tf", "tensorflow"];
+        private string[] RequireApps = [
+            "torch",
+            "torchvision",
+            "opencv-python",
+            "pillow",
+            "Matplotlib",
+            "scikit-learn",
+            "albumentations",
+            "tqdm",
+            "onnx2tf",
+            "tensorflow",
+            "tf_keras",
+        "psutil",
+        "onnx-graphsurgeon"];
         private List<string> MissingApps = [];
         StringBuilder sb = new StringBuilder();
         #endregion
 
         #region 绑定属性
+
         [ObservableProperty]
         private string pythonPath;
         [ObservableProperty]
@@ -71,6 +85,8 @@ namespace AutoTrainer.ViewModels
         private bool isVisibleProgressBar = false;
         [ObservableProperty]
         private bool isRunningProgressBar = false;
+        [ObservableProperty]
+        private bool isExcutingPyScript = false;
         #endregion
 
         #region 函数
@@ -153,6 +169,7 @@ namespace AutoTrainer.ViewModels
                 bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
+                    IsExcutingPyScript = true;
                     App.PythonVenvPath = PythonVenvPath;
                     List<string> commands = [$"{PythonVenvPath}\\Scripts\\activate.bat", "pip list"];
                     (int, string) result = await CmdHelper.ExecuteMultiLines("cmd.exe", commands);
@@ -195,6 +212,7 @@ namespace AutoTrainer.ViewModels
                         StateForeground = Brushes.Green;
                         IsVisibleInstallMissing = false;
                     }
+                    IsExcutingPyScript = false;
                     Outputs = sb.ToString();
                 }
                 else
