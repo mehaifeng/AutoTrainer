@@ -12,7 +12,7 @@ namespace AutoTrainer.Helpers
         /// <summary>
         /// 对输入图像进行数据增强
         /// </summary>
-        public static List<string> AugmentImage(string originalImagePath, string outputDirectory, int augmentationCount = 10)
+        public static List<string> AugmentImage(int index, string originalImagePath, string outputDirectory, int augmentationCount = 10)
         {
             List<string> augmentedImagePaths = [];
 
@@ -76,7 +76,7 @@ namespace AutoTrainer.Helpers
                         SKData data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
                         var count = originalImagePath.Split("\\");
                         var className = count[count.Length - 2];
-                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{className}_CLASS_.jpg");
+                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{index}({className})_CLASS_.jpg");
                         using (FileStream stream = File.OpenWrite(outputPath))
                         {
                             data.SaveTo(stream);

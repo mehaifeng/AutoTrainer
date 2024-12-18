@@ -407,11 +407,13 @@ namespace AutoTrainer.ViewModels
         {
             if (Directory.Exists(folderPath))
             {
+                ImageCategories = [];
                 var typeClasses = Directory.GetDirectories(folderPath);
                 if (typeClasses.Length > 0)
                 {
                     App.TrainModel.NumClasses = typeClasses.Length;
                     App.TrainModel.TrainDataPath = folderPath;
+                    PreviewState = string.Empty;
                     foreach (var typePath in typeClasses)
                     {
                         var files = Directory.GetFiles(typePath)
@@ -421,7 +423,8 @@ namespace AutoTrainer.ViewModels
                         var toFiles = files.Take(20);
                         PreviewImageModel model = new()
                         {
-                            ClassName = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+                            ClassName = System.IO.Path.GetFileName(typePath.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar)),
+                            Thumbnails = []
                         };
                         foreach (var file in toFiles)
                         {
@@ -436,7 +439,7 @@ namespace AutoTrainer.ViewModels
                                 });
                             }
                         }
-                        PreviewState += $"{model.Thumbnails.Count}:{count}张; ";
+                        PreviewState += $"{model.ClassName}:{count}张; ";
                         ImageCategories.Add(model);
                     }
                     IsVisibleIntroduce = true;
@@ -475,7 +478,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task SaveConfig()
         {
-            string jsonStr = JsonConvert.SerializeObject(CropConfigs);
+            string jsonStr = JsonConvert.SerializeObject(CropConfigs,Formatting.Indented);
             var configPath = System.IO.Path.Combine(App.ConfigFolderPath, "CropConfig.json");
             await File.WriteAllTextAsync(configPath, jsonStr);
         }

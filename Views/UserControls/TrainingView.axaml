@@ -35,14 +35,15 @@
 				CornerRadius="5"
 				UseFloatingWatermark="False" 
 				Text="{Binding ModelParamStr}">
-				
 			</TextBox>
 			<TextBox
+				x:Name="PyOutput_Tb"
 				Grid.Row="1"
 				Margin="0,10,0,0"
 				BorderBrush="LightGray"
 				BorderThickness="1"
 				CornerRadius="5"
+				TextChanged="PyOutput_Tb_TextChanged"
 				UseFloatingWatermark="False" 
 				Text="{Binding PyOutput}"/>
 		</Grid>
@@ -129,7 +130,11 @@
 						FontFamily="avares://AutoTrainer/Assets/Fonts#思源黑体 CN Bold"
 						Command="{Binding StartTrainingCommand}">
 					</Button>
-					<Button Height="35" Margin="10,0,0,0" Content="暂停(不可用)"/>
+					<Button
+						Height="35"
+						Margin="10,0,0,0"
+						Content="暂停(不可用)">
+					</Button>
 					<Button Height="35" Margin="10,0,0,0" Content="停止(不可用)"/>
 				</StackPanel>
 			</Grid>

@@ -4,9 +4,26 @@
              xmlns:local="using:AutoTrainer"
 			 xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
 			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+			 xmlns:dataGrid="clr-namespace:Material.Avalonia.DataGrid;assembly=Material.Avalonia.DataGrid"
              RequestedThemeVariant="Default">
-	    <Application.Resources>
-        <FontFamily x:Key="NunitoFont">avares://AutoTrainer/Assets/Fonts#思源黑体 CN Bold</FontFamily>
+	<Application.Styles>
+		<Style Selector="TextBox">
+			<Setter Property="FontFamily">
+				Microsoft YaHei
+			</Setter>
+		</Style>
+		<Style Selector="TextBlock">
+			<Setter Property="FontFamily">
+				Microsoft YaHei
+			</Setter>
+		</Style>
+		<Style Selector="RadioButton">
+			<Setter Property="FontFamily">
+				Microsoft YaHei
+			</Setter>
+		</Style>
+	</Application.Styles>
+	<Application.Resources>
     </Application.Resources>
 	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -16,6 +33,7 @@
   
     <Application.Styles>
 	    <avalonia:MaterialIconStyles/>
-		<themes:MaterialTheme BaseTheme="Light" PrimaryColor="Cyan" SecondaryColor="Indigo"/>
+		<dataGrid:MaterialDataGridStyles/>
+		<themes:MaterialTheme BaseTheme="Light" PrimaryColor="LightBlue" SecondaryColor="Indigo"/>
     </Application.Styles>
 </Application>

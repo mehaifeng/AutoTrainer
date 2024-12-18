@@ -60,6 +60,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task Classify()
         {
+            ClassifiedImages = [];
             var todayFolder = Path.Combine(App.PyClassifyLogFolderPath, DateTime.Now.ToString("yyyyMMdd"));
             Directory.CreateDirectory(todayFolder);
             var specialPyLogPath = Path.Combine(todayFolder, $"Predicted_{DateTime.Now.ToString("HHmmss")}.json");
@@ -147,22 +148,27 @@ namespace AutoTrainer.ViewModels
                     // App.TrainModel.NumClasses = typeClasses.Length;
                     App.TrainModel.TrainDataPath = dataSetPath;
                     var files = new List<string>();
-                    foreach (var typePath in typeClasses)
+                    Dictionary<string,int> classNameToIndexDic = [];
+                    for (int i = 0;i< typeClasses.Length;i++)
                     {
-                        files.AddRange(Directory.GetFiles(typePath)
+                        classNameToIndexDic.Add(typeClasses[i].Split("\\").Last(),i);
+                        files.AddRange(Directory.GetFiles(typeClasses[i])
                             .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
                     }
                     Shuffle(files);
                     //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
-                    var tofiles = files.Take(200);
+                    var tofiles = files.Take(200).ToArray();
                     var mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     foreach (var readyToDelete in mutationDatas)
                     {
                         System.IO.File.Delete(readyToDelete);
                     }
-                    foreach (var file in tofiles)
+                    for(int i=0;i<tofiles.Length;i++)
                     {
-                        ImageAugmentation.AugmentImage(file, App.MutationDataPath, 1);
+                        var count = tofiles[i].Split("\\");
+                        var className = count[count.Length - 2];
+                        var index = classNameToIndexDic[className];
+                        ImageAugmentation.AugmentImage(index, tofiles[i], App.MutationDataPath, 1);
                     }
                     mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     foreach (var mutationData in mutationDatas)

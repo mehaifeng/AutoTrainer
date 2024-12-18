@@ -9,6 +9,7 @@ using LiveChartsCore.Defaults;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
+using MsBox.Avalonia;
 using Newtonsoft.Json;
 using SkiaSharp;
 using System;
@@ -27,59 +28,7 @@ namespace AutoTrainer.ViewModels
         private int scanningIndex = 0;
         public TrainingViewModel()
         {
-            TrainAccValues = [];
-            TrainLossValues = [];
-            ValidationAccValues = [];
-            ValidationLossValues = [];
-            Series =
-            [new LineSeries<ObservableValue>(TrainAccValues)
-                {
-                    Name = "Train Acc Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.Orange, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.Orange,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(ValidationLossValues)
-                {
-                    Name = "Validation Loss Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.DodgerBlue,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(ValidationAccValues)
-                {
-                    Name = "Validation Acc Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.Blue, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.Blue,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(TrainLossValues)
-                {
-                    Name = "Train Loss Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.OrangeRed, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.OrangeRed,
-                        StrokeThickness = 2
-                    }
-                }];
+            InitialPlot();
             cancellationTokenSource = new CancellationTokenSource();
         }
 
@@ -163,6 +112,10 @@ namespace AutoTrainer.ViewModels
         private async Task StartTraining()
         {
             IsShowNextPage = false;
+            #region 初始化图标和输出信息
+            InitialPlot();
+            PyOutput = string.Empty;
+            #endregion
             var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
             App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
             var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
@@ -190,6 +143,65 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 函数
+        /// <summary>
+        /// 初始化图表线条
+        /// </summary>
+        private void InitialPlot()
+        {
+            TrainAccValues = [];
+            TrainLossValues = [];
+            ValidationAccValues = [];
+            ValidationLossValues = [];
+            Series =
+            [new LineSeries<ObservableValue>(TrainAccValues)
+                {
+                    Name = "Train Acc Values",
+                    Fill = null,
+                    GeometrySize = 5,
+                    GeometryStroke = new SolidColorPaint(SKColors.Orange, 2),
+                    Stroke = new SolidColorPaint()
+                    {
+                        Color = SKColors.Orange,
+                        StrokeThickness = 2
+                    }
+                },
+            new LineSeries<ObservableValue>(ValidationLossValues)
+                {
+                    Name = "Validation Loss Values",
+                    Fill = null,
+                    GeometrySize = 5,
+                    GeometryStroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
+                    Stroke = new SolidColorPaint()
+                    {
+                        Color = SKColors.DodgerBlue,
+                        StrokeThickness = 2
+                    }
+                },
+            new LineSeries<ObservableValue>(ValidationAccValues)
+                {
+                    Name = "Validation Acc Values",
+                    Fill = null,
+                    GeometrySize = 5,
+                    GeometryStroke = new SolidColorPaint(SKColors.Blue, 2),
+                    Stroke = new SolidColorPaint()
+                    {
+                        Color = SKColors.Blue,
+                        StrokeThickness = 2
+                    }
+                },
+            new LineSeries<ObservableValue>(TrainLossValues)
+                {
+                    Name = "Train Loss Values",
+                    Fill = null,
+                    GeometrySize = 5,
+                    GeometryStroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                    Stroke = new SolidColorPaint()
+                    {
+                        Color = SKColors.OrangeRed,
+                        StrokeThickness = 2
+                    }
+                }];
+        }
 
         /// <summary>
         /// Py文件执行时，处理各种任务
@@ -223,6 +235,24 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task ReadPyOutputAtMeantime()
         {
+            var reTryCounter = 0;
+            while (true)
+            {
+                if(reTryCounter > 3)
+                {
+                    await MessageBoxManager.GetMessageBoxStandard("训练失败", $"ModelTrainer.py无法创建训练日志\n{App.TrainModel.PyTrainLogOutputPath}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowAsync();
+                    return;
+                }
+                if (!File.Exists(App.TrainModel.PyTrainLogOutputPath))
+                {
+                    await Task.Delay(1000);
+                    reTryCounter++;
+                }
+                else
+                {
+                    break;
+                }
+            }
             var jsonStr = await File.ReadAllTextAsync(App.TrainModel.PyTrainLogOutputPath);
             var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
             if (pyExecuteOutput is { Entries.Count: > 0 })
