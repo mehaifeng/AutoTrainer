@@ -1,6 +1,7 @@
 ﻿using AutoTrainer.Helpers;
 using AutoTrainer.Models;
 using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Logging;
 using Avalonia.Media;
@@ -33,7 +34,9 @@ namespace AutoTrainer.ViewModels
     {
         public VisualVerifyViewModel()
         {
-            ClassifiedImages = [];
+            MutationImages = [];
+            ClassifiedImages = [new PreviewImageModel() { ClassName = "类别"}];
+            ModelQualityTable = [new ModelQuality() { Accuracy = 0, F1_score = 0, Precision = 0, Recall=0 }];
         }
         [ObservableProperty]
         private ObservableCollection<MutationImage> mutationImages;
@@ -46,17 +49,43 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private Thumbnail selectImage;
         [ObservableProperty]
-        private string describeImage;
+        private string predictClass;
+        [ObservableProperty]
+        private string confidence;
+        [ObservableProperty]
+        private string actualClass;
+        [ObservableProperty]
+        private string imagePath;
         [ObservableProperty]
         private bool isShowNextPageBtn = false;
+        [ObservableProperty]
+        private ObservableCollection<ModelQuality> modelQualityTable;
+        [ObservableProperty]
+        private bool isSpinning = false;
+        [ObservableProperty]
+        private int validationImageRate = 20;
 
+        /// <summary>
+        /// 第一次打开Tab
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         public async Task Loaded(UserControl o)
         {
-            IsLoadingMutationData = true;
-            await Task.Run(LoadMutationData);
-            IsLoadingMutationData = false;
+            if (MutationImages.Count == 0)
+            {
+                IsSpinning = true;
+                IsLoadingMutationData = true;
+                await Task.Run(LoadMutationData);
+                IsLoadingMutationData = false;
+                IsSpinning = false;
+            }
         }
+        /// <summary>
+        /// 分类
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         public async Task Classify()
         {
@@ -117,12 +146,32 @@ namespace AutoTrainer.ViewModels
             IsInSortingTask = false;
             IsShowNextPageBtn = true;
         }
+        /// <summary>
+        /// 转到下一页
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         private static async Task GoToExportPage(UserControl o)
         {
             if (o.Parent != null && o.Parent.Parent is TabControl control)
             {
                 await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 5);
+            }
+        }
+        /// <summary>
+        /// 刷新变异数据集
+        /// </summary>
+        [RelayCommand]
+        private async Task RefreshMutation()
+        {
+            if(!IsInSortingTask && !IsLoadingMutationData && !IsSpinning)
+            {
+                IsSpinning = true;
+                IsLoadingMutationData = true;
+                await Task.Run(LoadMutationData);
+                IsLoadingMutationData = false;
+                IsSpinning = false;
             }
         }
 
@@ -142,7 +191,6 @@ namespace AutoTrainer.ViewModels
             else
             {
                 var typeClasses = Directory.GetDirectories(dataSetPath);
-
                 if (typeClasses.Length > 0)
                 {
                     // App.TrainModel.NumClasses = typeClasses.Length;
@@ -157,7 +205,9 @@ namespace AutoTrainer.ViewModels
                     }
                     Shuffle(files);
                     //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
-                    var tofiles = files.Take(200).ToArray();
+                    //一共要获取的文件数目
+                    var getFilesCount = Convert.ToInt32(files.Count * ValidationImageRate * 0.01);
+                    var tofiles = files.Take(getFilesCount).ToArray();
                     var mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     foreach (var readyToDelete in mutationDatas)
                     {

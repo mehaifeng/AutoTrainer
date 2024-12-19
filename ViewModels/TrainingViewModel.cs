@@ -24,12 +24,12 @@ namespace AutoTrainer.ViewModels
     public partial class TrainingViewModel : ViewModelBase
     {
         private bool isPyRunning = false;
-        private readonly CancellationTokenSource cancellationTokenSource;
+        private CancellationTokenSource cancellationTokenSource;
         private int scanningIndex = 0;
         public TrainingViewModel()
         {
             InitialPlot();
-            cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource = new();
         }
 
         #region 可绑定属性
@@ -112,6 +112,7 @@ namespace AutoTrainer.ViewModels
         private async Task StartTraining()
         {
             IsShowNextPage = false;
+            cancellationTokenSource = new();
             #region 初始化图标和输出信息
             InitialPlot();
             PyOutput = string.Empty;
