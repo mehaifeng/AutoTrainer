@@ -9,8 +9,8 @@
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
              mc:Ignorable="d" 
-			 d:DesignWidth="1000" 
-			 d:DesignHeight="650"
+			 d:DesignWidth="1200" 
+			 d:DesignHeight="850"
 			 x:Name="ModelTabItem"
              x:Class="AutoTrainer.ModelConfigView"
 			 x:DataType="vm:ModelConfigViewModel">

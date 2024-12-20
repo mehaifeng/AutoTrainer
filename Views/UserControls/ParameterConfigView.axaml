@@ -10,8 +10,8 @@
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions" 
              mc:Ignorable="d"
 			 Padding="5"
-			 d:DesignWidth="1000"
-			 d:DesignHeight="650"
+			 d:DesignWidth="1200"
+			 d:DesignHeight="850"
 			 x:Name="ParameterPage"
 			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">

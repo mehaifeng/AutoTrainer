@@ -105,8 +105,7 @@
 								IsSnapToTickEnabled="True"
 								Classes="Accent"
 								Value="{Binding ValidationImageRate}"
-								TickFrequency="5"
-								Margin="10,0,0,0"/>
+								TickFrequency="5"/>
 							<!--验证数据集比例文本-->
 							<TextBlock
 								Grid.Column="1"
@@ -117,13 +116,14 @@
 							<Button
 								Grid.Column="2"
 								Classes="light"
-								Margin="0,0,0,0"
 								Command="{Binding RefreshMutationCommand}">
 								<Button.Content>
-									<avalonia:MaterialIcon Kind="Refresh"
-														 Width="26"
-														 Height="26"
-														 Classes.spinning="{Binding IsSpinning}">
+									<avalonia:MaterialIcon 
+										Kind="Refresh"
+										Width="26"
+										Height="26"
+										Foreground="Black"
+										Classes.spinning="{Binding IsSpinning}">
 										<avalonia:MaterialIcon.Styles>
 											<Style Selector="avalonia|MaterialIcon.spinning">
 												<Style.Animations>
@@ -170,7 +170,7 @@
 									</ItemsControl.ItemsPanel>
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
-											<Image Source="{Binding thumbnail}"
+											<Image Source="{Binding Thumbnail}"
 												   Width="64"
 												   Height="64"
 												   Margin="5">
@@ -191,23 +191,55 @@
 						</Grid>
 					</TabItem>
 				<TabItem Header="验证汇总">
-					<Grid
-						Margin="10"
-						Grid.Row="2">
-						<DataGrid
-							FontSize="14"
-							ColumnWidth="*"
-							AutoGenerateColumns="False"
-							BorderBrush="LightGray"
-							ItemsSource="{Binding ModelQualityTable}">
-							<DataGrid.Columns>
-								<DataGridTextColumn Header="准确率" Binding="{Binding Accuracy}"/>
-								<DataGridTextColumn Header="精确率" Binding="{Binding Precision}"/>
-								<DataGridTextColumn Header="召回率" Binding="{Binding Recall}"/>
-								<DataGridTextColumn Header="F1值" Binding="{Binding F1_score}"/>
-							</DataGrid.Columns>
-						</DataGrid>
-					</Grid>
+					<ScrollViewer>
+						<StackPanel
+							Orientation="Vertical"
+							Margin="10"
+							Grid.Row="2">
+							<TextBlock Text="单个类别指标">
+								<ToolTip.Tip>
+									<StackPanel>
+										<TextBlock>精确率 = 预测为该类别且正确的样本数/预测为该类别的样本总数</TextBlock>
+										<TextBlock>召回率 = 预测为该类别且正确的样本数/该类别的实际样本总数</TextBlock>
+										<TextBlock>F1分数 = 精确率和召回率的调和平均值</TextBlock>
+									</StackPanel>
+								</ToolTip.Tip>
+							</TextBlock>
+							<DataGrid
+								Margin="0,5,0,10"
+								FontSize="14"
+								ColumnWidth="*"
+								AutoGenerateColumns="False"
+								BorderBrush="LightGray"
+								ItemsSource="{Binding ModelSingleQualityTable}">
+								<DataGrid.Columns>
+									<DataGridTextColumn Header="类别" Binding="{Binding ClassName}"/>
+									<DataGridTextColumn Header="精确率" Binding="{Binding Precision}"/>
+									<DataGridTextColumn Header="召回率" Binding="{Binding Recall}"/>
+									<DataGridTextColumn Header="F1分数" Binding="{Binding F1_score}"/>
+								</DataGrid.Columns>
+							</DataGrid>
+							<TextBlock Text="整体指标"/>
+							<DataGrid
+								Margin="0,5,0,10"
+								FontSize="14"
+								ColumnWidth="*"
+								AutoGenerateColumns="False"
+								BorderBrush="LightGray"
+								ItemsSource="{Binding ModelMacroQualityTable}">
+								<DataGrid.Columns>
+									<DataGridTextColumn Header="准确率" Binding="{Binding Accuracy}"/>
+									<DataGridTextColumn Header="宏精确率" Binding="{Binding MacroPrecision}"/>
+									<DataGridTextColumn Header="宏召回率" Binding="{Binding MacroRecall}"/>
+									<DataGridTextColumn Header="宏F1分数" Binding="{Binding MacroF1}"/> 
+								</DataGrid.Columns>
+							</DataGrid>
+							<TextBlock Text="混淆矩阵"/>
+							<Grid x:Name="MakeMatrixGrid" Margin="0,5,0,0">
+								<!--自动生成矩阵-->
+							</Grid>
+						</StackPanel>
+					</ScrollViewer>
 				</TabItem>
 			</TabControl>
 			
@@ -269,6 +301,7 @@
 				Width="100"
 				Margin="0,0,0,5"
 				Command="{Binding ClassifyCommand}"
+				CommandParameter="{Binding ElementName=MakeMatrixGrid}"
 				Content="自动分类"/>
 		</Grid>
 		<Grid Grid.Column="2" RowDefinitions="100,*">

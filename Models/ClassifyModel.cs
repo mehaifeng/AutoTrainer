@@ -10,9 +10,9 @@ namespace AutoTrainer.Models
     public class ClassifyModel
     {
         [JsonProperty("image_path")]
-        public string? imagePath { get; set; }
+        public string imagePath { get; set; }
         [JsonProperty("predicted_class")]
-        public string? predictedClass { get; set; }
+        public string predictedClass { get; set; }
         [JsonProperty("confidence")]
         public double confidence { get; set; }
     }

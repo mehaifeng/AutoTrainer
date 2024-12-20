@@ -9,8 +9,8 @@
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
-			 d:DesignWidth="1000"
-			 d:DesignHeight="650"
+			 d:DesignWidth="1200"
+			 d:DesignHeight="850"
 			 x:Name="ConverterView"
 			 x:DataType="vm:ConvertToExportViewModel"
              x:Class="AutoTrainer.ConvertToExportView">

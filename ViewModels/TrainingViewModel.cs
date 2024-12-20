@@ -25,7 +25,7 @@ namespace AutoTrainer.ViewModels
     {
         private bool isPyRunning = false;
         private CancellationTokenSource cancellationTokenSource;
-        private int scanningIndex = 0;
+        private int ScanningIndex = 0;
         public TrainingViewModel()
         {
             InitialPlot();
@@ -111,6 +111,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task StartTraining()
         {
+            ScanningIndex = 0;
             IsShowNextPage = false;
             cancellationTokenSource = new();
             #region 初始化图标和输出信息
@@ -258,11 +259,11 @@ namespace AutoTrainer.ViewModels
             var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
             if (pyExecuteOutput is { Entries.Count: > 0 })
             {
-                if (scanningIndex >= pyExecuteOutput.Entries.Count)
+                if (ScanningIndex >= pyExecuteOutput.Entries.Count)
                 {
                     return;
                 }
-                for (var i = scanningIndex; i < pyExecuteOutput.Entries.Count; i++)
+                for (var i = ScanningIndex; i < pyExecuteOutput.Entries.Count; i++)
                 {
                     //画图方面，需要找到type为Validation的消息
                     if (string.Equals(pyExecuteOutput.Entries[i].Type, "Validation"))
@@ -279,7 +280,7 @@ namespace AutoTrainer.ViewModels
                     }
                     //打印输出信息
                     PyOutput += pyExecuteOutput.Entries[i].Message + "\r\n";
-                    scanningIndex++;
+                    ScanningIndex++;
                 }
             }
 

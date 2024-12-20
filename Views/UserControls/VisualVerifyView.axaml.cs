@@ -32,7 +32,7 @@ public partial class VisualVerifyView : UserControl
         {
             _viewmodel.SelectImage = imageInfo;
             _viewmodel.PredictClass = imageInfo.PredictClass ?? "";
-            _viewmodel.Confidence = imageInfo.Confidence.ToString();
+            _viewmodel.Confidence = Math.Round(imageInfo.Confidence,3).ToString();
             _viewmodel.ActualClass = imageInfo.ActualClass ?? "";
             _viewmodel.ImagePath = imageInfo.ImagePath ?? "";
         }
