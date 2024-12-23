@@ -245,7 +245,7 @@
 			
 			
 		</Grid>
-		<Grid Grid.Column="1" RowDefinitions="120,Auto,70" Margin="0,100,0,0" VerticalAlignment="Center">
+		<Grid Grid.Column="1" RowDefinitions="120,Auto,70" Margin="10,100,10,0" VerticalAlignment="Center">
 			<Border
 				Grid.Row="0"
 				VerticalAlignment="Center"
@@ -288,7 +288,7 @@
 					Text="图片路径"
 					HorizontalAlignment="Center"
 					Margin="0,0,0,5"/>
-				<TextBlock
+				<SelectableTextBlock
 					Text="{Binding ImagePath}"
 					TextWrapping="Wrap"
 					HorizontalAlignment="Center"/>

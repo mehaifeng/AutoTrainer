@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MsBox.Avalonia;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -43,6 +44,16 @@ namespace AutoTrainer.ViewModels
             "tf_keras",
         "psutil",
         "onnx-graphsurgeon"];
+        private HashSet<string> ExcludedPaths =
+        [
+            @"C:\Windows",
+                        @"C:\Documents and Settings",
+                        @"C:\Program Files",
+                        @"C:\Program Files (x86)",
+                        @"C:\ProgramData",
+                        @"C:\System Volume Information",
+                        @"C:\$Recycle.Bin"
+        ];
         private List<string> MissingApps = [];
         StringBuilder sb = new StringBuilder();
         #endregion
@@ -87,6 +98,10 @@ namespace AutoTrainer.ViewModels
         private bool isRunningProgressBar = false;
         [ObservableProperty]
         private bool isExcutingPyScript = false;
+        [ObservableProperty]
+        private bool isScanningVenv = false;
+        [ObservableProperty]
+        private string scanningFolder = string.Empty;
         #endregion
 
         #region 函数
@@ -138,11 +153,106 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
+        /// <summary>
+        /// 是否跳过目录
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private bool ShouldSkipDirectory(string path)
+        {
+            return ExcludedPaths.Any(excluded =>
+                path.StartsWith(excluded, StringComparison.OrdinalIgnoreCase));
+        }
+        /// <summary>
+        /// 扫描Venv目录
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private async Task ScanDirectory(string path)
+        {
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    if (ShouldSkipDirectory(path)) return;
+                    foreach (var dir in Directory.GetDirectories(path))
+                    {
+                        if (ShouldSkipDirectory(dir)) continue;
+                        ScanningFolder = dir;
+                        // 检查是否为venv目录
+                        if (IsVenvDirectory(dir))
+                        {
+                            sb.AppendLine($"找到虚拟环境：{dir}");
+                            Outputs = sb.ToString();
+                        }
+                        ScanDirectory(dir).Wait();
+                    }
+                }
+                catch (UnauthorizedAccessException) { }
+                catch (DirectoryNotFoundException) { }
+                catch (Exception ex)
+                {
+                    await MessageBoxManager.GetMessageBoxStandard("扫描识别", $"警告：扫描目录 {path} 时出错：{ex.Message}\n", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                }
+            });
+        }
+        /// <summary>
+        /// 是否为Venv目录
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private bool IsVenvDirectory(string path)
+        {
+            try
+            {
+                // 检查典型的venv目录特征
+                var pyvenvCfg = Path.Combine(path, "pyvenv.cfg");
+                var scriptsDir = Path.Combine(path, "Scripts");
+                var binDir = Path.Combine(path, "bin");
+                var libDir = Path.Combine(path, "Lib", "site-packages");
+
+                return (File.Exists(pyvenvCfg) &&
+                       (Directory.Exists(scriptsDir) || Directory.Exists(binDir)) &&
+                       Directory.Exists(libDir));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
         #endregion
 
         #region 命令
+        [RelayCommand]
+        public async Task ScanningVenv()
+        {
+            IsScanningVenv = true;
+            try
+            {
+                var drives = DriveInfo.GetDrives()
+                    .Where(d => d.DriveType == DriveType.Fixed)
+                    .Select(d => d.RootDirectory.FullName);
+
+                foreach (var drive in drives)
+                {
+                    try
+                    {
+                        await ScanDirectory(drive);
+                    }
+                    catch (Exception ex)
+                    {
+                        await MessageBoxManager.GetMessageBoxStandard("扫描识别",$"扫描驱动器 {drive} 时出错：{ex.Message}\n",MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxManager.GetMessageBoxStandard($"发生错误：{ex.Message}", "错误").ShowWindowAsync();
+            }
+            IsScanningVenv = false;
+        }
         /// <summary>
-        /// 创建Vevn环境
+        /// 创建Venv环境
         /// </summary>
         /// <returns></returns>
         [RelayCommand]

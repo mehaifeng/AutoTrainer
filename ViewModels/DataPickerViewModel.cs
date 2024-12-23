@@ -34,7 +34,8 @@ namespace AutoTrainer.ViewModels
         public DataPickerViewModel()
         {
             CropConfigs = [];
-            ImageCategories = [];
+            ImageCategories = [new PreviewImageModel() { ClassName = "类别"}];
+            CropOutputPath = Environment.CurrentDirectory;
             LoadConfig();
         }
         #region
@@ -411,6 +412,7 @@ namespace AutoTrainer.ViewModels
                 var typeClasses = Directory.GetDirectories(folderPath);
                 if (typeClasses.Length > 0)
                 {
+                    ImageCategories = [];
                     App.TrainModel.NumClasses = typeClasses.Length;
                     App.TrainModel.TrainDataPath = folderPath;
                     PreviewState = string.Empty;

@@ -16,8 +16,8 @@
 			 x:DataType="vm:ModelConfigViewModel">
 	<Grid>
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width=".3*"/>
-			<ColumnDefinition Width=".7*"/>
+			<ColumnDefinition Width=".33*"/>
+			<ColumnDefinition Width=".67*"/>
 		</Grid.ColumnDefinitions>
 		<Border  Grid.Column="0" Padding="10" BorderThickness="0,0,2,0" BorderBrush="Black">
 			<Grid>
@@ -30,6 +30,7 @@
 						<RowDefinition Height="60"/>
 						<RowDefinition Height="60"/>
 						<RowDefinition Height="50"/>
+						<RowDefinition Height="Auto"/>
 						<RowDefinition Height=".6*"/>
 						<RowDefinition Height=".4*"/>
 					</Grid.RowDefinitions>
@@ -41,7 +42,7 @@
 						IsEnabled="{Binding IsEnablePythonConfigView}"
 						Theme="{StaticResource OutlineTextBox}" 
 						Text="{Binding PythonPath}"
-						p1:TextFieldAssist.Label="Python path" />
+						p1:TextFieldAssist.Label="Python路径" />
 					<!--python venv path-->
 					<TextBox
 						Grid.Row="1"
@@ -50,7 +51,7 @@
 						IsEnabled="{Binding IsEnablePythonConfigView}"
 						Theme="{StaticResource OutlineTextBox}"
 						Text="{Binding PythonVenvPath}"
-						p1:TextFieldAssist.Label="Venv path" />
+						p1:TextFieldAssist.Label="Venv路径" />
 					<!--Global-Venv-CreateVenv-->
 					<StackPanel
 						Grid.Row="2" 
@@ -60,15 +61,49 @@
 						HorizontalAlignment="Center">
 						<RadioButton 
 							GroupName="1" 
-							Content="Global"
+							Content="全局环境"
 							VerticalAlignment="Center"
 							IsChecked="{Binding IsCheckedGlobal}"/>
 						<RadioButton 
 							GroupName="1"
-							Content="Venv"
+							Content="虚拟环境"
 							Margin="10,0,0,0"
 							VerticalAlignment="Center"
 							IsChecked="{Binding IsCheckedVenv}"/>
+						<Button Classes="light"
+							Command="{Binding ScanningVenvCommand}"
+							Margin="10,0,0,0"
+							VerticalAlignment="Center"
+							Height="30"
+							FontSize="12">
+							<Button.Content>
+								<Panel>
+									<!-- 默认文本 -->
+									<TextBlock Text="扫描Venv"
+											  IsVisible="{Binding !IsScanningVenv}"/>
+
+									<!-- Loading图标 -->
+									<avalonia:MaterialIcon Kind="Loading"
+														 IsVisible="{Binding IsScanningVenv}">
+										<avalonia:MaterialIcon.Styles>
+											<Style Selector="avalonia|MaterialIcon">
+												<Style.Animations>
+													<Animation Duration="0:0:1"
+															 IterationCount="INFINITE">
+														<KeyFrame Cue="0%">
+															<Setter Property="RotateTransform.Angle" Value="0.0"/>
+														</KeyFrame>
+														<KeyFrame Cue="100%">
+															<Setter Property="RotateTransform.Angle" Value="360.0"/>
+														</KeyFrame>
+													</Animation>
+												</Style.Animations>
+											</Style>
+										</avalonia:MaterialIcon.Styles>
+									</avalonia:MaterialIcon>
+								</Panel>
+							</Button.Content>
+						</Button>
 						<Button Classes="light"
 							Command="{Binding CreateVenvCommand}"
 							Margin="10,0,0,0"
@@ -78,7 +113,7 @@
 							<Button.Content>
 								<Panel>
 									<!-- 默认文本 -->
-									<TextBlock Text="Create Venv"
+									<TextBlock Text="创建Venv"
 											  IsVisible="{Binding IsEnablePythonConfigView}"/>
 
 									<!-- Loading图标 -->
@@ -105,11 +140,18 @@
 							</Button.Content>
 						</Button>
 					</StackPanel>
+					<!--Dynamic Scanning Folder-->
+					<TextBlock
+						Grid.Row="3"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Text="{Binding ScanningFolder}"
+						IsVisible="{Binding IsScanningVenv}"/>
 					<!--Pip list-->
 					<TextBox 
-						Grid.Row="3"
+						Grid.Row="4"
 						UseFloatingWatermark="True" 
-						p1:TextFieldAssist.Label="Pip list" 
+						p1:TextFieldAssist.Label="软件包列表" 
 						Classes="outline" 
 						Theme="{StaticResource OutlineTextBox}" 
 						Text="{Binding PipApps}"
@@ -117,10 +159,10 @@
 						TextWrapping="Wrap"  />
 					<!--reuirements-->
 					<TextBox
-						Grid.Row="4"
+						Grid.Row="5"
 						Margin="0,10,0,0"
 						UseFloatingWatermark="True"
-						p1:TextFieldAssist.Label="Requirements"
+						p1:TextFieldAssist.Label="软件包需求"
 						Classes="outline"
 						Theme="{StaticResource OutlineTextBox}"
 						Text="{Binding Requirements}"
@@ -180,7 +222,7 @@
 									HorizontalAlignment="Left"
 									VerticalAlignment="Center"
 									Theme="{StaticResource MaterialOutlineComboBox}"
-									p1:ComboBoxAssist.Label="Select Model"
+									p1:ComboBoxAssist.Label="选择模型"
 									SelectedItem="{Binding SelectModel}"
 									ItemsSource="{Binding ModelList}">
 									<i:Interaction.Behaviors>

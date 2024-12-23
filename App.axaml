@@ -22,6 +22,11 @@
 				Microsoft YaHei
 			</Setter>
 		</Style>
+		<Style Selector="Button.Content">
+			<Setter Property="FontFamily">
+				Microsoft YaHei
+			</Setter>
+		</Style>
 	</Application.Styles>
 	<Application.Resources>
     </Application.Resources>
