@@ -80,6 +80,11 @@
 				<TextBlock 
 					Grid.Row="0" 
 					Margin="0,0,0,30"
+					Width="65"
+					TextAlignment="Center"
+					HorizontalAlignment="Left"
+					Foreground="White"
+					Background="Black"
 					Text="基础参数"
 					FontWeight="Bold"/>
 				<ComboBox 
@@ -128,10 +133,15 @@
 				VerticalAlignment="Top"
 				Height="450"
 				Margin="0,20,0,0"
-				RowDefinitions="20,80,80,80,185">
+				RowDefinitions="20,80,80,80,210">
 				<TextBlock
 					Grid.Row="0"
 					Margin="0,0,0,30"
+					Width="65"
+					TextAlignment="Center"
+					HorizontalAlignment="Left"
+					Foreground="White"
+					Background="Black"
 					Text="高级参数"
 					FontWeight="Bold"/>
 				<ComboBox
@@ -165,9 +175,16 @@
 				</StackPanel>
 				<Grid 
 					Grid.Row="4" 
-					RowDefinitions="*,5*">
+					RowDefinitions="35,Auto">
 					<TextBlock 
-						Text="数据增强(暂不可用)"/>
+						Width="65"
+						FontWeight="Bold"
+						TextAlignment="Center"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Left"
+						Foreground="White"
+						Background="Black"
+						Text="数据增强"/>
 					<Border
 						Grid.Row="1"
 						CornerRadius="5"
@@ -177,18 +194,27 @@
 						<StackPanel Orientation="Vertical">
 							<CheckBox 
 								Margin="0,0,0,0"
+								IsChecked="{Binding RandomHorizonFlipChecked}"
 								Content="随机水平翻转"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomVerticalFlipChecked}"
 								Content="随机垂直翻转"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomRotationChecked}"
 								Content="随机旋转"/>
 							<CheckBox
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomZoomChecked}"
+								Content="随机缩放"/>
+							<CheckBox 
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomBrightnessChecked}"
 								Content="随机亮度"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomContrastChecked}"
 								Content="随机对比度"/>
 						</StackPanel>
 					</Border>

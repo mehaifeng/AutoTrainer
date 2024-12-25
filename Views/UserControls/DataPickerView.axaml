@@ -55,9 +55,8 @@
 					HorizontalAlignment="Left"
 					Classes="light"
 					Command="{Binding AddCroppingConfigCommand}"
-					CommandParameter="{Binding ElementName=DragCanvas}">
-					<TextBlock Text="增加裁剪配置"/>
-				</Button>
+					Content="增加裁剪配置"
+					CommandParameter="{Binding ElementName=DragCanvas}"/>
 				<Button
 					Grid.Column="1"
 					Height="35"
@@ -65,22 +64,25 @@
 					VerticalAlignment="Center"
 					HorizontalAlignment="Left"
 					Classes="light"
-					Command="{Binding SelectPictureCommand}">
-					<TextBlock Text="选择图片"/>
-				</Button>
+					Content="选择图片"
+					Command="{Binding SelectPictureCommand}"/>
 				<TextBlock 
 					Grid.Column="2"
+					FontSize="16"
+					FontWeight="Bold"
+					Background="Black"
+					TextAlignment="Center"
 					HorizontalAlignment="Center"
 					VerticalAlignment="Center"
+					Foreground="White"
 					Text="{Binding CropConfig.Name}"/>
 				<Button
 					Grid.Column="3"
 					Height="35"
 					HorizontalAlignment="Left"
 					Classes="light"
-					Command="{Binding QuickCropCommand}">
-					<TextBlock Text="快速裁剪"/>
-				</Button>
+					Content="快速裁剪"
+					Command="{Binding QuickCropCommand}"/>
 				<SelectableTextBlock
 					Grid.Column="3"
 					VerticalAlignment="Center"

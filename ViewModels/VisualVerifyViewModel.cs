@@ -103,17 +103,16 @@ namespace AutoTrainer.ViewModels
             var classifyPyFilePath = Path.Combine(Environment.CurrentDirectory, "PyScripts/ImageClassifier.py");
             var modelPath = Path.Combine(App.ModelOutputFolderPath, App.TrainModel.PretrainedModel + ".pth");
             StringBuilder sb = new StringBuilder();
-            sb.Append($"{App.PythonVenvPath}\\Scripts\\activate.bat && ");
-            sb.Append($" python {classifyPyFilePath}");
-            sb.Append($" --image-folder {App.MutationDataPath}");
+            var venvFolder = App.PythonVenvPath;
+            sb.Append($"--image-folder {App.MutationDataPath}");
             sb.Append($" --model-path {modelPath}");
             sb.Append($" --model-name {App.TrainModel.PretrainedModel}");
             sb.Append($" --image-folder {App.MutationDataPath}");
             sb.Append($" --num-classes {App.TrainModel.NumClasses}");
             sb.Append($" --output-path {specialPyLogPath}");
-            sb.Append($" && {App.PythonVenvPath}\\Scripts\\deactivate.bat");
+            var argument = sb.ToString();
             IsInSortingTask = true;
-            await CmdHelper.ExecuteCmdWindow(sb.ToString(), false);
+            await CmdHelper.ExecutePythonScriptAsync(classifyPyFilePath, venvFolder, argument, false);
             if (System.IO.File.Exists(specialPyLogPath))
             {
                 var jsonStr = await System.IO.File.ReadAllTextAsync(specialPyLogPath);
@@ -148,7 +147,7 @@ namespace AutoTrainer.ViewModels
                             Thumbnails = new ObservableCollection<Thumbnail>(thumbnails)
                         });
                     }
-                    CalculateModelPerformance(classifyResult,o);
+                    CalculateModelPerformance(classifyResult, o);
                 }
             }
             IsInSortingTask = false;
@@ -226,7 +225,7 @@ namespace AutoTrainer.ViewModels
                         var count = tofiles[i].Split("\\");
                         var className = count[count.Length - 2];
                         var index = classNameToIndexDic[className];
-                        ImageAugmentation.AugmentImageOne(index, tofiles[i], App.MutationDataPath, 1);
+                        ImageAugmentation.AugmentImageOne(index, Enumerable.Repeat(true,6).ToArray(), tofiles[i], App.MutationDataPath, 1);
                     }
                     mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     var pattern = @"^(.*)\(";

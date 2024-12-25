@@ -94,6 +94,7 @@
 						Height="10"
 						CornerRadius="5"
 						Minimum="0"
+						Foreground="WhiteSmoke"
 						Maximum="{Binding EpochState.TotalEpochs}"
 						Value="{Binding EpochState.CurrentEpoch}" />
 					<Grid ColumnDefinitions="*,*">

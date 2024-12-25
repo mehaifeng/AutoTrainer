@@ -122,7 +122,6 @@
 										Kind="Refresh"
 										Width="26"
 										Height="26"
-										Foreground="Black"
 										Classes.spinning="{Binding IsSpinning}">
 										<avalonia:MaterialIcon.Styles>
 											<Style Selector="avalonia|MaterialIcon.spinning">

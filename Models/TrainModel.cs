@@ -63,9 +63,18 @@ namespace AutoTrainer.Models
         public int NumClasses { get; set; }
         [JsonProperty("mutation_data_path")]
         public string MutationDataPath { get; set; }
-
-        [JsonProperty("use_Data_augmentation")]
-        public bool UseDataAugmentation { get; set; }
+        [JsonProperty("random_horizon_flip_checked")]
+        public bool RandomHorizonFlipChecked { get; set; }
+        [JsonProperty("random_vertical_flip_checked")]
+        public bool RandomVerticalFlipChecked { get; set; }
+        [JsonProperty("random_rotation_checked")]
+        public bool RandomRotationChecked { get; set; }
+        [JsonProperty("random_brightness_checked")]
+        public bool RandomBrightnessChecked { get; set; }
+        [JsonProperty("random_contrast_checked")]
+        public bool RandomContrastChecked { get; set; }
+        [JsonProperty("random_zoom_checked")]
+        public bool RandomZoomChecked { get; set; }
     }
 
     public class Status

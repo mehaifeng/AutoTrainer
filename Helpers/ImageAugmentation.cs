@@ -13,20 +13,18 @@ namespace AutoTrainer.Helpers
     public class ImageAugmentation
     {
 
-        public static List<string> AugmentImageOne(int index, string originalImagePath, string outputDirectory, int augmentationCount)
+        public static List<string> AugmentImageOne(int index, bool[] checks, string originalImagePath, string outputDirectory, int augmentationCount)
         {
             if (!File.Exists(originalImagePath))
             {
                 throw new FileNotFoundException("原始图像文件不存在。", originalImagePath);
             }
-
             if (!Directory.Exists(outputDirectory))
             {
                 Directory.CreateDirectory(outputDirectory);
             }
 
             List<string> augmentedImagePaths = new List<string>();
-
             try
             {
                 using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImagePath))
@@ -35,25 +33,48 @@ namespace AutoTrainer.Helpers
                     {
                         // 克隆原始图像，避免修改原始图像
                         Image<Rgba32> augmentedImage = image.Clone();
-
-                        // 应用随机增强效果
                         Random random = new Random();
-                        int randomRotation = random.Next(-15, 15); // 随机旋转 -30 到 30 度
-                        double randomZoom = 1.0 + (random.NextDouble() * 0.2 - 0.1); // 随机缩放 0.9 到 1.1 倍
-                        double randomBrightness = 1.0 + (random.NextDouble() * 0.5 - 0.2); // 随机亮度调整 0.8 到 1.3 倍
-                        double randomContrast = 1.0 + (random.NextDouble() * 0.5 - 0.2); // 随机对比度调整 0.7 到 1.3 倍
-                        bool randomFlipHorizontal = random.Next(2) == 0; // 随机水平翻转
-                        bool randomFlipVertical = random.Next(2) == 0;//随机垂直翻转
 
-                        augmentedImage.Mutate(x => x
-                            .Rotate(randomRotation)
-                            .Resize((int)(image.Width * randomZoom), (int)(image.Height * randomZoom))
-                            .Brightness((float)randomBrightness)
-                            .Contrast((float)randomContrast));
-                        if (randomFlipHorizontal)
-                            augmentedImage.Mutate(x => x.Flip(FlipMode.Horizontal));
-                        if (randomFlipVertical)
-                            augmentedImage.Mutate(x => x.Flip(FlipMode.Vertical));
+                        // 只在对应的checks为true时执行相应的增强操作
+                        if (checks[0]) // 随机旋转
+                        {
+                            int randomRotation = random.Next(-15, 15);
+                            augmentedImage.Mutate(x => x.Rotate(randomRotation));
+                        }
+
+                        if (checks[1]) // 随机缩放
+                        {
+                            double randomZoom = 1.0 + (random.NextDouble() * 0.2 - 0.1);
+                            augmentedImage.Mutate(x => x.Resize((int)(image.Width * randomZoom), (int)(image.Height * randomZoom)));
+                        }
+
+                        if (checks[2]) // 随机亮度
+                        {
+                            double randomBrightness = 1.0 + (random.NextDouble() * 0.5 - 0.2);
+                            augmentedImage.Mutate(x => x.Brightness((float)randomBrightness));
+                        }
+
+                        if (checks[3]) // 随机对比度
+                        {
+                            double randomContrast = 1.0 + (random.NextDouble() * 0.5 - 0.2);
+                            augmentedImage.Mutate(x => x.Contrast((float)randomContrast));
+                        }
+
+                        if (checks[4]) // 随机水平翻转
+                        {
+                            if (random.Next(2) == 0)
+                            {
+                                augmentedImage.Mutate(x => x.Flip(FlipMode.Horizontal));
+                            }
+                        }
+
+                        if (checks[5]) // 随机垂直翻转
+                        {
+                            if (random.Next(2) == 0)
+                            {
+                                augmentedImage.Mutate(x => x.Flip(FlipMode.Vertical));
+                            }
+                        }
 
                         // 生成输出文件名
                         var count = originalImagePath.Split("\\");
@@ -69,13 +90,12 @@ namespace AutoTrainer.Helpers
             catch (Exception ex)
             {
                 Console.WriteLine($"图像增强过程中发生错误：{ex.Message}");
-                // 可以选择抛出异常或者返回空列表
                 return new List<string>();
             }
 
             return augmentedImagePaths;
         }
-        
+
         /// <summary>
         /// 对输入图像进行数据增强
         /// </summary>

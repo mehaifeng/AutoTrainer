@@ -1,15 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AutoTrainer.Helpers
 {
     public static class CmdHelper
     {
+        public class CommandResult
+        {
+            public int ExitCode { get; set; }
+            public string Output { get; set; }
+            public string Error { get; set; }
+        }
         /// <summary>
         /// 验证Venv环境是否可用
         /// </summary>
@@ -52,150 +60,209 @@ namespace AutoTrainer.Helpers
             }
             return false;
         }
+
+        public delegate void OutputReceivedHandler(string data);
         /// <summary>
-        /// 执行一条指令 具有返回的方法
+        /// 原生执行指令 具有返回的方法
         /// </summary>
         /// <param name="fileName"></param>
         /// <param name="arguments"></param>
         /// <returns></returns>
-        public async static Task<(int, string, string)> ExecuteLine(string fileName, string arguments)
+        public async static Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
         {
+            var result = new CommandResult();
             // 创建进程
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                FileName = "cmd.exe",
+                Arguments = "/c" + arguments,
+                RedirectStandardOutput = !isShowTerminal,
+                RedirectStandardError = !isShowTerminal,
+                WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
+                RedirectStandardInput = false,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = !isShowTerminal
             };
-            return await Task.Factory.StartNew(() =>
+            if (!isShowTerminal)
             {
-                // 启动进程
-                using (Process process = Process.Start(startInfo))
+                // 设置控制台输出编码为UTF8
+                startInfo.StandardOutputEncoding = new UTF8Encoding(false);
+                startInfo.StandardErrorEncoding = new UTF8Encoding(false);
+            }
+            // 添加环境变量以确保正确的编码
+            startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+            // 启动进程
+            using var process = new Process { StartInfo = startInfo };
+            // 如果不显示终端，则捕获输出
+            if (!isShowTerminal && onOutputReceived!=null)
+            {
+                process.OutputDataReceived += (sender, args) =>
                 {
-                    // 读取输出
-                    string output = process.StandardOutput.ReadToEnd();
-                    string error = process.StandardError.ReadToEnd();
-
-                    // 等待进程完成
-                    process.WaitForExit();
-
-                    return (process.ExitCode, output, error);
-                }
-            });
-
+                    if (args.Data != null)
+                    {
+                        // 触发事件（如果有订阅）
+                        onOutputReceived?.Invoke(args.Data);
+                    }
+                };
+                process.ErrorDataReceived += (sender, args) =>
+                {
+                    if (args.Data != null)
+                    {
+                        onOutputReceived?.Invoke($"{args.Data}");
+                    }
+                };
+            }
+            process.Start();
+            // 如果不显示终端，开始异步读取输出
+            if (!isShowTerminal && onOutputReceived!=null)
+            {
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+            }
+            // 等待进程完成或取消
+            await process.WaitForExitAsync();
+            // 如果显示终端，不需要读取输出
+            if (onOutputReceived == null)
+            {
+                // 读取输出
+                result.Output = await process.StandardOutput.ReadToEndAsync();
+                result.Error = await process.StandardError.ReadToEndAsync();
+            }
+            result.ExitCode = process.ExitCode;
+            return result;
         }
         /// <summary>
-        /// 执行多条指令 具有返回的方法
+        /// 执行Python脚本并处理长输出，带有虚拟环境
         /// </summary>
-        /// <param name="commands"></param>
+        /// <param name="pythonScriptPath">py脚本地址</param>
+        /// <param name="venvPath">虚拟环境地址</param>
+        /// <param name="arguments">py脚本参数</param>
+        /// <param name="isShowTerminal">是否显示终端</param>
+        /// <param name="onOutputReceived">委托</param>
+        /// <param name="cancellationToken">取消令牌</param>
         /// <returns></returns>
-        public async static Task<(int, string)> ExecuteMultiLines(string fileName, List<string> commands)
+        public static async Task<CommandResult> ExecutePythonScriptAsync(string pythonScriptPath, string venvPath, string? arguments = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null, CancellationToken cancellationToken = default)
         {
-            // 创建一个新的ProcessStartInfo对象
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            var command = new StringBuilder();
+            command.Append($"{Path.Combine(venvPath, "Scripts", "activate.bat")}");
+            command.Append(" && ");
+            command.Append("set PYTHONIOENCODING=utf-8");
+            command.Append(" && ");
+            command.Append($"python {pythonScriptPath}");
+
+            if (!string.IsNullOrEmpty(arguments))
             {
-                FileName = fileName,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,  // 也重定向错误输出
+                command.Append($" {arguments}");
+            }
+
+            return await ExecuteCommandAsync(
+                command.ToString(),
+                isShowTerminal,
+                onOutputReceived: onOutputReceived,
+                cancellationToken: cancellationToken);
+        }
+        /// <summary>
+        /// 执行命令行命令并返回详细结果，支持长输出处理
+        /// </summary>
+        /// <param name="command">要执行的命令</param>
+        /// <param name="isShowTerminal">是否显示终端窗口</param>
+        /// <param name="workingDirectory">工作目录</param>
+        /// <param name="onOutputReceived">输出接收事件处理器（可选）</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>命令执行结果</returns>
+        private static async Task<CommandResult> ExecuteCommandAsync(string command,bool isShowTerminal = false,string? workingDirectory = null,OutputReceivedHandler? onOutputReceived = null,CancellationToken cancellationToken = default)
+        {
+            var result = new CommandResult();
+
+            // 首先设置代码页为 UTF-8
+            var encodingCommand = "chcp 65001 && " + command;
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/c " + encodingCommand,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = !isShowTerminal,
+                WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
+                RedirectStandardOutput = !isShowTerminal,
+                RedirectStandardError = !isShowTerminal,
+                RedirectStandardInput = false,
             };
-
-            // 创建输出缓冲区
-            var output = new StringBuilder();
-            var error = new StringBuilder();
-
-            using (var process = new Process())
+            // 只有在重定向输出时才设置编码
+            if (!isShowTerminal)
             {
-                process.StartInfo = startInfo;
+                startInfo.StandardOutputEncoding = new UTF8Encoding(false);
+                startInfo.StandardErrorEncoding = new UTF8Encoding(false);
+            }
+            // 添加环境变量以确保正确的编码
+            startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+            try
+            {
+                using var process = new Process { StartInfo = startInfo };
 
-                // 异步处理输出
-                process.OutputDataReceived += (sender, e) =>
+                // 如果不显示终端，则捕获输出
+                if (!isShowTerminal)
                 {
-                    if (e.Data != null)
+                    process.OutputDataReceived += (sender, args) =>
                     {
-                        output.AppendLine(e.Data);
-                    }
-                };
+                        if (args.Data != null)
+                        {
+                            // 触发事件（如果有订阅）
+                            onOutputReceived?.Invoke(args.Data);
+                        }
+                    };
 
-                // 异步处理错误
-                process.ErrorDataReceived += (sender, e) =>
-                {
-                    if (e.Data != null)
+                    process.ErrorDataReceived += (sender, args) =>
                     {
-                        error.AppendLine(e.Data);
-                    }
-                };
+                        if (args.Data != null)
+                        {
+                            onOutputReceived?.Invoke($"{args.Data}");
+                        }
+                    };
+                }
 
                 // 启动进程
                 process.Start();
 
-                // 开始异步读取
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                // 写入命令
-                using (var writer = process.StandardInput)
+                // 如果不显示终端，开始异步读取输出
+                if (!isShowTerminal && onOutputReceived != null)
                 {
-                    if (writer.BaseStream.CanWrite)
-                    {
-                        foreach (var command in commands)
-                        {
-                            await writer.WriteLineAsync(command);
-                        }
-                        await writer.FlushAsync();
-                        writer.Close(); // 重要：关闭标准输入流
-                    }
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
                 }
 
-                // 等待进程结束
-                await process.WaitForExitAsync();
+                // 等待进程完成或取消
+                await Task.WhenAny(
+                    process.WaitForExitAsync(cancellationToken),
+                    Task.Delay(Timeout.Infinite, cancellationToken)
+                );
 
-                // 返回结果
-                return (process.ExitCode, output.ToString() + error.ToString());
-            }
-        }
-        /// <summary>
-        /// 打开终端，执行命令,无返回
-        /// </summary>
-        /// <param name="command">命令</param>
-        /// <param name="isShowTerminal">是否显示终端</param>
-        /// <returns></returns>
-        public async static Task ExecuteCmdWindow(string command, bool isShowTerminal)
-
-        {
-            // 创建进程启动信息
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = "cmd.exe";
-            startInfo.Arguments = "/c " + command;
-
-            // 关键修改：设置进程输出配置
-            startInfo.RedirectStandardInput = false;   // 改为false，允许直接输入
-            startInfo.RedirectStandardOutput = false;  // 改为false，允许直接输出到控制台
-            startInfo.RedirectStandardError = false;   // 改为false，允许直接输出错误到控制台
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = !isShowTerminal;          // 显示控制台窗口
-
-            try
-            {
-                await Task.Factory.StartNew(() =>
+                // 如果取消了，则结束进程
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    // 启动进程
-                    using (Process process = Process.Start(startInfo))
+                    try
                     {
-                        // 等待进程结束
-                        process.WaitForExit();
-                        Console.WriteLine($"\n命令执行完成，退出代码: {process.ExitCode}");
+                        if (!process.HasExited)
+                        {
+                            process.Kill(true);
+                        }
                     }
-                });
+                    catch (InvalidOperationException) { }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                // 获取结果
+                result.ExitCode = process.ExitCode;
+
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"执行命令时出错: {ex.Message}");
+                throw new Exception($"执行命令时出错: {ex.Message}", ex);
             }
         }
     }

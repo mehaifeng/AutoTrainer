@@ -22,7 +22,7 @@
 				Microsoft YaHei
 			</Setter>
 		</Style>
-		<Style Selector="Button.Content">
+		<Style Selector="AccessText">
 			<Setter Property="FontFamily">
 				Microsoft YaHei
 			</Setter>
@@ -39,6 +39,7 @@
     <Application.Styles>
 	    <avalonia:MaterialIconStyles/>
 		<dataGrid:MaterialDataGridStyles/>
-		<themes:MaterialTheme BaseTheme="Light" PrimaryColor="LightBlue" SecondaryColor="Indigo"/>
+		
+		<themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#080808" SecondaryColor="#FFFFFF"/>
     </Application.Styles>
 </Application>
