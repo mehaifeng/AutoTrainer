@@ -24,22 +24,23 @@
 				<Button
 					Classes="light"
 					Height="35"
-					Content="Reset Defaut" />
+					Content="重设配置" />
 				<Button
 					Classes="light"
 					Height="35"
 					Margin="10,0,10,0"
 					Command="{Binding SaveConfigCommand}"
-					Content="Save Config" />
+					Content="保存配置" />
 				<controls:FloatingButton
 					Grid.Row="0"
 					Command="{Binding GoToNextTabCommand}"
 					CommandParameter="{Binding ElementName=ParameterPage}"
-					IsVisible="{Binding IsVisibleNextStep}"
+					
 					Margin="10,0,10,0"
-					Width="150"
+					Width="120"
 					HorizontalAlignment="Right"
 					VerticalAlignment="Center"
+					IsVisible="{Binding IsVisibleNextStep}"
 					Classes="Light"
 					IsExtended="True">
 					<controls:FloatingButton.Styles>
@@ -56,8 +57,9 @@
 											<TextBlock
 												Margin="10,0,0,0"
 												FontSize="16"
+												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
-												Text="Next Step"/>
+												Text="下一步"/>
 										</StackPanel>
 									</Template>
 								</Setter.Value>

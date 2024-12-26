@@ -74,7 +74,8 @@
 					<ProgressBar
 						Width="80"
 						IsIndeterminate="True"
-						IsVisible="{Binding IsConverting}"/>
+						BorderThickness="1"
+						Foreground="WhiteSmoke"/>
 				</Border>
 			</Grid>
 			<TextBox

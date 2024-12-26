@@ -308,7 +308,7 @@
 				Grid.Row="0"
 				Grid.Column="2"
 				Margin="0,0,10,0"
-				Width="150"
+				Width="120"
 				IsVisible="{Binding IsShowNextPageBtn}"
 				Command="{Binding GoToExportPageCommand}"
 				CommandParameter="{Binding ElementName=VerifyTabItem}"
@@ -331,7 +331,7 @@
 											Margin="10,0,0,0"
 											FontSize="16"
 											VerticalAlignment="Center"
-											Text="Next Step"/>
+											Text="下一步"/>
 									</StackPanel>
 								</Template>
 							</Setter.Value>

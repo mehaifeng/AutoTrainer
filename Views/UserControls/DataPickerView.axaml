@@ -55,7 +55,7 @@
 					HorizontalAlignment="Left"
 					Classes="light"
 					Command="{Binding AddCroppingConfigCommand}"
-					Content="增加裁剪配置"
+					Content="增加标注配置"
 					CommandParameter="{Binding ElementName=DragCanvas}"/>
 				<Button
 					Grid.Column="1"
@@ -81,7 +81,7 @@
 					Height="35"
 					HorizontalAlignment="Left"
 					Classes="light"
-					Content="快速裁剪"
+					Content="快速创建"
 					Command="{Binding QuickCropCommand}"/>
 				<SelectableTextBlock
 					Grid.Column="3"
@@ -267,6 +267,8 @@
 						Height="6"
 						Value="{Binding ProgressValue}"
 						Maximum="{Binding ProgressMax}"
+						BorderThickness="1"
+						Foreground="WhiteSmoke"
 						Minimum="0"
 						Classes="no-transitions" />
 				</StackPanel>
@@ -281,7 +283,7 @@
 			<controls:FloatingButton
 					Grid.Row="0"
 					Margin="0,0,10,0"
-					Width="150"
+					Width="120"
 					Command="{Binding GoToNextTabCommand}"
 					CommandParameter="{Binding ElementName=DataTabItem}"
 					HorizontalAlignment="Right"
@@ -304,7 +306,7 @@
 											Margin="10,0,0,0"
 											FontSize="16"
 											VerticalAlignment="Center"
-											Text="Next Step"/>
+											Text="下一步"/>
 									</StackPanel>
 								</Template>
 							</Setter.Value>

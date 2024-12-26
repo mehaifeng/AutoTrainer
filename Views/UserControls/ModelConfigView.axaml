@@ -234,7 +234,7 @@
 								<controls:FloatingButton
 									Grid.Column="1"
 									Margin="0,10,0,0"
-									Width="150"
+									Width="120"
 									Command="{Binding GoToNextTabCommand}"
 									CommandParameter="{Binding ElementName=ModelTabItem}"
 									HorizontalAlignment="Right"
@@ -257,7 +257,7 @@
 																Margin="10,0,0,0"
 																FontSize="16"
 																VerticalAlignment="Center"
-																Text="Next Step"/>
+																Text="下一步"/>
 														</StackPanel>
 													</Template>
 												</Setter.Value>

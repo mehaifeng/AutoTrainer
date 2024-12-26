@@ -35,7 +35,7 @@ namespace AutoTrainer.ViewModels
         {
             CropConfigs = [];
             ImageCategories = [new PreviewImageModel() { ClassName = "类别"}];
-            CropOutputPath = Environment.CurrentDirectory;
+            //CropOutputPath = Environment.CurrentDirectory;
             LoadConfig();
         }
         #region
