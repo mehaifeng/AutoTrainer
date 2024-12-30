@@ -75,6 +75,7 @@
 						Width="80"
 						IsIndeterminate="True"
 						BorderThickness="1"
+						IsVisible="{Binding IsConverting}"
 						Foreground="WhiteSmoke"/>
 				</Border>
 			</Grid>

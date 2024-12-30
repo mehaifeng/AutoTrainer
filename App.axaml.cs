@@ -24,8 +24,15 @@ namespace AutoTrainer
                 MutationDataPath = MutationDataPath,
             };
         }
-        public static TrainModel TrainModel { get; set; }
-        public static string PythonVenvPath { get; set; }
+        /// <summary>
+        /// 一个全局参数
+        /// </summary>
+        public static TrainModel TrainModel { get; set; } = new TrainModel();
+        public static readonly string endPoint = "127.0.0.1:9000";
+        public static readonly string accessKey = "Jv3FFA8htlzEpIRBcVBI";
+        public static readonly string secretKey = "RGdOvEMrV9flZOAEQtN4FYPWJf2xoaXjD0zlszAs";
+        #region 各种静态路径及其初始化
+        public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
         public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyTrain");
@@ -41,6 +48,7 @@ namespace AutoTrainer
             if (!Directory.Exists(PyClassifyLogFolderPath)) Directory.CreateDirectory(PyClassifyLogFolderPath);
             if (Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
         }
+        #endregion
 
         public override void OnFrameworkInitializationCompleted()
         {

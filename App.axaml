@@ -39,7 +39,6 @@
     <Application.Styles>
 	    <avalonia:MaterialIconStyles/>
 		<dataGrid:MaterialDataGridStyles/>
-		
 		<themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#080808" SecondaryColor="#FFFFFF"/>
     </Application.Styles>
 </Application>

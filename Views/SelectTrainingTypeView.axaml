@@ -20,7 +20,7 @@
 			<StackPanel>
 				<Image Source="avares://AutoTrainer/Assets/ImageClassify.webp"/>
 				<StackPanel Margin="8">
-					<TextBlock Classes="Headline6" Text="图像分类" />
+					<TextBlock Classes="Headline6" Text="视觉模型" />
 					<TextBlock Classes="Body2" Text="Secondary text" />
 					<TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Text="{StaticResource DemoText}" />
 				</StackPanel>
@@ -42,19 +42,18 @@
 			<StackPanel>
 			    <Image Source="avares://AutoTrainer/Assets/ValuePredict.webp"/>
 				<StackPanel Margin="8">
-					<TextBlock Classes="Headline6" Text="连续值预测" />
+					<TextBlock Classes="Headline6" Text="模型仓库" />
 					<TextBlock Classes="Body2" Text="Secondary text" />
 					<TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Text="{StaticResource DemoText}" />
 				</StackPanel>
 				<StackPanel Orientation="Horizontal">
 					<Button 
-						x:Name="ValuePredic_Train_Btn"
+						x:Name="Connect_Btn"
 						Classes="Light" 
-						Content="新训练" 
+						Content="连接" 
 						ClickMode="Release"
-						Click="ValuePredic_Train_Btn_Click"/>
+						Click="Connect_Btn_Click"/>
 					<Border Width="8" />
-					<Button Classes="Flat" Content="测试" />
 				</StackPanel>
 			</StackPanel>
 		</controls:Card>

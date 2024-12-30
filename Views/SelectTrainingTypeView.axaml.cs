@@ -1,3 +1,4 @@
+using AutoTrainer.Helpers;
 using AutoTrainer.Views;
 using Avalonia;
 using Avalonia.Controls;
@@ -18,10 +19,10 @@ public partial class SelectTrainingTypeView : Window
         MainWindow mainWindow = new MainWindow();
         mainWindow.Show();
     }
-    private void ValuePredic_Train_Btn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void Connect_Btn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         this.IsVisible = false;
-        MainWindow mainWindow = new MainWindow();
-        mainWindow.Show();
+        ModelStorehouse modelStorehouse = new ModelStorehouse();
+        modelStorehouse.Show();
     }
 }
