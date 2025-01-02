@@ -31,7 +31,7 @@ namespace AutoTrainer
         public static readonly string endPoint = "127.0.0.1:9000";
         public static readonly string accessKey = "Jv3FFA8htlzEpIRBcVBI";
         public static readonly string secretKey = "RGdOvEMrV9flZOAEQtN4FYPWJf2xoaXjD0zlszAs";
-        #region 各种静态路径及其初始化
+        #region 各种路径及其初始化
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
@@ -39,6 +39,7 @@ namespace AutoTrainer
         public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyClassify");
         public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\AppLogs");
         public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet\\MutationDatas");
+        public static string ObjDownloadPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
         private static void CheckDirectory()
         {
             if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
@@ -47,6 +48,7 @@ namespace AutoTrainer
             if (!Directory.Exists(AppLogsFolderPath)) Directory.CreateDirectory(AppLogsFolderPath);
             if (!Directory.Exists(PyClassifyLogFolderPath)) Directory.CreateDirectory(PyClassifyLogFolderPath);
             if (Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
+            if (Directory.Exists(ObjDownloadPath)) Directory.CreateDirectory(ObjDownloadPath);
         }
         #endregion
 

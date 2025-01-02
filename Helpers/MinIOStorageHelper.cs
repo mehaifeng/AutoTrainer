@@ -16,7 +16,7 @@ namespace AutoTrainer.Helpers
     public class MinIOStorageHelper
     {
         private readonly IMinioClient minioClient;
-        private readonly string bucketName = string.Empty;
+        public string bucketName = string.Empty;
         public MinIOStorageHelper(string endpoint, string accessKey, string secretKey)
         {
             minioClient = new MinioClient()
@@ -24,6 +24,8 @@ namespace AutoTrainer.Helpers
                 .WithCredentials(accessKey, secretKey)
                 .WithSSL(false)
                 .Build();
+            Task[] tasks = [];
+            Task.WaitAll(tasks);
         }
 
         /// <summary>
@@ -45,23 +47,66 @@ namespace AutoTrainer.Helpers
 
             await minioClient.PutObjectAsync(putObjectArgs);
         }
-        /// <summary>
-        /// 下载文件
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="destinationPath"></param>
-        /// <param name="username"></param>
-        /// <returns></returns>
-        public async Task DownloadFileAsync(string fileName, string destinationPath, string username)
+        public async Task DownloadFileWithProgressAsync(
+        string bucketName,
+        string objectName,
+        string destinationPath,
+        IProgress<double> progress = null,
+        CancellationToken cancellationToken = default)
         {
-            string objectName = $"{username}/{fileName}";
+            try
+            {
+                // 获取对象的状态信息以获取文件大小
+                var statObjectArgs = new StatObjectArgs()
+                    .WithBucket(bucketName)
+                    .WithObject(objectName);
+                var objectStat = await minioClient.StatObjectAsync(statObjectArgs, cancellationToken);
+                var totalSize = objectStat.Size;
 
-            var getObjectArgs = new GetObjectArgs()
-                .WithBucket(bucketName)
-                .WithObject(objectName)
-                .WithFile(destinationPath);
+                // 准备下载参数
+                var getObjectArgs = new GetObjectArgs()
+                    .WithBucket(bucketName)
+                    .WithObject(objectName)
+                    .WithCallbackStream((stream) =>
+                    {
+                        using (var fileStream = File.Create(destinationPath))
+                        {
+                            var buffer = new byte[8192];
+                            long totalBytesRead = 0;
+                            int bytesRead;
 
-            await minioClient.GetObjectAsync(getObjectArgs);
+                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                if (cancellationToken.IsCancellationRequested)
+                                {
+                                    throw new OperationCanceledException();
+                                }
+
+                                fileStream.Write(buffer, 0, bytesRead);
+                                totalBytesRead += bytesRead;
+
+                                // 计算并报告进度
+                                if (progress != null)
+                                {
+                                    double progressPercentage = (double)totalBytesRead / totalSize * 100;
+                                    progress.Report(progressPercentage);
+                                }
+                            }
+                        }
+                    });
+
+                // 执行下载
+                await minioClient.GetObjectAsync(getObjectArgs, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // 如果下载失败，删除可能部分下载的文件
+                if (File.Exists(destinationPath))
+                {
+                    File.Delete(destinationPath);
+                }
+                throw new Exception($"下载文件时发生错误: {ex.Message}", ex);
+            }
         }
         /// <summary>
         /// 检查存储桶是否存在
@@ -142,33 +187,34 @@ namespace AutoTrainer.Helpers
             }
         }
         /// <summary>
-        /// 列出文件和目录
+        /// 列出文件和目录，包含详细信息
         /// </summary>
-        /// <param name="bucketName"></param>
-        /// <param name="prefix"></param>
-        /// <returns></returns>
-        public async Task<(List<string> Files, List<string> Directories)> ListFilesAndDirectoriesAsync(string bucketName, string? prefix = null,bool recursive = false)
+        /// <param name="bucketName">桶名称</param>
+        /// <param name="prefix">前缀路径</param>
+        /// <param name="recursive">是否递归获取</param>
+        /// <returns>包含文件和目录详细信息的元组</returns>
+        public async Task<(List<FileInfo> Files, List<string> Directories)> ListFilesAndDirectoriesAsync(
+            string bucketName,
+            string? prefix = null,
+            bool recursive = false)
         {
-            var files = new List<string>();
-            var directories = new HashSet<string>(); // 使用HashSet避免重复
+            var files = new List<FileInfo>();
+            var directories = new HashSet<string>();
             var listArgs = new ListObjectsArgs()
                 .WithBucket(bucketName)
                 .WithPrefix(prefix)
-                .WithRecursive(recursive); // 设置为false以获取当前级别
+                .WithRecursive(recursive);
             var items = minioClient.ListObjectsEnumAsync(listArgs);
             await foreach (var item in items)
             {
-                // 如果以/结尾，说明是目录
                 if (item.Key.EndsWith('/'))
                 {
                     var dirName = item.Key.TrimEnd('/');
                     if (prefix != null)
                     {
-                        // 如果有前缀，需要去除前缀部分
                         dirName = dirName.Substring(prefix.TrimEnd('/').Length).TrimStart('/');
                     }
 
-                    // 只添加当前级别的目录名
                     if (!string.IsNullOrEmpty(dirName) && !dirName.Contains('/'))
                     {
                         directories.Add(dirName);
@@ -179,17 +225,24 @@ namespace AutoTrainer.Helpers
                     var fileName = item.Key;
                     if (prefix != null)
                     {
-                        // 如果有前缀，需要去除前缀部分
                         fileName = fileName.Substring(prefix.Length);
                     }
-                    // 只添加当前级别的文件
                     if (!fileName.Contains('/'))
                     {
-                        files.Add(fileName);
+                        // 创建包含详细信息的文件对象
+                        var fileInfo = new FileInfo
+                        {
+                            Name = fileName,
+                            Size = (long)item.Size,
+                            LastModified = DateTime.Parse(item.LastModified),
+                            ETag = item.ETag,
+                            VersionId = item.VersionId
+                        };
+
+                        files.Add(fileInfo);
                     }
                 }
             }
-
             return (files, directories.ToList());
         }
         /// <summary>
@@ -227,5 +280,14 @@ namespace AutoTrainer.Helpers
                 .WithObject(objectName);
             await minioClient.RemoveObjectAsync(removeArgs);
         }
+    }
+    // 创建一个新的文件信息类来存储更多详细信息
+    public class FileInfo
+    {
+        public string Name { get; set; }
+        public long Size { get; set; }
+        public DateTime LastModified { get; set; }
+        public string ETag { get; set; }
+        public string VersionId { get; set; }
     }
 }

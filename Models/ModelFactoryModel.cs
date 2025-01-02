@@ -1,16 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using AutoTrainer.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
-    public class ModelFactoryModel
+    public partial class ModelFactoryModel : ViewModelBase
     {
-        public string ModelName { get; set; }
-        public string ModelType {  get; set; }
-        public string ModelVersion { get; set; }
-        public DateTime DateTime {  get; set; }
+        [ObservableProperty]
+        private bool isChecked;
+        [ObservableProperty]
+        private string modelName = string.Empty;
+        [ObservableProperty]
+        private long modelSize = 0;
+        [ObservableProperty]
+        private string modelType = string.Empty;
+        [ObservableProperty]
+        private string modelVersion = string.Empty;
+        [ObservableProperty]
+        private DateTime lastModifiedDateTime;
+        [ObservableProperty]
+        private int downloadProgress;
+
+        [RelayCommand]
+        private void CheckedOne()
+        {
+            WeakReferenceMessenger.Default.Send(this,"CheckedSingleToken");
+        }
     }
 }

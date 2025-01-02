@@ -12,10 +12,6 @@
         x:Class="AutoTrainer.SelectTrainingTypeView"
         Title="SelectTrainingTypeView">
 	<Grid>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition/>
-			<ColumnDefinition/>
-		</Grid.ColumnDefinitions>
 		<controls:Card Width="330" Padding="4" VerticalAlignment="Center">
 			<StackPanel>
 				<Image Source="avares://AutoTrainer/Assets/ImageClassify.webp"/>
@@ -33,27 +29,9 @@
 						Click="ImageClassify_Train_Btn_Click"/>
 					<Border Width="8" />
 					<Button 
-						Classes="Flat" 
-						Content="测试" />
-				</StackPanel>
-			</StackPanel>
-		</controls:Card>
-		<controls:Card Grid.Column="1" Width="330" Padding="4" VerticalAlignment="Center">
-			<StackPanel>
-			    <Image Source="avares://AutoTrainer/Assets/ValuePredict.webp"/>
-				<StackPanel Margin="8">
-					<TextBlock Classes="Headline6" Text="模型仓库" />
-					<TextBlock Classes="Body2" Text="Secondary text" />
-					<TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Text="{StaticResource DemoText}" />
-				</StackPanel>
-				<StackPanel Orientation="Horizontal">
-					<Button 
-						x:Name="Connect_Btn"
-						Classes="Light" 
-						Content="连接" 
-						ClickMode="Release"
-						Click="Connect_Btn_Click"/>
-					<Border Width="8" />
+						Classes="Flat"
+						Click="Connect_Btn_Click"
+						Content="连接模型库" />
 				</StackPanel>
 			</StackPanel>
 		</controls:Card>

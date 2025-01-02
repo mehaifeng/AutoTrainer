@@ -105,6 +105,19 @@
 			HorizontalAlignment="Left"
 			Margin="10,0,0,0">
 			<controls:FloatingButton
+				x:Name="DownloadSelected_Btn"
+				Width="100"
+				IsVisible="{Binding IsShowDownloadBtn}"
+				Classes="Accent"
+				Command="{Binding DownloadSelectedCommand}"
+				IsExtended="True"
+				Margin="0,0,15,0">
+				<Grid HorizontalAlignment="Center" VerticalAlignment="Center" ColumnDefinitions="20,60">
+					<avalonia:MaterialIcon Kind="Download" Height="20" Width="20"/>
+					<TextBlock Grid.Column="1" Text="下载所选" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Grid>
+			</controls:FloatingButton>
+			<controls:FloatingButton
 				Width="50"
 				Classes="Accent" 
 				IsExtended="True"
@@ -132,6 +145,30 @@
 				</ia:EventTriggerBehavior>
 			</i:Interaction.Behaviors>
 			<DataGrid.Columns>
+				<!--全选-->
+				<DataGridTemplateColumn Width="40">
+					<DataGridTemplateColumn.Header>
+						<CheckBox IsChecked="{Binding IsAllChecked,UpdateSourceTrigger=PropertyChanged}" Command="{Binding ExcuteSelectAllCommand}"/>
+					</DataGridTemplateColumn.Header>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<CheckBox IsChecked="{Binding IsChecked}" Command="{Binding CheckedOneCommand}"/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="DL" Width="Auto" IsVisible="{Binding IsShowDownloadState}">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<ProgressBar 
+								Classes="circular"
+								Width="28"
+								Height="28"
+								IsVisible="{Binding IsChecked}"
+								Value="{Binding DownloadProgress}"
+								ShowProgressText="True"/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
 				<DataGridTemplateColumn Header="目标">
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
@@ -147,8 +184,8 @@
 				</DataGridTemplateColumn>
 				<DataGridTextColumn Header="类别" Binding="{Binding ModelType}"/>
 				<DataGridTextColumn Header="版本" Binding="{Binding ModelVersion}"/>
-				<DataGridTextColumn Header="大小"/>
-				<DataGridTextColumn Header="日期" Binding="{Binding DateTime}"/>
+				<DataGridTextColumn Header="大小" Binding="{Binding ModelSize}"/>
+				<DataGridTextColumn Header="最后修改日期" Binding="{Binding LastModifiedDateTime}"/>
 			</DataGrid.Columns>
 		</DataGrid>
 	</Grid>
