@@ -88,11 +88,14 @@ namespace AutoTrainer.ViewModels
             {
                 ModelTable = [];
                 CheckedStates = [];
-                var path = MinioPath.Replace(SelectedProject + '/', string.Empty).TrimEnd('/');
-                var index = path.LastIndexOf("/");
-                path = path.Substring(0, index + 1);
-                await GetObjects(SelectedProject, path, false);
-                MinioPath = MinioPath.Substring(0, MinioPath.TrimEnd('/').LastIndexOf('/') + 1);
+                if (MinioPath.StartsWith(SelectedProject + '/'))
+                {
+                    var path = MinioPath.Substring(SelectedProject.Length+1).TrimEnd('/');
+                    var index = path.LastIndexOf('/');
+                    path = path.Substring(0, index + 1);
+                    await GetObjects(SelectedProject, path, false);
+                    MinioPath = MinioPath.Substring(0, MinioPath.TrimEnd('/').LastIndexOf('/') + 1);
+                }
                 IsAllChecked = false;
                 IsShowDownloadBtn = false;
             }
@@ -121,34 +124,75 @@ namespace AutoTrainer.ViewModels
         public async Task DownloadSelected()
         {
             IsShowDownloadState = true;
-            var selectedModels = ModelTable.Where(m => m.IsChecked).ToList();
-            var path = string.Empty;
-            List<Task> DownloadTasks = [];
-            if (selectedModels.Count == 0)
+            try
             {
-                IsShowDownloadState = false;
-                return;
-            }
-            if (MinioPath.StartsWith(SelectedProject + '/'))
-            {
-                path = MinioPath.Substring(SelectedProject.Length);
-            }
-            foreach (var model in selectedModels)
-            {
-                var objPath = Path.Combine(path,model.ModelName);
-                var destinationPath = Path.Combine(App.ObjDownloadPath,model.ModelName);
-                Task downloadTask =  MinIOStorageHelper.DownloadFileWithProgressAsync(SelectedProject, objPath, destinationPath, new Progress<double>((percentComplete) =>
+                var selectedModels = ModelTable.Where(m => m.IsChecked).ToList();
+                if (selectedModels.Count == 0)
                 {
-                    model.DownloadProgress = (int)percentComplete;
-                }));
-                DownloadTasks.Add(downloadTask);
-                while (DownloadTasks.Count > 0)
+                    return;
+                }
+
+                var basePath = MinioPath.StartsWith(SelectedProject + '/')
+                    ? MinioPath.Substring(SelectedProject.Length)
+                    : string.Empty;
+
+                List<Task> downloadTasks = new();
+
+                foreach (var model in selectedModels)
                 {
-                    var completeTask = await Task.WhenAny([..DownloadTasks]);
-                    DownloadTasks.Remove(completeTask);
+                    var sourcePath = Path.Combine(basePath, model.ModelName).Replace("\\", "/");
+                    var destinationPath = Path.Combine(App.ObjDownloadPath, model.ModelName);
+
+                    if (string.Equals(model.ModelType,"folder"))
+                    {
+                        // 下载文件夹
+                        var progress = new Progress<(string File, double Progress)>(tuple =>
+                        {
+                            model.DownloadProgress = (int)tuple.Progress;
+                        });
+
+                        var task = MinIOStorageHelper.DownloadFolderAsync(
+                            SelectedProject,
+                            sourcePath,
+                            destinationPath,
+                            progress);
+                        downloadTasks.Add(task);
+                    }
+                    else
+                    {
+                        // 下载单个文件
+                        var progress = new Progress<double>(percentComplete =>
+                        {
+                            model.DownloadProgress = (int)percentComplete;
+                        });
+
+                        var task = MinIOStorageHelper.DownloadFileWithProgressAsync(
+                            SelectedProject,
+                            sourcePath,
+                            destinationPath,
+                            progress);
+                        downloadTasks.Add(task);
+                    }
+
+                    // 等待当前任务完成
+                    while (downloadTasks.Count > 0)
+                    {
+                        var completedTask = await Task.WhenAny(downloadTasks);
+                        downloadTasks.Remove(completedTask);
+                        await completedTask; // 这将抛出任何发生的异常
+                    }
                 }
             }
-            IsShowDownloadState = false;
+            catch (Exception ex)
+            {
+                // 处理错误
+                Debug.WriteLine($"下载错误: {ex.Message}");
+                // 可以添加用户通知
+            }
+            finally
+            {
+                IsShowDownloadState = false;
+            }
         }
         #endregion
         /// <summary>

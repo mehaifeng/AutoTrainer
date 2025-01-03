@@ -191,6 +191,8 @@
 						Foreground="Red"/>
 					<ProgressBar
 						Margin="0,0,0,10"
+						BorderThickness="1"
+						Foreground="White"
 						IsIndeterminate="{Binding IsRunningProgressBar}" 
 						IsVisible="{Binding IsVisibleProgressBar}"/>
 				</StackPanel>

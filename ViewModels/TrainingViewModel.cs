@@ -179,6 +179,7 @@ namespace AutoTrainer.ViewModels
             var dataSetPath = App.TrainModel.TrainDataPath;
             var dataSetClassify = Directory.GetDirectories(dataSetPath);
             var augemnetDataFolder = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
+            Directory.CreateDirectory(augemnetDataFolder);
             Directory.Delete(augemnetDataFolder,true);
             for (int i = 0; i<dataSetClassify.Length; i++)
             {

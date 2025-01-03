@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -246,6 +247,112 @@ namespace AutoTrainer.Helpers
             return (files, directories.ToList());
         }
         /// <summary>
+        /// 列出文件夹内容
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="prefix"></param>
+        /// <param name="recursive"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<List<FileInfo>> ListFolderContentsAsync(string bucketName, string prefix, bool recursive = true)
+        {
+            var items = new List<FileInfo>();
+            try
+            {
+                var listArgs = new ListObjectsArgs()
+                    .WithBucket(bucketName)
+                    .WithPrefix(prefix)
+                    .WithRecursive(recursive);
+
+                var objects = minioClient.ListObjectsEnumAsync(listArgs);
+                await foreach (var item in objects)
+                {
+                    items.Add(new FileInfo
+                    {
+                        Path = item.Key,
+                        Size = (long)item.Size,
+                        IsDirectory = item.Key.EndsWith('/')
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"列出文件夹内容时发生错误: {ex.Message}", ex);
+            }
+            return items;
+        }
+
+        /// <summary>
+        /// 下载文件夹及其子项
+        /// </summary>
+        /// <param name="bucketName"></param>
+        /// <param name="sourcePath"></param>
+        /// <param name="destinationBasePath"></param>
+        /// <param name="progress"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task DownloadFolderAsync(
+            string bucketName,
+            string sourcePath,
+            string destinationBasePath,
+            IProgress<(string File, double Progress)> progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // 确保源路径以 / 结尾
+                if (sourcePath.StartsWith(bucketName + '/'))
+                {
+                    sourcePath = sourcePath[(bucketName.Length + 1)..];
+                }
+                sourcePath = sourcePath.TrimStart('/');
+                sourcePath = sourcePath.TrimEnd('/') + '/';
+
+                // 获取文件夹中的所有内容
+                var contents = await ListFolderContentsAsync(bucketName, sourcePath);
+
+                foreach (var item in contents)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    // 计算相对路径
+                    var relativePath = item.Path.Substring(sourcePath.Length);
+                    var fullDestinationPath = Path.Combine(destinationBasePath, relativePath);
+
+                    if (item.IsDirectory)
+                    {
+                        // 创建目录
+                        Directory.CreateDirectory(fullDestinationPath);
+                    }
+                    else
+                    {
+                        // 确保目标文件夹存在
+                        Directory.CreateDirectory(Path.GetDirectoryName(fullDestinationPath));
+
+                        // 下载文件
+                        var fileProgress = new Progress<double>(percent =>
+                        {
+                            progress?.Report((relativePath, percent));
+                        });
+
+                        await DownloadFileWithProgressAsync(
+                            bucketName,
+                            item.Path,
+                            fullDestinationPath,
+                            fileProgress,
+                            cancellationToken
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"下载文件夹时发生错误: {ex.Message}", ex);
+            }
+        }
+        /// <summary>
         /// 列出文件
         /// </summary>
         /// <param name="bucketName"></param>
@@ -284,6 +391,8 @@ namespace AutoTrainer.Helpers
     // 创建一个新的文件信息类来存储更多详细信息
     public class FileInfo
     {
+        public bool IsDirectory { get; set; }
+        public string Path { get; set; }
         public string Name { get; set; }
         public long Size { get; set; }
         public DateTime LastModified { get; set; }

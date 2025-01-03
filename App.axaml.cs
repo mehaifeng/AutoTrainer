@@ -35,11 +35,12 @@ namespace AutoTrainer
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
-        public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyTrain");
-        public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyClassify");
-        public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\AppLogs");
-        public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet\\MutationDatas");
+        public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","PyTrain");
+        public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","PyClassify");
+        public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","AppLogs");
+        public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet","MutationDatas");
         public static string ObjDownloadPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
+        public static string AugmentTrainingDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
         private static void CheckDirectory()
         {
             if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
@@ -47,8 +48,9 @@ namespace AutoTrainer
             if (!Directory.Exists(PyTrainLogsFolderPath)) Directory.CreateDirectory(PyTrainLogsFolderPath);
             if (!Directory.Exists(AppLogsFolderPath)) Directory.CreateDirectory(AppLogsFolderPath);
             if (!Directory.Exists(PyClassifyLogFolderPath)) Directory.CreateDirectory(PyClassifyLogFolderPath);
-            if (Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
-            if (Directory.Exists(ObjDownloadPath)) Directory.CreateDirectory(ObjDownloadPath);
+            if (!Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
+            if (!Directory.Exists(ObjDownloadPath)) Directory.CreateDirectory(ObjDownloadPath);
+            if (!Directory.Exists(AugmentTrainingDataPath)) Directory.CreateDirectory(AugmentTrainingDataPath);
         }
         #endregion
 

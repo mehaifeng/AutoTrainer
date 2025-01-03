@@ -44,6 +44,8 @@ namespace AutoTrainer.ViewModels
             "tensorflow",
             "tf_keras",
             "psutil",
+            "sympy",
+            "six",
             "onnx-graphsurgeon",
             "sng4onnx"];
         private HashSet<string> ExcludedPaths =
