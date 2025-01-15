@@ -1,0 +1,192 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:vm="using:AutoTrainer.ViewModels"
+		xmlns:converter="using:AutoTrainer.Converters"
+		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+		xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
+		xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="850"
+        x:Class="AutoTrainer.ModelStorehouse"
+		x:DataType="vm:ModelStorehouseViewModel"
+		Closed="Window_Closed"
+        Title="ModelStorehouse">
+	<Window.Resources>
+		<converter:IconTypeConverter x:Key="IconTypeConverter"/>
+	</Window.Resources>
+	<Window.Styles>
+		<Style Selector="ListBoxItem">
+			<Setter Property="Foreground" Value="Transparent" />
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="BorderThickness" Value="0" />
+			<Setter Property="Padding" Value="8" />
+			<Setter Property="Template">
+				<ControlTemplate>
+					<Border Name="PART_RootBorder"
+							CornerRadius="{TemplateBinding CornerRadius}"
+							Background="{TemplateBinding Background}"
+							BorderBrush="{TemplateBinding BorderBrush}"
+							BorderThickness="{TemplateBinding BorderThickness}">
+						<Panel Name="PART_RootPanel">
+							<Border Name="selectedBorder"
+									Background="{TemplateBinding Foreground}"
+									CornerRadius="{TemplateBinding CornerRadius}" />
+							<Border Name="pointerOverBorder"
+									Background="{TemplateBinding Foreground}"
+									CornerRadius="{TemplateBinding CornerRadius}" />
+							<Border CornerRadius="{TemplateBinding CornerRadius}"
+									ClipToBounds="True">
+								<ContentPresenter Name="PART_ContentPresenter"
+												  Background="{TemplateBinding Background}"
+												  BorderBrush="{TemplateBinding BorderBrush}"
+												  BorderThickness="{TemplateBinding BorderThickness}"
+												  ContentTemplate="{TemplateBinding ContentTemplate}"
+												  Content="{TemplateBinding Content}"
+												  Padding="{TemplateBinding Padding}"
+												  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+												  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+							</Border>
+						</Panel>
+					</Border>
+				</ControlTemplate>
+			</Setter>
+		</Style>
+	</Window.Styles>
+	<Grid RowDefinitions="110,60,*" Margin="10">
+		<Grid Grid.Row="0" RowDefinitions="40,70">
+			<TextBlock 
+				Grid.Row="0"
+				Text="项目"
+				VerticalAlignment="Center"
+				Classes="Headline6"/>
+			<Grid Grid.Row="1" ColumnDefinitions="Auto,110">
+				<ListBox
+					Grid.Column="0"
+					VerticalAlignment="Center"
+					SelectedItem="{Binding SelectedProject}"
+					ItemsSource="{Binding ProjectCollection}">
+					<ListBox.Styles>
+						<!-- 移除默认选中效果 -->
+						<Style Selector="ListBoxItem:selected Border#PART_Border">
+							<Setter Property="Background" Value="Black"/>
+						</Style>
+						<Style Selector="ListBoxItem:selected TextBlock#PART_Textblock">
+							<Setter Property="Foreground" Value="White"/>
+						</Style>
+					</ListBox.Styles>
+					<ListBox.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10"/>
+						</ItemsPanelTemplate>
+					</ListBox.ItemsPanel>
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<Border x:Name="PART_Border" CornerRadius="50" BorderBrush="Black" BorderThickness="1">
+								<TextBlock x:Name="PART_Textblock" Text="{Binding .}" Margin="13"/>
+							</Border>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+				<Border Grid.Column="1" Margin="10,0,0,0">
+					<controls:FloatingButton Classes="Accent" IsExtended="True">
+						<StackPanel Orientation="Horizontal">
+							<avalonia:MaterialIcon Kind="Plus" />
+							<TextBlock Text="添加项目" Margin="5,0,0,0" VerticalAlignment="Center"/>
+						</StackPanel>
+					</controls:FloatingButton>
+				</Border>
+			</Grid>
+		</Grid>
+		<StackPanel 
+			Grid.Row="1"
+			Orientation="Horizontal"
+			HorizontalAlignment="Left"
+			Margin="10,0,0,0">
+			<controls:FloatingButton
+				x:Name="DownloadSelected_Btn"
+				Width="100"
+				IsVisible="{Binding IsShowDownloadBtn}"
+				Classes="Accent"
+				Command="{Binding DownloadSelectedCommand}"
+				IsExtended="True"
+				Margin="0,0,15,0">
+				<Grid HorizontalAlignment="Center" VerticalAlignment="Center" ColumnDefinitions="20,60">
+					<avalonia:MaterialIcon Kind="Download" Height="20" Width="20"/>
+					<TextBlock Grid.Column="1" Text="下载所选" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+				</Grid>
+			</controls:FloatingButton>
+			<controls:FloatingButton
+				Width="50"
+				Classes="Accent" 
+				IsExtended="True"
+				Command="{Binding BackFolderCommand}"
+				Margin="0,0,15,0">
+				<avalonia:MaterialIcon Kind="ArrowLeft" />
+			</controls:FloatingButton>
+			<SelectableTextBlock 
+				Text="{Binding MinioPath}" 
+				FontSize="16"
+				VerticalAlignment="Center"/>
+		</StackPanel>
+		<DataGrid
+			x:Name="ModelFactory_DG"
+			Grid.Row="2"
+			Margin="0,5,0,10"
+			FontSize="14"
+			ColumnWidth="*"
+			ItemsSource="{Binding ModelTable}"
+			AutoGenerateColumns="False"
+			BorderBrush="Black">
+			<i:Interaction.Behaviors>
+				<ia:EventTriggerBehavior EventName="SelectionChanged">
+					<ia:InvokeCommandAction Command="{Binding OpenFolderCommand}" CommandParameter="{Binding ElementName=ModelFactory_DG,Path=SelectedItem}"/>
+				</ia:EventTriggerBehavior>
+			</i:Interaction.Behaviors>
+			<DataGrid.Columns>
+				<!--全选-->
+				<DataGridTemplateColumn Width="40">
+					<DataGridTemplateColumn.Header>
+						<CheckBox IsChecked="{Binding IsAllChecked,UpdateSourceTrigger=PropertyChanged}" Command="{Binding ExcuteSelectAllCommand}"/>
+					</DataGridTemplateColumn.Header>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<CheckBox IsChecked="{Binding IsChecked}" Command="{Binding CheckedOneCommand}"/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="DL" Width="Auto" IsVisible="{Binding IsShowDownloadState}">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<ProgressBar 
+								Classes="circular"
+								Width="28"
+								Height="28"
+								IsVisible="{Binding IsChecked}"
+								Value="{Binding DownloadProgress}"
+								ShowProgressText="True"/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="目标">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<Grid ColumnDefinitions="30,Auto">
+								<TextBlock Grid.Column="0"
+										 Text="{Binding ModelType, Converter={StaticResource IconTypeConverter}}"
+										 VerticalAlignment="Center"
+										 Margin="0,0,0,5"/>
+								<TextBlock Grid.Column="1" Text="{Binding ModelName}" VerticalAlignment="Center"/>
+							</Grid>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTextColumn Header="类别" Binding="{Binding ModelType}"/>
+				<DataGridTextColumn Header="版本" Binding="{Binding ModelVersion}"/>
+				<DataGridTextColumn Header="大小" Binding="{Binding ModelSize}"/>
+				<DataGridTextColumn Header="最后修改日期" Binding="{Binding LastModifiedDateTime}"/>
+			</DataGrid.Columns>
+		</DataGrid>
+	</Grid>
+</Window>

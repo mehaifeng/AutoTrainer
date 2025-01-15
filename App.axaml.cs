@@ -20,25 +20,39 @@ namespace AutoTrainer
             TrainModel = new TrainModel
             {
                 ModelOutputPath = ModelOutputFolderPath,
-                LogOutputPath = PyLogsFolderPath,
+                PyTrainLogOutputPath = PyTrainLogsFolderPath,
                 MutationDataPath = MutationDataPath,
             };
         }
-        public static TrainModel TrainModel { get; set; }
-        public static string PythonVenvPath { get; set; }
+        /// <summary>
+        /// 一个全局参数
+        /// </summary>
+        public static TrainModel TrainModel { get; set; } = new TrainModel();
+        public static readonly string endPoint = "127.0.0.1:9000";
+        public static readonly string accessKey = "Jv3FFA8htlzEpIRBcVBI";
+        public static readonly string secretKey = "RGdOvEMrV9flZOAEQtN4FYPWJf2xoaXjD0zlszAs";
+        #region 各种路径及其初始化
+        public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
-        public static string PyLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\PyLogs");
-        public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs\\AppLogs");
-        public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet\\MutationDatas");
+        public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","PyTrain");
+        public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","PyClassify");
+        public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs","AppLogs");
+        public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet","MutationDatas");
+        public static string ObjDownloadPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
+        public static string AugmentTrainingDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
         private static void CheckDirectory()
         {
             if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
             if (!Directory.Exists(ModelOutputFolderPath)) Directory.CreateDirectory(ModelOutputFolderPath);
-            if (!Directory.Exists(PyLogsFolderPath)) Directory.CreateDirectory(PyLogsFolderPath);
+            if (!Directory.Exists(PyTrainLogsFolderPath)) Directory.CreateDirectory(PyTrainLogsFolderPath);
             if (!Directory.Exists(AppLogsFolderPath)) Directory.CreateDirectory(AppLogsFolderPath);
-            if (Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
+            if (!Directory.Exists(PyClassifyLogFolderPath)) Directory.CreateDirectory(PyClassifyLogFolderPath);
+            if (!Directory.Exists(MutationDataPath)) Directory.CreateDirectory(MutationDataPath);
+            if (!Directory.Exists(ObjDownloadPath)) Directory.CreateDirectory(ObjDownloadPath);
+            if (!Directory.Exists(AugmentTrainingDataPath)) Directory.CreateDirectory(AugmentTrainingDataPath);
         }
+        #endregion
 
         public override void OnFrameworkInitializationCompleted()
         {

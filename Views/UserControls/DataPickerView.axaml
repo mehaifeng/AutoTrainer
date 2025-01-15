@@ -10,8 +10,8 @@
 			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
 			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
              mc:Ignorable="d" 
-			 d:DesignWidth="1000" 
-			 d:DesignHeight="650"
+			 d:DesignWidth="1200" 
+			 d:DesignHeight="850"
 			 Padding="10,0,10,0"
 			 x:Name="DataTabItem"
 			 x:DataType="vm:DataPickerViewModel"
@@ -55,8 +55,8 @@
 					HorizontalAlignment="Left"
 					Classes="light"
 					Command="{Binding AddCroppingConfigCommand}"
-					CommandParameter="{Binding ElementName=DragCanvas}"
-					Content="增加裁剪配置"/>
+					Content="增加标注配置"
+					CommandParameter="{Binding ElementName=DragCanvas}"/>
 				<Button
 					Grid.Column="1"
 					Height="35"
@@ -64,21 +64,26 @@
 					VerticalAlignment="Center"
 					HorizontalAlignment="Left"
 					Classes="light"
-					Command="{Binding SelectPictureCommand}"
-					Content="选择图片"/>
+					Content="选择图片"
+					Command="{Binding SelectPictureCommand}"/>
 				<TextBlock 
 					Grid.Column="2"
+					FontSize="16"
+					FontWeight="Bold"
+					Background="Black"
+					TextAlignment="Center"
 					HorizontalAlignment="Center"
 					VerticalAlignment="Center"
+					Foreground="White"
 					Text="{Binding CropConfig.Name}"/>
 				<Button
 					Grid.Column="3"
 					Height="35"
 					HorizontalAlignment="Left"
 					Classes="light"
-					Content="快速裁剪"
+					Content="快速创建"
 					Command="{Binding QuickCropCommand}"/>
-				<TextBlock
+				<SelectableTextBlock
 					Grid.Column="3"
 					VerticalAlignment="Center"
 					Margin="100,0,0,0"
@@ -262,6 +267,8 @@
 						Height="6"
 						Value="{Binding ProgressValue}"
 						Maximum="{Binding ProgressMax}"
+						BorderThickness="1"
+						Foreground="WhiteSmoke"
 						Minimum="0"
 						Classes="no-transitions" />
 				</StackPanel>
@@ -276,7 +283,7 @@
 			<controls:FloatingButton
 					Grid.Row="0"
 					Margin="0,0,10,0"
-					Width="150"
+					Width="120"
 					Command="{Binding GoToNextTabCommand}"
 					CommandParameter="{Binding ElementName=DataTabItem}"
 					HorizontalAlignment="Right"
@@ -299,7 +306,7 @@
 											Margin="10,0,0,0"
 											FontSize="16"
 											VerticalAlignment="Center"
-											Text="Next Step"/>
+											Text="下一步"/>
 									</StackPanel>
 								</Template>
 							</Setter.Value>
@@ -317,7 +324,7 @@
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="60"/>
-						<RowDefinition Height="40"/>
+						<RowDefinition Height="50"/>
 						<RowDefinition Height="*"/>
 					</Grid.RowDefinitions>
 					<Grid Grid.Row="0">
@@ -326,25 +333,21 @@
 							VerticalAlignment="Top"
 							HorizontalAlignment="Left"
 							Command="{Binding PreviewImageCommand}"
-							Classes="light"
-							Content="选择文件夹"/>
+							Classes="light">
+							<TextBlock Text="选择文件夹"/>
+						</Button>
 					</Grid>
 					<StackPanel Grid.Row="1" Orientation="Vertical">
 						<TextBlock
 							Text="数据预览"
 							HorizontalAlignment="Left"
 							VerticalAlignment="Center"/>
-						<ScrollViewer Margin="0,5,0,5">
-							<Border>
-								<TextBlock
-								
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center"
-									ToolTip.IsOpen="True"
-									ToolTip.Tip="{Binding PreviewState}"
-									Text="{Binding PreviewState}"/>
-							</Border>
-						</ScrollViewer>
+							<TextBlock
+								HorizontalAlignment="Left"
+								VerticalAlignment="Center"
+								ToolTip.IsOpen="True"
+								ToolTip.Tip="{Binding PreviewState}"
+								Text="{Binding PreviewState}"/>
 					</StackPanel>
 					<TabControl
 						Theme="{StaticResource ScrollableTabControl}"
@@ -359,7 +362,7 @@
 						<!-- 设置 TabItem 的标题 -->
 						<TabControl.ItemTemplate>
 							<DataTemplate DataType="model:PreviewImageModel">
-								<TextBlock Text="{Binding Name}" />
+								<TextBlock Text="{Binding ClassName}" />
 							</DataTemplate>
 						</TabControl.ItemTemplate>
 
@@ -376,7 +379,7 @@
 										</ItemsControl.ItemsPanel>
 										<ItemsControl.ItemTemplate>
 											<DataTemplate>
-												<Image Source="{Binding}" Width="64" Height="64" Margin="5"/>
+												<Image Source="{Binding Image}" Width="64" Height="64" Margin="5"/>
 											</DataTemplate>
 										</ItemsControl.ItemTemplate>
 									</ItemsControl>

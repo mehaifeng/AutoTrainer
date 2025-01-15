@@ -1,4 +1,7 @@
-﻿using SkiaSharp;
+﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,12 +12,96 @@ namespace AutoTrainer.Helpers
 {
     public class ImageAugmentation
     {
+
+        public static List<string> AugmentImageOne(int index, bool[] checks, string originalImagePath, string outputDirectory, int augmentationCount)
+        {
+            if (!File.Exists(originalImagePath))
+            {
+                throw new FileNotFoundException("原始图像文件不存在。", originalImagePath);
+            }
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            List<string> augmentedImagePaths = new List<string>();
+            try
+            {
+                using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImagePath))
+                {
+                    for (int i = 0; i < augmentationCount; i++)
+                    {
+                        // 克隆原始图像，避免修改原始图像
+                        Image<Rgba32> augmentedImage = image.Clone();
+                        Random random = new Random();
+
+                        // 只在对应的checks为true时执行相应的增强操作
+                        if (checks[0]) // 随机旋转
+                        {
+                            int randomRotation = random.Next(-15, 15);
+                            augmentedImage.Mutate(x => x.Rotate(randomRotation));
+                        }
+
+                        if (checks[1]) // 随机缩放
+                        {
+                            double randomZoom = 1.0 + (random.NextDouble() * 0.2 - 0.1);
+                            augmentedImage.Mutate(x => x.Resize((int)(image.Width * randomZoom), (int)(image.Height * randomZoom)));
+                        }
+
+                        if (checks[2]) // 随机亮度
+                        {
+                            double randomBrightness = 1.0 + (random.NextDouble() * 0.5 - 0.2);
+                            augmentedImage.Mutate(x => x.Brightness((float)randomBrightness));
+                        }
+
+                        if (checks[3]) // 随机对比度
+                        {
+                            double randomContrast = 1.0 + (random.NextDouble() * 0.5 - 0.2);
+                            augmentedImage.Mutate(x => x.Contrast((float)randomContrast));
+                        }
+
+                        if (checks[4]) // 随机水平翻转
+                        {
+                            if (random.Next(2) == 0)
+                            {
+                                augmentedImage.Mutate(x => x.Flip(FlipMode.Horizontal));
+                            }
+                        }
+
+                        if (checks[5]) // 随机垂直翻转
+                        {
+                            if (random.Next(2) == 0)
+                            {
+                                augmentedImage.Mutate(x => x.Flip(FlipMode.Vertical));
+                            }
+                        }
+
+                        // 生成输出文件名
+                        var count = originalImagePath.Split("\\");
+                        var className = count[count.Length - 2];
+                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{index}({className})_CLASS_.jpg");
+
+                        // 保存增强后的图像
+                        augmentedImage.Save(outputPath);
+                        augmentedImagePaths.Add(outputPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"图像增强过程中发生错误：{ex.Message}");
+                return new List<string>();
+            }
+
+            return augmentedImagePaths;
+        }
+
         /// <summary>
         /// 对输入图像进行数据增强
         /// </summary>
-        public static List<string> AugmentImage(string originalImagePath, string outputDirectory, int augmentationCount = 10)
+        public static List<string> AugmentImage(int index, string originalImagePath, string outputDirectory, int augmentationCount = 10)
         {
-            List<string> augmentedImagePaths = new List<string>();
+            List<string> augmentedImagePaths = [];
 
             // 确保输出目录存在
             Directory.CreateDirectory(outputDirectory);
@@ -74,8 +161,9 @@ namespace AutoTrainer.Helpers
                         // 保存增强后的图像
                         SKImage image = surface.Snapshot();
                         SKData data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
-
-                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}.jpg");
+                        var count = originalImagePath.Split("\\");
+                        var className = count[count.Length - 2];
+                        string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{index}({className})_CLASS_.jpg");
                         using (FileStream stream = File.OpenWrite(outputPath))
                         {
                             data.SaveTo(stream);

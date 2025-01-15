@@ -23,14 +23,23 @@ namespace AutoTrainer.ViewModels
             BatchSizes = [8, 16, 32, 64];
             Optimizers = ["Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
-            SchedulingStrategies = ["ReduceLROnPlateau","StepLR"];
-            SelectedLearningRate = LearningRates[0];
+            SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];
+            SelectedLearningRate = LearningRates[1];
             SelectedBatchSize = BatchSizes[1];
             SelectedValidationSetRate = ValidationSetRates[1];
             SelectedOptimizer = Optimizers[0];
             SelectedStrategy = SchedulingStrategies[0];
-            Epochs = 100;
+            Epochs = 25;
             EarlyStopRound = 5;
+            this.PropertyChanged += ParameterConfigViewModel_PropertyChanged;
+        }
+
+        private void ParameterConfigViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != "IsVisibleNextStep")
+            {
+                IsVisibleNextStep = false;
+            }
         }
         #region 可绑定属性
         /// <summary>
@@ -64,7 +73,6 @@ namespace AutoTrainer.ViewModels
             {
                 SetProperty(ref epochs, value);
                 OnPropertyChanged(nameof(Epochs));
-                ShowNextBtn();
             }
         }
         /// <summary>
@@ -113,7 +121,6 @@ namespace AutoTrainer.ViewModels
             {
                 SetProperty(ref earlyStopRound, value);
                 OnPropertyChanged(nameof(EarlyStopRound));
-                ShowNextBtn();
             }
         }
         /// <summary>
@@ -121,6 +128,36 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private bool isVisibleNextStep = false;
+        /// <summary>
+        /// 随机水平反转是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomHorizonFlipChecked = false;
+        /// <summary>
+        /// 随机垂直反转是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomVerticalFlipChecked = false;
+        /// <summary>
+        /// 随机旋转是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomRotationChecked = false;
+        /// <summary>
+        /// 随机亮度是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomBrightnessChecked = false;
+        /// <summary>
+        /// 随机对比度是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomContrastChecked = false;
+        /// <summary>
+        /// 随机缩放是否选中
+        /// </summary>
+        [ObservableProperty]
+        private bool randomZoomChecked = false;
         #endregion
 
         #region 命令
@@ -133,28 +170,28 @@ namespace AutoTrainer.ViewModels
             }
         }
         [RelayCommand]
-        private async void SaveConfig()
+        private async Task SaveConfig()
         {
             App.TrainModel.LearningRate = SelectedLearningRate;
             App.TrainModel.LrScheduler = SelectedStrategy;
             App.TrainModel.WeightDecay = WeightDecay;
             App.TrainModel.BatchSize = SelectedBatchSize;
             App.TrainModel.Optimizer = SelectedOptimizer;
-            App.TrainModel.UseDataAugmentation = false;
             App.TrainModel.Epochs = Epochs;
             App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
             App.TrainModel.ValidationSplit = SelectedValidationSetRate;
-            string jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json"); 
-            await File.WriteAllTextAsync(configPath,jsonStr);
+            App.TrainModel.RandomHorizonFlipChecked = RandomHorizonFlipChecked;
+            App.TrainModel.RandomVerticalFlipChecked = RandomVerticalFlipChecked;
+            App.TrainModel.RandomRotationChecked = RandomRotationChecked;
+            App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
+            App.TrainModel.RandomContrastChecked = RandomContrastChecked;
+            App.TrainModel.RandomZoomChecked = RandomZoomChecked;
+            string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
+            string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
+            await File.WriteAllTextAsync(configPath, jsonStr);
+            IsVisibleNextStep = true;
         }
         #endregion
 
-        #region 函数
-        private void ShowNextBtn()
-        {
-            IsVisibleNextStep = (Epochs > 0 && EarlyStopRound > 0) ? true : false;
-        }
-        #endregion
     }
 }

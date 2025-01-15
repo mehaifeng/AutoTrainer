@@ -24,4 +24,8 @@ public partial class TrainingView : UserControl
         _viewmodel = new TrainingViewModel();
         DataContext = _viewmodel;
     }
+    private void PyOutput_Tb_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        PyOutput_Tb.CaretIndex = int.MaxValue;
+    }
 }

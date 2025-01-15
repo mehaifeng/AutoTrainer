@@ -333,7 +333,7 @@ def main():
     try:
         # 加载配置
         config = load_config()
-        logger = TrainingLogger(config['log_output_path'])
+        logger = TrainingLogger(config['py_train_log_output_path'])
         logger.log_data["config"] = config
 
         # 创建模型配置

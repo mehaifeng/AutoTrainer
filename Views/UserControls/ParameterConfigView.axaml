@@ -10,8 +10,8 @@
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions" 
              mc:Ignorable="d"
 			 Padding="5"
-			 d:DesignWidth="1000"
-			 d:DesignHeight="650"
+			 d:DesignWidth="1200"
+			 d:DesignHeight="850"
 			 x:Name="ParameterPage"
 			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">
@@ -24,22 +24,23 @@
 				<Button
 					Classes="light"
 					Height="35"
-					Content="Reset Defaut" />
+					Content="重设配置" />
 				<Button
 					Classes="light"
 					Height="35"
 					Margin="10,0,10,0"
 					Command="{Binding SaveConfigCommand}"
-					Content="Save Config" />
+					Content="保存配置" />
 				<controls:FloatingButton
 					Grid.Row="0"
 					Command="{Binding GoToNextTabCommand}"
 					CommandParameter="{Binding ElementName=ParameterPage}"
-					IsVisible="{Binding IsVisibleNextStep}"
+					
 					Margin="10,0,10,0"
-					Width="150"
+					Width="120"
 					HorizontalAlignment="Right"
 					VerticalAlignment="Center"
+					IsVisible="{Binding IsVisibleNextStep}"
 					Classes="Light"
 					IsExtended="True">
 					<controls:FloatingButton.Styles>
@@ -56,8 +57,9 @@
 											<TextBlock
 												Margin="10,0,0,0"
 												FontSize="16"
+												HorizontalAlignment="Center"
 												VerticalAlignment="Center"
-												Text="Next Step"/>
+												Text="下一步"/>
 										</StackPanel>
 									</Template>
 								</Setter.Value>
@@ -80,6 +82,11 @@
 				<TextBlock 
 					Grid.Row="0" 
 					Margin="0,0,0,30"
+					Width="65"
+					TextAlignment="Center"
+					HorizontalAlignment="Left"
+					Foreground="White"
+					Background="Black"
 					Text="基础参数"
 					FontWeight="Bold"/>
 				<ComboBox 
@@ -128,10 +135,15 @@
 				VerticalAlignment="Top"
 				Height="450"
 				Margin="0,20,0,0"
-				RowDefinitions="20,80,80,80,185">
+				RowDefinitions="20,80,80,80,210">
 				<TextBlock
 					Grid.Row="0"
 					Margin="0,0,0,30"
+					Width="65"
+					TextAlignment="Center"
+					HorizontalAlignment="Left"
+					Foreground="White"
+					Background="Black"
 					Text="高级参数"
 					FontWeight="Bold"/>
 				<ComboBox
@@ -165,8 +177,15 @@
 				</StackPanel>
 				<Grid 
 					Grid.Row="4" 
-					RowDefinitions="*,5*">
+					RowDefinitions="35,Auto">
 					<TextBlock 
+						Width="65"
+						FontWeight="Bold"
+						TextAlignment="Center"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Left"
+						Foreground="White"
+						Background="Black"
 						Text="数据增强"/>
 					<Border
 						Grid.Row="1"
@@ -177,18 +196,27 @@
 						<StackPanel Orientation="Vertical">
 							<CheckBox 
 								Margin="0,0,0,0"
+								IsChecked="{Binding RandomHorizonFlipChecked}"
 								Content="随机水平翻转"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomVerticalFlipChecked}"
 								Content="随机垂直翻转"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomRotationChecked}"
 								Content="随机旋转"/>
 							<CheckBox
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomZoomChecked}"
+								Content="随机缩放"/>
+							<CheckBox 
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomBrightnessChecked}"
 								Content="随机亮度"/>
 							<CheckBox 
 								Margin="0,5,0,0"
+								IsChecked="{Binding RandomContrastChecked}"
 								Content="随机对比度"/>
 						</StackPanel>
 					</Border>

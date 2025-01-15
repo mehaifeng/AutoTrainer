@@ -48,8 +48,8 @@ namespace AutoTrainer.Models
         [JsonProperty("model_output_path")]
         public string ModelOutputPath { get; set; }
 
-        [JsonProperty("log_output_path")]
-        public string LogOutputPath { get; set; }
+        [JsonProperty("py_train_log_output_path")]
+        public string PyTrainLogOutputPath { get; set; }
 
         [JsonProperty("pretrained_model")]
         public string PretrainedModel { get; set; }
@@ -59,11 +59,22 @@ namespace AutoTrainer.Models
 
         [JsonProperty("val_data_path")]
         public string ValDataPath { get; set; }
+        [JsonProperty("num_classes")]
+        public int NumClasses { get; set; }
         [JsonProperty("mutation_data_path")]
         public string MutationDataPath { get; set; }
-
-        [JsonProperty("use_Data_augmentation")]
-        public bool UseDataAugmentation { get; set; }
+        [JsonProperty("random_horizon_flip_checked")]
+        public bool RandomHorizonFlipChecked { get; set; }
+        [JsonProperty("random_vertical_flip_checked")]
+        public bool RandomVerticalFlipChecked { get; set; }
+        [JsonProperty("random_rotation_checked")]
+        public bool RandomRotationChecked { get; set; }
+        [JsonProperty("random_brightness_checked")]
+        public bool RandomBrightnessChecked { get; set; }
+        [JsonProperty("random_contrast_checked")]
+        public bool RandomContrastChecked { get; set; }
+        [JsonProperty("random_zoom_checked")]
+        public bool RandomZoomChecked { get; set; }
     }
 
     public class Status

@@ -134,8 +134,8 @@ namespace AutoTrainer.ControlHelper
                                 var newTop = Canvas.GetTop(container) + deltaY;
 
                                 // 限制在图像显示区域内
-                                newLeft = Math.Max(0, Math.Min(newLeft, displayImage.Bounds.Width - container.Bounds.Width));
-                                newTop = Math.Max(0, Math.Min(newTop, displayImage.Bounds.Height - container.Bounds.Height));
+                                newLeft = Math.Max(0, Math.Min(newLeft, displayImage.Bounds.Width - rectangle.Bounds.Width));
+                                newTop = Math.Max(0, Math.Min(newTop, displayImage.Bounds.Height - rectangle.Bounds.Height));
 
                                 Canvas.SetLeft(container, newLeft);
                                 Canvas.SetTop(container, newTop);
