@@ -26,7 +26,9 @@ namespace AutoTrainer.Helpers
         public static bool IsVenvValid(string venvPath)
         {
             // 构建Python解释器的路径
-            string pythonPath = System.IO.Path.Combine(venvPath, "Scripts", "python.exe");
+            var pythonPath = OperatingSystem.IsWindows()
+                ? Path.Combine(venvPath, "Scripts", "python.exe")
+                : Path.Combine(venvPath, "bin", "python");
 
             // 检查Python解释器是否存在
             if (!System.IO.File.Exists(pythonPath))
@@ -62,20 +64,43 @@ namespace AutoTrainer.Helpers
         }
 
         public delegate void OutputReceivedHandler(string data);
-        /// <summary>
-        /// 原生执行指令 具有返回的方法
-        /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="arguments"></param>
-        /// <returns></returns>
-        public async static Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
-        {
+    public static async Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
+    {
             var result = new CommandResult();
+            // 根据操作系统确定shell程序路径和参数格式
+            string shellPath;
+            string shellArgs;
+            if (OperatingSystem.IsWindows())
+            {
+                shellPath = "cmd.exe";
+                shellArgs = "/c" + arguments;
+            }
+            else
+            {
+                // MacOS 和 Linux 都使用 bash
+                if (OperatingSystem.IsMacOS())
+                {
+                    // 在 MacOS 上，bash 一般位于 /bin/bash
+                    // 可以通过 which bash 命令找到实际位置
+                    shellPath = "/bin/bash";
+                    // 某些 MacOS 版本可能默认使用 zsh
+                    if (!File.Exists(shellPath))
+                    {
+                        shellPath = "/bin/zsh";
+                    }
+                }
+                else // Linux
+                {
+                    shellPath = "/bin/bash";
+                }
+                // Unix-like 系统的命令参数格式相同
+                shellArgs = $"-c \"{arguments.Replace("\"", "\\\"")}\"";
+            }
             // 创建进程
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "cmd.exe",
-                Arguments = "/c" + arguments,
+                FileName = shellPath,
+                Arguments = shellArgs,
                 RedirectStandardOutput = !isShowTerminal,
                 RedirectStandardError = !isShowTerminal,
                 WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
@@ -91,16 +116,30 @@ namespace AutoTrainer.Helpers
             }
             // 添加环境变量以确保正确的编码
             startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+            // 为 Unix-like 系统（MacOS 和 Linux）添加额外的环境变量
+            if (!OperatingSystem.IsWindows())
+            {
+                startInfo.EnvironmentVariables["LANG"] = "en_US.UTF-8";
+                startInfo.EnvironmentVariables["LC_ALL"] = "en_US.UTF-8";
+                // 在 MacOS 上设置 PATH 以确保能找到所需的命令
+                if (OperatingSystem.IsMacOS())
+                {
+                    string defaultPath = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+                    startInfo.EnvironmentVariables["PATH"] = 
+                        string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PATH"))
+                        ? defaultPath
+                        : Environment.GetEnvironmentVariable("PATH") + ":" + defaultPath;
+                }
+            }
             // 启动进程
             using var process = new Process { StartInfo = startInfo };
             // 如果不显示终端，则捕获输出
-            if (!isShowTerminal && onOutputReceived!=null)
+            if (!isShowTerminal && onOutputReceived != null)
             {
                 process.OutputDataReceived += (sender, args) =>
                 {
                     if (args.Data != null)
                     {
-                        // 触发事件（如果有订阅）
                         onOutputReceived?.Invoke(args.Data);
                     }
                 };
@@ -114,12 +153,12 @@ namespace AutoTrainer.Helpers
             }
             process.Start();
             // 如果不显示终端，开始异步读取输出
-            if (!isShowTerminal && onOutputReceived!=null)
+            if (!isShowTerminal && onOutputReceived != null)
             {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
             }
-            // 等待进程完成或取消
+            // 等待进程完成
             await process.WaitForExitAsync();
             // 如果显示终端，不需要读取输出
             if (onOutputReceived == null)
@@ -144,7 +183,8 @@ namespace AutoTrainer.Helpers
         public static async Task<CommandResult> ExecutePythonScriptAsync(string pythonScriptPath, string venvPath, string? arguments = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null, CancellationToken cancellationToken = default)
         {
             var command = new StringBuilder();
-            command.Append($"{Path.Combine(venvPath, "Scripts", "activate.bat")}");
+            var activateScript = OperatingSystem.IsWindows()? Path.Combine(venvPath,"Scripts","activate.bat") : $"source {Path.Combine(venvPath, "bin","activate")}";
+            command.Append(activateScript);
             command.Append(" && ");
             command.Append("set PYTHONIOENCODING=utf-8");
             command.Append(" && ");
@@ -173,14 +213,43 @@ namespace AutoTrainer.Helpers
         private static async Task<CommandResult> ExecuteCommandAsync(string command,bool isShowTerminal = false,string? workingDirectory = null,OutputReceivedHandler? onOutputReceived = null,CancellationToken cancellationToken = default)
         {
             var result = new CommandResult();
-
             // 首先设置代码页为 UTF-8
-            var encodingCommand = "chcp 65001 && " + command;
+            //var encodingCommand = "chcp 65001 && " + command;
+            var encodingCommand = command;
+            // 根据操作系统确定shell程序路径和参数格式
+            string shellPath;
+            string shellArgs;
+            if (OperatingSystem.IsWindows())
+            {
+                shellPath = "cmd.exe";
+                shellArgs = "/c" + encodingCommand;
+            }
+            else
+            {
+                // MacOS 和 Linux 都使用 bash
+                if (OperatingSystem.IsMacOS())
+                {
+                    // 在 MacOS 上，bash 一般位于 /bin/bash
+                    // 可以通过 which bash 命令找到实际位置
+                    shellPath = "/bin/bash";
+                    // 某些 MacOS 版本可能默认使用 zsh
+                    if (!File.Exists(shellPath))
+                    {
+                        shellPath = "/bin/zsh";
+                    }
+                }
+                else // Linux
+                {
+                    shellPath = "/bin/bash";
+                }
+                // Unix-like 系统的命令参数格式相同
+                shellArgs = $"-c \"{encodingCommand.Replace("\"", "\\\"")}\"";
+            }
             var startInfo = new ProcessStartInfo
             {
-                FileName = "cmd.exe",
-                Arguments = "/c " + encodingCommand,
-                UseShellExecute = false,
+                FileName = shellPath,
+                Arguments = shellArgs,
+                UseShellExecute = isShowTerminal,
                 CreateNoWindow = !isShowTerminal,
                 WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
                 RedirectStandardOutput = !isShowTerminal,
@@ -197,6 +266,7 @@ namespace AutoTrainer.Helpers
             startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
             try
             {
+                // 启动进程
                 using var process = new Process { StartInfo = startInfo };
 
                 // 如果不显示终端，则捕获输出

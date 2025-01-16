@@ -77,7 +77,7 @@ namespace AutoTrainer.Helpers
                         }
 
                         // 生成输出文件名
-                        var count = originalImagePath.Split("\\");
+                        var count = originalImagePath.Split(App.Separator);
                         var className = count[count.Length - 2];
                         string outputPath = Path.Combine(outputDirectory, $"augmented_{i}_{Guid.NewGuid()}_CLASS_{index}({className})_CLASS_.jpg");
 
