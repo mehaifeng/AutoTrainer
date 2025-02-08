@@ -8,6 +8,7 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace AutoTrainer
 {
@@ -23,15 +24,23 @@ namespace AutoTrainer
                 PyTrainLogOutputPath = PyTrainLogsFolderPath,
                 MutationDataPath = MutationDataPath,
             };
+            string osDescription = RuntimeInformation.OSDescription; // è·å–æ“ä½œç³»ç»Ÿæè¿°
+            string osArchitecture = RuntimeInformation.OSArchitecture.ToString(); // è·å–æ“ä½œç³»ç»Ÿæ¶æ„
+            string osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" :
+                RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "Linux" :
+                RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "macOS" :
+                "Unknown";
         }
         /// <summary>
-        /// Ò»¸öÈ«¾Ö²ÎÊı
+        /// Ò»ï¿½ï¿½È«ï¿½Ö²ï¿½ï¿½ï¿½
         /// </summary>
         public static TrainModel TrainModel { get; set; } = new TrainModel();
+        public static string LineBreak = OperatingSystem.IsWindows() ? "\r\n" : OperatingSystem.IsLinux()? "\n" : "\r";
+        public static string Separator = OperatingSystem.IsWindows() ? "\\" : "/";
         public static readonly string endPoint = "127.0.0.1:9000";
         public static readonly string accessKey = "Jv3FFA8htlzEpIRBcVBI";
         public static readonly string secretKey = "RGdOvEMrV9flZOAEQtN4FYPWJf2xoaXjD0zlszAs";
-        #region ¸÷ÖÖÂ·¾¶¼°Æä³õÊ¼»¯
+        #region ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");

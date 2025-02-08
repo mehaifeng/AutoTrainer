@@ -125,7 +125,7 @@ namespace AutoTrainer.ViewModels
                         List<Thumbnail> thumbnails = [];
                         foreach (var result in thisGroup)
                         {
-                            if (result.imagePath == null) continue;
+                            if (result.imagePath == string.Empty) continue;
                             using (var stream = System.IO.File.OpenRead(result.imagePath))
                             {
                                 var actualClass = result.imagePath.Split("_CLASS_")[1];
@@ -190,8 +190,8 @@ namespace AutoTrainer.ViewModels
         public void LoadMutationData()
         {
             MutationImages = [];
-            string dataSetPath = App.TrainModel.TrainDataPath;
-            if (dataSetPath == null)
+            var dataSetPath = App.TrainModel.TrainDataPath;
+            if (dataSetPath == string.Empty)
             {
                 return;
             }
@@ -206,7 +206,7 @@ namespace AutoTrainer.ViewModels
                     Dictionary<string,int> classNameToIndexDic = [];
                     for (int i = 0;i< typeClasses.Length;i++)
                     {
-                        classNameToIndexDic.Add(typeClasses[i].Split("\\").Last(),i);
+                        classNameToIndexDic.Add(typeClasses[i].Split(App.Separator).Last(),i);
                         files.AddRange(Directory.GetFiles(typeClasses[i])
                             .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
                     }
@@ -222,7 +222,7 @@ namespace AutoTrainer.ViewModels
                     }
                     for(int i=0;i<tofiles.Length;i++)
                     {
-                        var count = tofiles[i].Split("\\");
+                        var count = tofiles[i].Split(App.Separator);
                         var className = count[count.Length - 2];
                         var index = classNameToIndexDic[className];
                         ImageAugmentation.AugmentImageOne(index, Enumerable.Repeat(true,6).ToArray(), tofiles[i], App.MutationDataPath, 1);

@@ -13,8 +13,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 
 namespace AutoTrainer.ViewModels
 {
@@ -24,13 +26,14 @@ namespace AutoTrainer.ViewModels
         public ModelConfigViewModel()
         {
             ModelList = [];
-            Requirements = string.Join("\r\n", RequireApps);
+            Requirements = string.Join("\r\n", requireApps);
             Task.Run(GetPython);
         }
         #endregion
 
         #region 全局属性
-        private string[] RequireApps = [
+        private string modelHelperScript = Path.Combine($"{Environment.CurrentDirectory}","PyScripts","ModelHelper.py");
+        private string[] requireApps = [
             "torch",
             "torchvision",
             "opencv-python",
@@ -48,7 +51,7 @@ namespace AutoTrainer.ViewModels
             "six",
             "onnx-graphsurgeon",
             "sng4onnx"];
-        private HashSet<string> ExcludedPaths =
+        private readonly HashSet<string> excludedPaths =
         [
             @"C:\Windows",
             @"C:\Documents and Settings",
@@ -58,7 +61,7 @@ namespace AutoTrainer.ViewModels
             @"System Volume Information",
             @"$RECYCLE.BIN"
         ];
-        private List<string> MissingApps = [];
+        private List<string> missingApps = [];
         StringBuilder sb = new StringBuilder();
         #endregion
 
@@ -75,7 +78,7 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isEnablePythonConfigView = true;
         [ObservableProperty]
-        private string enviromentState = "Environment State";
+        private string environmentState = "Environment State";
         [ObservableProperty]
         private IBrush stateForeground = Brushes.Green;
         [ObservableProperty]
@@ -127,13 +130,14 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task GetPython()
         {
-            string command = "where python";
+            var command = OperatingSystem.IsWindows() ? "where python" : "which python";
             var result = await CmdHelper.ExecuteLine(command);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(result.Output))
                 {
-                    var paths = result.Output.Split("\r\n");
+                    var splitChart = OperatingSystem.IsWindows() ? "\r\n" : OperatingSystem.IsLinux()? "\n" : "\r";
+                    var paths = result.Output.Split(splitChart);
                     PythonPath = paths[0];
                 }
             }
@@ -151,16 +155,17 @@ namespace AutoTrainer.ViewModels
             {
                 ModelList = new ObservableCollection<string>();
                 StringBuilder sb = new StringBuilder();
-                sb.Append($"{PythonVenvPath}\\Scripts\\activate.bat");
+                var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
+                sb.Append(activateFile);
                 sb.Append(" && ");
-                sb.Append($"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py list");
+                sb.Append($"python {modelHelperScript} list");
                 var command = sb.ToString();
                 var result = await CmdHelper.ExecuteLine(command);
                 if (result.ExitCode == 0)
                 {
                     if (result.Output.Contains("###Models###"))
                     {
-                        var modelNames = result.Output.Split("###Models###")[1].TrimStart().TrimEnd().Split("\r\n");
+                        var modelNames = result.Output.Split("###Models###")[1].TrimStart().TrimEnd().Split(App.LineBreak);
                         for (int i = 0; i < modelNames.Length; i++)
                         {
                             var name = modelNames[i].ToLower();
@@ -180,7 +185,7 @@ namespace AutoTrainer.ViewModels
         /// <returns></returns>
         private bool ShouldSkipDirectory(string path)
         {
-            return ExcludedPaths.Any(excluded =>
+            return excludedPaths.Any(excluded =>
                 path.Contains(excluded, StringComparison.OrdinalIgnoreCase));
         }
         /// <summary>
@@ -340,7 +345,7 @@ namespace AutoTrainer.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        await MessageBoxManager.GetMessageBoxStandard("扫描识别", $"扫描驱动器 {drive} 时出错：{ex.Message}\n", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                        await MessageBoxManager.GetMessageBoxStandard("扫描识别",$"扫描驱动器 {drive} 时出错：{ex.Message}\n",MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                     }
                 }
             }
@@ -374,13 +379,19 @@ namespace AutoTrainer.ViewModels
         {
             if (IsCheckedVenv && !string.IsNullOrEmpty(PythonVenvPath))
             {
+                missingApps = [];
                 //验证所填venv环境是否可用
                 bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
                     IsExcutingPyScript = true;
                     App.PythonVenvPath = PythonVenvPath;
-                    var command = $"{PythonVenvPath}\\Scripts\\activate.bat" + " && " + "pip list";
+                    var sb = new StringBuilder();
+                    var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
+                    sb.Append(activateFile);
+                    sb.Append(" && ");
+                    sb.Append("pip list");
+                    var command = sb.ToString();
                     var result = await CmdHelper.ExecuteLine(command);
                     if (result.ExitCode == 0)
                     {
@@ -391,24 +402,25 @@ namespace AutoTrainer.ViewModels
                     Outputs = sb.ToString();
                     try
                     {
-                        var checkResult = CheckPackages(PipApps, RequireApps);
+                        var checkResult = CheckPackages(PipApps, requireApps);
                         if (!checkResult.IsMatch)
                         {
-                            EnviromentState = "Python软件包不匹配";
-                            Outputs = checkResult.Message;
+                            environmentState = "Python软件包不匹配";
+                            sb.Append(checkResult.Message);
+                            Outputs = sb.ToString();
                             StateForeground = Brushes.Red;
                             IsVisibleInstallMissing = true;
-                            MissingApps.AddRange(checkResult.MissingPackages);
+                            missingApps.AddRange(checkResult.MissingPackages);
                         }
                         else
                         {
                             await GetModels();
-                            EnviromentState = "Python软件包已安装";
+                            environmentState = "Python软件包已安装";
                             StateForeground = Brushes.Green;
                             IsVisibleInstallMissing = false;
                         }
                     }
-                    catch (Exception ex)
+                    catch(Exception ex)
                     {
                         await MessageBoxManager.GetMessageBoxStandard("错误", $"检查环境时发生错误：{ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                     }
@@ -423,7 +435,7 @@ namespace AutoTrainer.ViewModels
             }
             else
             {
-                sb.Append("Global enviroment is not support");
+                sb.Append("Global enviroment is not ready");
                 Outputs = sb.ToString();
             }
         }
@@ -434,11 +446,12 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task InstallMissingApp()
         {
-            if (MissingApps.Count > 0)
+            if (missingApps.Count > 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(Path.Combine(App.PythonVenvPath, "Scripts\\activate.bat"));
-                foreach (var missingApp in MissingApps)
+                var activateFile = OperatingSystem.IsWindows()? $@"{PythonVenvPath}\Scripts\activate.bat" : $"source {PythonVenvPath}/bin/activate";
+                sb.Append(activateFile);
+                foreach (var missingApp in missingApps)
                 {
                     sb.Append($"&& pip install {missingApp}");
                 }
@@ -449,7 +462,7 @@ namespace AutoTrainer.ViewModels
                     IsVisibleProgressBar = true;
                     IsRunningProgressBar = true;
                     // 安装缺失的软件包
-                    await CmdHelper.ExecuteLine(command, isShowTerminal: false, onOutputReceived: HandleOutput);
+                    await CmdHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
                     // 重新执行Python脚本
                     await ExecutePy();
                 }
@@ -473,9 +486,10 @@ namespace AutoTrainer.ViewModels
                 IsLoadingModelList = true;
                 App.TrainModel.PretrainedModel = SelectModel;
                 StringBuilder sb = new StringBuilder();
-                sb.Append($"{PythonVenvPath}\\Scripts\\activate.bat");
+                var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
+                sb.Append(activateFile);
                 sb.Append(" && ");
-                sb.Append($"python {AppDomain.CurrentDomain.BaseDirectory}PyScripts\\ModelHelper.py info {SelectModel}");
+                sb.Append($"python {modelHelperScript} info {SelectModel}");
                 var command = sb.ToString();
                 var result = await CmdHelper.ExecuteLine(command);
                 IsLoadingModelList = false;

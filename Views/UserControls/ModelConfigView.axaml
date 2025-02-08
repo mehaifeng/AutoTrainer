@@ -178,7 +178,7 @@
 					<TextBlock 
 						HorizontalAlignment="Center"
 						Margin="0,0,0,10"
-						Text="{Binding EnviromentState}"
+						Text="{Binding EnvironmentState}"
 						Foreground="{Binding StateForeground}"/>
 					<Button 
 						Width="160"

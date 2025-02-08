@@ -64,14 +64,42 @@ namespace AutoTrainer.ViewModels
                 "模型已转换为onnx",
                 TimeSpan.FromSeconds(8),
                 new SnackbarButtonModel
-                {
+               { 
                     Text = "打开目录",
                     Action = () =>
                     {
                         var psi = new ProcessStartInfo();
-                        psi.FileName = @"c:\windows\explorer.exe";
-                        psi.Arguments = onnxFolder;
-                        Process.Start(psi);
+                        if (OperatingSystem.IsWindows())
+                        {
+                            psi.FileName = "explorer";
+                            psi.Arguments = onnxFolder;
+                        }
+                        else if (OperatingSystem.IsLinux())
+                        {
+                            // xdg-open 是 Linux 桌面环境的标准开启方式
+                            psi.FileName = "xdg-open";
+                            psi.Arguments = onnxFolder;
+                        }
+                        else if (OperatingSystem.IsMacOS())
+                        {
+                            // 对 macOS 的支持
+                            psi.FileName = "open";
+                            psi.Arguments = onnxFolder;
+                        }
+                        else
+                        {
+                            throw new PlatformNotSupportedException("不支持的操作系统");
+                        }
+
+                        try
+                        {
+                            Process.Start(psi);
+                        }
+                        catch (Exception ex)
+                        {
+                            // 处理可能的异常
+                            Console.WriteLine($"打开目录失败: {ex.Message}");
+                        }
                     }
                 }),
             o.HostName,

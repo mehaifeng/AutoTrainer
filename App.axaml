@@ -9,22 +9,22 @@
 	<Application.Styles>
 		<Style Selector="TextBox">
 			<Setter Property="FontFamily">
-				Microsoft YaHei
+				Source Han Sans CN Normal
 			</Setter>
 		</Style>
 		<Style Selector="TextBlock">
 			<Setter Property="FontFamily">
-				Microsoft YaHei
+				Source Han Sans CN Normal
 			</Setter>
 		</Style>
 		<Style Selector="RadioButton">
 			<Setter Property="FontFamily">
-				Microsoft YaHei
+				Source Han Sans CN Normal
 			</Setter>
 		</Style>
 		<Style Selector="AccessText">
 			<Setter Property="FontFamily">
-				Microsoft YaHei
+				Source Han Sans CN Normal
 			</Setter>
 		</Style>
 	</Application.Styles>
