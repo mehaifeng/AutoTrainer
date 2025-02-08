@@ -191,7 +191,7 @@ namespace AutoTrainer.ViewModels
         {
             MutationImages = [];
             var dataSetPath = App.TrainModel.TrainDataPath;
-            if (dataSetPath == string.Empty)
+            if (string.IsNullOrEmpty(dataSetPath))
             {
                 return;
             }

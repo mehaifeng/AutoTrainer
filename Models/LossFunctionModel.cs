@@ -19,14 +19,14 @@ namespace AutoTrainer.Models
     public class Params
     {
         [JsonProperty("weight")]
-        public double[] weight { get; set; }
+        public double[]? weight { get; set; }
         [JsonProperty("pos_weight")]
-        public double[] pos_weight { get; set; }
+        public double[]? pos_weight { get; set; }
         [JsonProperty("reduction")]
-        public string reduction { get; set; }
+        public string? reduction { get; set; }
         [JsonProperty("beta")]
-        public double Beta { get; set; }
+        public double? Beta { get; set; }
         [JsonProperty("label_smoothing")]
-        public double label_smoothing { get; set; }
+        public double? label_smoothing { get; set; }
     }
 }
