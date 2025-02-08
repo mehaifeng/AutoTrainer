@@ -1,6 +1,7 @@
 using AutoTrainer.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using System;
 
@@ -11,8 +12,8 @@ public partial class ParameterConfigView : UserControl
     private ParameterConfigViewModel _viewmodel;
     public ParameterConfigView()
     {
-        InitializeComponent();
         _viewmodel = new ParameterConfigViewModel();
         DataContext = _viewmodel;
+        InitializeComponent();
     }
 }

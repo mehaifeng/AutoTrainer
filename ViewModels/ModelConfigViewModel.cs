@@ -340,7 +340,7 @@ namespace AutoTrainer.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        await MessageBoxManager.GetMessageBoxStandard("扫描识别",$"扫描驱动器 {drive} 时出错：{ex.Message}\n",MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                        await MessageBoxManager.GetMessageBoxStandard("扫描识别", $"扫描驱动器 {drive} 时出错：{ex.Message}\n", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                     }
                 }
             }
@@ -408,7 +408,7 @@ namespace AutoTrainer.ViewModels
                             IsVisibleInstallMissing = false;
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         await MessageBoxManager.GetMessageBoxStandard("错误", $"检查环境时发生错误：{ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                     }
@@ -423,7 +423,7 @@ namespace AutoTrainer.ViewModels
             }
             else
             {
-                sb.Append("Global enviroment is not ready");
+                sb.Append("Global enviroment is not support");
                 Outputs = sb.ToString();
             }
         }
@@ -437,7 +437,7 @@ namespace AutoTrainer.ViewModels
             if (MissingApps.Count > 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(Path.Combine(App.PythonVenvPath,"Scripts\\activate.bat"));
+                sb.Append(Path.Combine(App.PythonVenvPath, "Scripts\\activate.bat"));
                 foreach (var missingApp in MissingApps)
                 {
                     sb.Append($"&& pip install {missingApp}");
@@ -449,7 +449,7 @@ namespace AutoTrainer.ViewModels
                     IsVisibleProgressBar = true;
                     IsRunningProgressBar = true;
                     // 安装缺失的软件包
-                    await CmdHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
+                    await CmdHelper.ExecuteLine(command, isShowTerminal: false, onOutputReceived: HandleOutput);
                     // 重新执行Python脚本
                     await ExecutePy();
                 }

@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AutoTrainer.ViewModels
@@ -24,11 +26,15 @@ namespace AutoTrainer.ViewModels
             Optimizers = ["Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
             SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];
+            LossFunctionTypes = ["CrossEntropyLoss", "BCELoss", "BCEWithLogitsLoss", "MSELoss", "L1Loss", "SmoothL1Loss", "KLDivLoss"];
+            Reductions = ["mean", "sum", "none"];
+            KLDivLoss_Reductions = ["mean", "sum", "none", "batchmean"];
             SelectedLearningRate = LearningRates[1];
             SelectedBatchSize = BatchSizes[1];
             SelectedValidationSetRate = ValidationSetRates[1];
             SelectedOptimizer = Optimizers[0];
             SelectedStrategy = SchedulingStrategies[0];
+            SelectedLossFunction = LossFunctionTypes[0];
             Epochs = 25;
             EarlyStopRound = 5;
             this.PropertyChanged += ParameterConfigViewModel_PropertyChanged;
@@ -41,6 +47,7 @@ namespace AutoTrainer.ViewModels
                 IsVisibleNextStep = false;
             }
         }
+        LossFunctionModel lossFunctionModel = new LossFunctionModel();
         #region 可绑定属性
         /// <summary>
         /// 学习率集合
@@ -123,6 +130,55 @@ namespace AutoTrainer.ViewModels
                 OnPropertyChanged(nameof(EarlyStopRound));
             }
         }
+        [ObservableProperty]
+        public ObservableCollection<string> lossFunctionTypes;
+        [ObservableProperty]
+        public string lossFunctionDescribe;
+        /// <summary>
+        /// 选择的损失函数
+        /// </summary>
+        [ObservableProperty]
+        public string selectedLossFunction;
+        /// <summary>
+        /// 权重
+        /// </summary>
+        [ObservableProperty]
+        public string weight;
+        /// <summary>
+        /// 正样本权重
+        /// </summary>
+        [ObservableProperty]
+        public string pos_weight;
+        /// <summary>
+        /// 标签平滑因子
+        /// </summary>
+        [ObservableProperty]
+        public double labelSmoothing;
+        /// <summary>
+        /// 平滑L1损失函数的beta参数
+        /// </summary>
+        [ObservableProperty]
+        public double beta;
+        /// <summary>
+        /// 损失计算方式
+        /// </summary>
+        [ObservableProperty]
+        public ObservableCollection<string> reductions;
+        /// <summary>
+        /// KL散度损失函数的reduction参数
+        /// </summary>
+        [ObservableProperty]
+        public ObservableCollection<string> kLDivLoss_Reductions;
+        /// <summary>
+        /// 选择的损失计算方式
+        /// </summary>
+        [ObservableProperty]
+        public string selectedReduction;
+        /// <summary>
+        /// 代码预览
+        /// </summary>
+        [ObservableProperty]
+        public string codePreview;
         /// <summary>
         /// 是否可显示下一步按钮
         /// </summary>
@@ -169,6 +225,158 @@ namespace AutoTrainer.ViewModels
                 await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 3);
             }
         }
+        [RelayCommand]
+        private void ChangedLossFunction()
+        {
+
+            switch (SelectedLossFunction)
+            {
+                case "CrossEntropyLoss":
+                    LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
+                    LabelSmoothing = 0.0;
+                    SelectedReduction = "mean";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            weight = GetWeightArray(Weight),
+                            label_smoothing = LabelSmoothing,
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "BCELoss":
+                    LossFunctionDescribe = "二分类交叉熵损失函数";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            weight = GetWeightArray(Weight),
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "BCEWithLogitsLoss":
+                    LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            weight = GetWeightArray(Weight),
+                            pos_weight = GetWeightArray(Pos_weight),
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "MSELoss":
+                    LossFunctionDescribe = "均方误差损失函数，适用于回归任务";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "L1Loss":
+                    LossFunctionDescribe = "L1损失函数，适用于回归任务";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "SmoothL1Loss":
+                    LossFunctionDescribe = "平滑L1损失函数，适用于回归任务";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            Beta = Beta,
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+                case "KLDivLoss":
+                    LossFunctionDescribe = "KL散度损失函数，适用于分布预测任务";
+                    lossFunctionModel = new LossFunctionModel
+                    {
+                        name = SelectedLossFunction,
+                        param = new Params
+                        {
+                            reduction = SelectedReduction
+                        }
+                    };
+                    CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                    {
+                        Formatting = Formatting.Indented,
+                        NullValueHandling = NullValueHandling.Ignore,
+                    });
+                    break;
+            }
+        }
+        /// <summary>
+        /// 获取权重数组
+        /// </summary>
+        /// <param name="weight"></param>
+        /// <returns></returns>
+        private double[] GetWeightArray(string weight)
+        {
+            string pattern = @"^[0-9,.]+$";
+            if (weight != null && Regex.IsMatch(weight, pattern))
+            {
+                var weightArray = weight.Split(",").Where(t => t != string.Empty).Select(t => double.Parse(t)).ToArray();
+                return weightArray;
+            }
+            else
+            {
+                return [];
+            }
+        }
+        [RelayCommand]
+        public void LossfunctionParamChanged()
+        {
+            ChangedLossFunction();
+        }
+
         [RelayCommand]
         private async Task SaveConfig()
         {

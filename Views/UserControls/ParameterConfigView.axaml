@@ -6,6 +6,7 @@
 			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
 			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:converters="using:AutoTrainer.Converters"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions" 
              mc:Ignorable="d"
@@ -15,6 +16,9 @@
 			 x:Name="ParameterPage"
 			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">
+	<UserControl.Resources>
+		<converters:LossFunctionUIConverter x:Key="StringEqualsConverter"/>
+	</UserControl.Resources>
 	<Grid RowDefinitions="60,*">
 		<Grid Grid.Row="0">
 			<StackPanel
@@ -78,7 +82,7 @@
 				Height="450"
 				Margin="0,20,0,0"
 				VerticalAlignment="Top"
-				RowDefinitions="20,80,80,80,80,80">
+				RowDefinitions="20,80,80,80,80,80,210">
 				<TextBlock 
 					Grid.Row="0" 
 					Margin="0,0,0,30"
@@ -129,13 +133,55 @@
 					SelectedIndex="1"
 					Theme="{StaticResource MaterialOutlineComboBox}"
 					p1:ComboBoxAssist.Label="验证集比例" />
+				<Grid
+					Grid.Row="6"
+					RowDefinitions="35,Auto">
+					<TextBlock
+						Width="65"
+						FontWeight="Bold"
+						TextAlignment="Center"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Left"
+						Text="数据增强"/>
+					<Border
+						Grid.Row="1"
+						CornerRadius="5"
+						BorderThickness="1"
+						Padding="8"
+						BorderBrush="LightGray">
+						<StackPanel Orientation="Vertical">
+							<CheckBox
+								Margin="0,0,0,0"
+								IsChecked="{Binding RandomHorizonFlipChecked}"
+								Content="随机水平翻转"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomVerticalFlipChecked}"
+								Content="随机垂直翻转"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomRotationChecked}"
+								Content="随机旋转"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomZoomChecked}"
+								Content="随机缩放"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomBrightnessChecked}"
+								Content="随机亮度"/>
+							<CheckBox
+								Margin="0,5,0,0"
+								IsChecked="{Binding RandomContrastChecked}"
+								Content="随机对比度"/>
+						</StackPanel>
+					</Border>
+				</Grid>
 			</Grid>
 			<Grid 
 				Grid.Column="2"
-				VerticalAlignment="Top"
-				Height="450"
-				Margin="0,20,0,0"
-				RowDefinitions="20,80,80,80,210">
+				RowDefinitions="20,*"
+				Margin="0,20,0,0">
 				<TextBlock
 					Grid.Row="0"
 					Margin="0,0,0,30"
@@ -146,81 +192,276 @@
 					Background="Black"
 					Text="高级参数"
 					FontWeight="Bold"/>
-				<ComboBox
-					Grid.Row="1"
-					Margin="0,0,0,20"
-					ItemsSource="{Binding SchedulingStrategies}"
-					SelectedItem="{Binding SelectedStrategy,StringFormat={}{0:P1}}"
-					Theme="{StaticResource MaterialOutlineComboBox}"
-					p1:ComboBoxAssist.Label="学习率调度策略" />
-				<StackPanel
-					Grid.Row="2"
-					Margin="0,0,0,20"
-					Orientation="Vertical">
-					<TextBlock Text="权重衰减"/>
-					<NumericUpDown
-						Increment="0.0001"
-						Value="{Binding WeightDecay}"
-						Theme="{StaticResource OutlineNumericUpDown}"
-						Watermark="权重衰减" />
-				</StackPanel>
-				<StackPanel
-					Grid.Row="3"
-					Margin="0,0,0,20"
-					Orientation="Vertical">
-					<TextBlock Text="早停轮数"/>
-					<NumericUpDown
-						Increment="1"
-						Value="{Binding EarlyStopRound}"
-						Theme="{StaticResource OutlineNumericUpDown}"
-						Watermark="早停轮数" />
-				</StackPanel>
-				<Grid 
-					Grid.Row="4" 
-					RowDefinitions="35,Auto">
-					<TextBlock 
-						Width="65"
-						FontWeight="Bold"
-						TextAlignment="Center"
-						VerticalAlignment="Center"
-						HorizontalAlignment="Left"
-						Foreground="White"
-						Background="Black"
-						Text="数据增强"/>
-					<Border
-						Grid.Row="1"
-						CornerRadius="5"
-						BorderThickness="1"
-						Padding="8"
-						BorderBrush="LightGray">
-						<StackPanel Orientation="Vertical">
-							<CheckBox 
-								Margin="0,0,0,0"
-								IsChecked="{Binding RandomHorizonFlipChecked}"
-								Content="随机水平翻转"/>
-							<CheckBox 
-								Margin="0,5,0,0"
-								IsChecked="{Binding RandomVerticalFlipChecked}"
-								Content="随机垂直翻转"/>
-							<CheckBox 
-								Margin="0,5,0,0"
-								IsChecked="{Binding RandomRotationChecked}"
-								Content="随机旋转"/>
-							<CheckBox
-								Margin="0,5,0,0"
-								IsChecked="{Binding RandomZoomChecked}"
-								Content="随机缩放"/>
-							<CheckBox 
-								Margin="0,5,0,0"
-								IsChecked="{Binding RandomBrightnessChecked}"
-								Content="随机亮度"/>
-							<CheckBox 
-								Margin="0,5,0,0"
-								IsChecked="{Binding RandomContrastChecked}"
-								Content="随机对比度"/>
+				<ScrollViewer Grid.Row="1" Padding="0,0,10,0" Margin="0,0,0,30">
+					<Grid RowDefinitions="80,80,80,*">
+						<!--学习率调度策略-->
+						<ComboBox
+							Grid.Row="0"
+							Margin="0,0,0,20"
+							ItemsSource="{Binding SchedulingStrategies}"
+							SelectedItem="{Binding SelectedStrategy,StringFormat={}{0:P1}}"
+							Theme="{StaticResource MaterialOutlineComboBox}"
+							p1:ComboBoxAssist.Label="学习率调度策略" />
+						<!--权重衰减-->
+						<StackPanel
+							Grid.Row="1"
+							Margin="0,0,0,20"
+							Orientation="Vertical">
+							<TextBlock Text="权重衰减"/>
+							<NumericUpDown
+								Increment="0.0001"
+								Value="{Binding WeightDecay}"
+								Theme="{StaticResource OutlineNumericUpDown}"
+								Watermark="权重衰减" />
 						</StackPanel>
-					</Border>
-				</Grid>
+						<!--早停轮数-->
+						<StackPanel
+							Grid.Row="2"
+							Margin="0,0,0,20"
+							Orientation="Vertical">
+							<TextBlock Text="早停轮数"/>
+							<NumericUpDown
+								Increment="1"
+								Value="{Binding EarlyStopRound}"
+								Theme="{StaticResource OutlineNumericUpDown}"
+								Watermark="早停轮数" />
+						</StackPanel>
+						<!--损失函数配置-->
+						<Grid Grid.Row="3" RowDefinitions="20,*">
+							<TextBlock
+								Grid.Row="0"
+								Width="88"
+								TextAlignment="Center"
+								HorizontalAlignment="Left"
+								VerticalAlignment="Top"
+								Text="损失函数配置"
+								FontWeight="Bold"/>
+							<Border
+								Grid.Row="1"
+								Background="WhiteSmoke"
+								BorderBrush="LightGray"
+								BorderThickness="1"
+								CornerRadius="5"
+								Padding="10">
+								<Grid RowDefinitions="80,20,Auto,Auto">
+									<ComboBox
+										Name="LossFunction"
+										Grid.Row="0"
+										ItemsSource="{Binding LossFunctionTypes}"
+										Theme="{StaticResource MaterialOutlineComboBox}"
+										SelectedItem="{Binding SelectedLossFunction}"
+										p1:ComboBoxAssist.Label="选择损失函数">
+										<i:Interaction.Behaviors>
+											<ia:EventTriggerBehavior EventName="SelectionChanged">
+											   <ia:InvokeCommandAction Command="{Binding ChangedLossFunctionCommand}"/>
+											</ia:EventTriggerBehavior>
+										</i:Interaction.Behaviors>
+									</ComboBox>
+									<TextBlock
+										Name="TipText"
+										Text="{Binding LossFunctionDescribe}"
+										Grid.Row="1">
+										<TextBlock.Styles>
+											<Style Selector="TextBlock">
+												<Setter Property="FontSize" Value="12"/>
+												<Setter Property="Foreground" Value="Gray"/>
+											</Style>
+										</TextBlock.Styles>
+									</TextBlock>
+									<Grid Grid.Row="2" Name="LossFunctionParamsGrid">
+										<!-- CrossEntropyLoss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CrossEntropyLoss}"
+											  RowDefinitions="80,80,80">
+											<StackPanel Grid.Row="0" Margin="0,10,0,0" Orientation="Vertical">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="weight"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="各类别的权重，用于处理类别不平衡，格式如: 1.0,2.0,1.0"/>
+												</StackPanel>
+												<TextBox 
+													Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+													Name="CrossEntropyWeights"
+													Classes="outline"
+													UseFloatingWatermark="False"
+													Text="{Binding Weight,Mode=OneWayToSource,UpdateSourceTrigger=PropertyChanged}"
+													Theme="{StaticResource OutlineTextBox}"
+													Watermark="留空表示所有类别权重相等">
+												</TextBox>
+											</StackPanel>
+											<StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,15,0,0">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="label_smoothing"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="标签平滑因子，用于提高模型泛化能力"/>
+												</StackPanel>
+												<NumericUpDown
+													Margin="0,10,0,0"
+													Height="50"
+													Value="{Binding LabelSmoothing}"
+													Increment="0.1"
+													Maximum="1"
+													Minimum="0"
+													Theme="{StaticResource OutlineNumericUpDown}">
+												</NumericUpDown>
+											</StackPanel>
+											<ComboBox Grid.Row="2"  Margin="0,10,0,0"
+													  Name="CrossEntropyReduction"
+													  ItemsSource="{Binding Reductions}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  SelectedIndex="0"
+													  p1:ComboBoxAssist.Label="reduction 损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- BCELoss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BCELoss}"
+											  RowDefinitions="Auto,Auto" Margin="0,10">
+											<StackPanel Grid.Row="0" Orientation="Vertical">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="weight"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="每个批次样本的权重，用逗号分隔"/>
+												</StackPanel>
+												<TextBox
+													Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+													Name="BCELossWeights"
+													Classes="outline"
+													Text="{Binding Weight}"
+													UseFloatingWatermark="False"
+													Theme="{StaticResource OutlineTextBox}"
+													Watermark="留空表示所有类别权重相等">
+												</TextBox>
+											</StackPanel>
+											<ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+													  Name="BCEReduction"
+													  ItemsSource="{Binding Reductions}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  SelectedIndex="0"
+													  p1:ComboBoxAssist.Label="reduction 损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- BCEWithLogitsLoss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BCEWithLogitsLoss}"
+											  RowDefinitions="Auto,Auto,Auto">
+											<StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,10,0,0">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="weight"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="每个批次样本的权重"/>
+												</StackPanel>
+												<TextBox
+													Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+													Name="BCEWithLogitsLossWeights"
+													Classes="outline"
+													UseFloatingWatermark="False"
+													Text="{Binding Weight}"
+													Theme="{StaticResource OutlineTextBox}"
+													Watermark="留空表示所有类别权重相等">
+												</TextBox>
+											</StackPanel>
+
+											<StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,10,0,0">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="pos_weight"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="正样本的权重，用于处理类别不平衡"/>
+												</StackPanel>
+												<TextBox
+													Grid.ColumnSpan="2"
+													Name="BCEWithLogitsLossPosWeight"
+													Classes="outline"
+													Text="{Binding Pos_weight}"
+													UseFloatingWatermark="False"
+													Theme="{StaticResource OutlineTextBox}"
+													Watermark="留空表示所有类别权重为1"/>
+											</StackPanel>
+											<ComboBox Grid.Row="2" Grid.Column="0" Margin="0,10,0,0"
+													  Name="BCELogitsReduction"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  SelectedIndex="0"
+													  p1:ComboBoxAssist.Label="reduction 损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- MSELoss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=MSELoss}"
+											  RowDefinitions="Auto" ColumnDefinitions="*,*" Margin="0,10">
+											<ComboBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5"
+													  Name="MSEReduction"
+													  ItemsSource="{Binding Reductions}"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  p1:ComboBoxAssist.Label="损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- L1Loss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=L1Loss}"
+											  RowDefinitions="Auto" ColumnDefinitions="*,*" Margin="0,10">
+											<ComboBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5"
+													  Name="L1Reduction"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  ItemsSource="{Binding Reductions}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  p1:ComboBoxAssist.Label="损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- SmoothL1Loss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=SmoothL1Loss}"
+											  RowDefinitions="Auto,Auto" Margin="0,10">
+											<StackPanel Grid.Row="0" Orientation="Vertical" Margin="0,10,0,0">
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Text="Beta"/>
+													<TextBlock Margin="10,0,0,0" FontSize="12" Foreground="Gray" Text="平滑参数，决定MSE和L1的过渡点"/>
+												</StackPanel>
+												<NumericUpDown
+													Margin="0,10,0,0"
+													Height="50"
+													Value="{Binding Beta}"
+													Increment="0.1"
+													Minimum="0"
+													Theme="{StaticResource OutlineNumericUpDown}"/>
+											</StackPanel>
+											<ComboBox Grid.Row="1" Margin="0,15,0,0"
+													  Name="SmoothL1Reduction"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  ItemsSource="{Binding Reductions}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  p1:ComboBoxAssist.Label="损失计算方式">
+											</ComboBox>
+										</Grid>
+
+										<!-- KLDivLoss 参数配置 -->
+										<Grid IsVisible="{Binding ElementName=LossFunction, Path=SelectedItem, Converter={StaticResource StringEqualsConverter}, ConverterParameter=KLDivLoss}"
+											  RowDefinitions="Auto" ColumnDefinitions="*,*" Margin="0,10">
+											<ComboBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5"
+													  Name="KLDivReduction"
+													  Theme="{StaticResource MaterialOutlineComboBox}"
+													  ItemsSource="{Binding KLDivLoss_Reductions}"
+													  SelectedItem="{Binding SelectedReduction}"
+													  p1:ComboBoxAssist.Label="损失计算方式">
+											</ComboBox>
+										</Grid>
+										<i:Interaction.Behaviors>
+											<ia:EventTriggerBehavior EventName="DataContextChanged">
+												<ia:InvokeCommandAction Command="{Binding LossfunctionParamChangedCommand}"/>
+											</ia:EventTriggerBehavior>
+										</i:Interaction.Behaviors>
+									</Grid>
+
+									<StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,10,0,0">
+										<TextBlock Text="参数预览"/>
+										<Border CornerRadius="5" Background="AliceBlue" Margin="0,10,0,0" Padding="10">
+											<SelectableTextBlock 
+												Height="180"
+												SelectionForegroundBrush="White"
+												Text="{Binding CodePreview}"/>
+										</Border>
+									</StackPanel>
+								</Grid>
+							</Border>
+						</Grid>
+					</Grid>
+				</ScrollViewer>
 			</Grid>
 		</Grid>
 	</Grid>

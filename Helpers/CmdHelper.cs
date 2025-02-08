@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -71,6 +72,7 @@ namespace AutoTrainer.Helpers
         public async static Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
         {
             var result = new CommandResult();
+            Log.Information($"ExcuteLine: \"{arguments}\", IsShowTerminal: {isShowTerminal} ");
             // 创建进程
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -91,45 +93,54 @@ namespace AutoTrainer.Helpers
             }
             // 添加环境变量以确保正确的编码
             startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
-            // 启动进程
-            using var process = new Process { StartInfo = startInfo };
-            // 如果不显示终端，则捕获输出
-            if (!isShowTerminal && onOutputReceived!=null)
+            try
             {
-                process.OutputDataReceived += (sender, args) =>
+                // 启动进程
+                using var process = new Process { StartInfo = startInfo };
+                // 如果不显示终端，则捕获输出
+                if (!isShowTerminal && onOutputReceived != null)
                 {
-                    if (args.Data != null)
+                    process.OutputDataReceived += (sender, args) =>
                     {
-                        // 触发事件（如果有订阅）
-                        onOutputReceived?.Invoke(args.Data);
-                    }
-                };
-                process.ErrorDataReceived += (sender, args) =>
+                        if (args.Data != null)
+                        {
+                            // 触发事件（如果有订阅）
+                            onOutputReceived?.Invoke(args.Data);
+                        }
+                    };
+                    process.ErrorDataReceived += (sender, args) =>
+                    {
+                        if (args.Data != null)
+                        {
+                            onOutputReceived?.Invoke($"{args.Data}");
+                        }
+                    };
+                }
+                process.Start();
+                // 如果不显示终端，开始异步读取输出
+                if (!isShowTerminal && onOutputReceived != null)
                 {
-                    if (args.Data != null)
-                    {
-                        onOutputReceived?.Invoke($"{args.Data}");
-                    }
-                };
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                }
+                // 等待进程完成或取消
+                await process.WaitForExitAsync();
+                // 如果显示终端，不需要读取输出
+                if (onOutputReceived == null)
+                {
+                    // 读取输出
+                    result.Output = await process.StandardOutput.ReadToEndAsync();
+                    result.Error = await process.StandardError.ReadToEndAsync();
+                }
+                Log.Information($"Output: {result.Output}");
+                result.ExitCode = process.ExitCode;
+                return result;
             }
-            process.Start();
-            // 如果不显示终端，开始异步读取输出
-            if (!isShowTerminal && onOutputReceived!=null)
+            catch (Exception ex)
             {
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                Log.Error(ex, "ExecuteLine Error");
+                return result;
             }
-            // 等待进程完成或取消
-            await process.WaitForExitAsync();
-            // 如果显示终端，不需要读取输出
-            if (onOutputReceived == null)
-            {
-                // 读取输出
-                result.Output = await process.StandardOutput.ReadToEndAsync();
-                result.Error = await process.StandardError.ReadToEndAsync();
-            }
-            result.ExitCode = process.ExitCode;
-            return result;
         }
         /// <summary>
         /// 执行Python脚本并处理长输出，带有虚拟环境
@@ -170,7 +181,7 @@ namespace AutoTrainer.Helpers
         /// <param name="onOutputReceived">输出接收事件处理器（可选）</param>
         /// <param name="cancellationToken">取消令牌</param>
         /// <returns>命令执行结果</returns>
-        private static async Task<CommandResult> ExecuteCommandAsync(string command,bool isShowTerminal = false,string? workingDirectory = null,OutputReceivedHandler? onOutputReceived = null,CancellationToken cancellationToken = default)
+        private static async Task<CommandResult> ExecuteCommandAsync(string command, bool isShowTerminal = false, string? workingDirectory = null, OutputReceivedHandler? onOutputReceived = null, CancellationToken cancellationToken = default)
         {
             var result = new CommandResult();
 
