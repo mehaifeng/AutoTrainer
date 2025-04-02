@@ -53,11 +53,11 @@ namespace AutoTrainer.ViewModels
             "sng4onnx"];
         private readonly HashSet<string> excludedPaths =
         [
-            @"C:\Windows",
-            @"C:\Documents and Settings",
-            @"C:\Program Files",
-            @"C:\Program Files (x86)",
-            @"C:\ProgramData",
+            @"Windows",
+            @"Documents and Settings",
+            @"Program Files",
+            @"Program Files (x86)",
+            @"ProgramData",
             @"System Volume Information",
             @"$RECYCLE.BIN"
         ];
@@ -185,6 +185,11 @@ namespace AutoTrainer.ViewModels
         /// <returns></returns>
         private bool ShouldSkipDirectory(string path)
         {
+            if (path.StartsWith("C:\\Users\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
             return excludedPaths.Any(excluded =>
                 path.Contains(excluded, StringComparison.OrdinalIgnoreCase));
         }
@@ -215,6 +220,7 @@ namespace AutoTrainer.ViewModels
                 }
                 catch (UnauthorizedAccessException) { }
                 catch (DirectoryNotFoundException) { }
+                catch (IOException) { }
                 catch (Exception ex)
                 {
                     await MessageBoxManager.GetMessageBoxStandard("扫描识别", $"警告：扫描目录 {path} 时出错：{ex.Message}\n", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
