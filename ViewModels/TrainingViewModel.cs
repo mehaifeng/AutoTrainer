@@ -161,15 +161,15 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private void ImageEnhancement()
         {
-            bool[] checks = new[]
-            {
+            bool[] checks =
+            [
                 App.TrainModel.RandomRotationChecked,
                 App.TrainModel.RandomZoomChecked,
                 App.TrainModel.RandomBrightnessChecked,
                 App.TrainModel.RandomContrastChecked,
                 App.TrainModel.RandomHorizonFlipChecked,
                 App.TrainModel.RandomVerticalFlipChecked
-            };
+            ];
             if (checks.Any(t => !t))
             {
                 return;

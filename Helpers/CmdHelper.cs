@@ -185,8 +185,8 @@ namespace AutoTrainer.Helpers
             var command = new StringBuilder();
             var activateScript = OperatingSystem.IsWindows()? Path.Combine(venvPath,"Scripts","activate.bat") : $"source {Path.Combine(venvPath, "bin","activate")}";
             command.Append(activateScript);
-            command.Append(" && ");
-            command.Append("set PYTHONIOENCODING=utf-8");
+            //command.Append(" && ");
+            //command.Append("set PYTHONIOENCODING=utf-8");
             command.Append(" && ");
             command.Append($"python {pythonScriptPath}");
 
@@ -263,7 +263,7 @@ namespace AutoTrainer.Helpers
                 startInfo.StandardErrorEncoding = new UTF8Encoding(false);
             }
             // 添加环境变量以确保正确的编码
-            startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+            // startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
             try
             {
                 // 启动进程
