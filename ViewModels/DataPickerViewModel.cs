@@ -71,6 +71,7 @@ namespace AutoTrainer.ViewModels
         private string previewState;
         [ObservableProperty]
         private bool isVisibleIntroduce = false;
+
         #endregion
 
         #region 命令
@@ -378,7 +379,7 @@ namespace AutoTrainer.ViewModels
                     List<string> files = [];
                     foreach (var folder in folders)
                     {
-                        files.AddRange(Directory.GetFiles(folder.Path.AbsolutePath));
+                        files.AddRange(Directory.GetFiles(folder.Path.LocalPath));
                     }
                     ProgressMax = files.Count;//进度条最大值设置为文件数目
                     for (int i = 0; i < files.Count; i++)
@@ -419,7 +420,7 @@ namespace AutoTrainer.ViewModels
                     foreach (var typePath in typeClasses)
                     {
                         var files = Directory.GetFiles(typePath)
-                            .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp"))
+                            .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")||f.EndsWith(".jpeg"))
                             .ToArray(); // 可根据需求选择文件类型
                         int count = files.Length;
                         var toFiles = files.Take(20);

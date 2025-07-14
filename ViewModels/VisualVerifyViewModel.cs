@@ -225,7 +225,8 @@ namespace AutoTrainer.ViewModels
                         var count = tofiles[i].Split(App.Separator);
                         var className = count[count.Length - 2];
                         var index = classNameToIndexDic[className];
-                        ImageAugmentation.AugmentImageOne(index, Enumerable.Repeat(true,6).ToArray(), tofiles[i], App.MutationDataPath, 1);
+                        bool[] Augmentations = [true, true, false, false, true, true];
+                        ImageAugmentation.AugmentImageOne(index, Augmentations, tofiles[i], App.MutationDataPath, 1);
                     }
                     mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     var pattern = @"^(.*)\(";

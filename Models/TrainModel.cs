@@ -53,6 +53,8 @@ namespace AutoTrainer.Models
 
         [JsonProperty("pretrained_model")]
         public string PretrainedModel { get; set; }
+        [JsonProperty("local_weights_path")]
+        public string LocalWeightsPath { get; set; }
 
         [JsonProperty("train_data_path")]
         public string TrainDataPath { get; set; }
@@ -75,6 +77,8 @@ namespace AutoTrainer.Models
         public bool RandomContrastChecked { get; set; }
         [JsonProperty("random_zoom_checked")]
         public bool RandomZoomChecked { get; set; }
+        [JsonProperty("loss_function_config")]
+        public LossFunctionModel LossFunction { get; set; } = new();
     }
 
     public class Status

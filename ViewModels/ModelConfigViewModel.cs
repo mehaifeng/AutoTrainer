@@ -17,6 +17,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 
 namespace AutoTrainer.ViewModels
 {
@@ -43,7 +45,7 @@ namespace AutoTrainer.ViewModels
             "albumentations",
             "tqdm",
             "onnx",
-            "onnx2tf",
+            //"onnx2tf",
             "tensorflow",
             "tf_keras",
             "psutil",
@@ -85,6 +87,8 @@ namespace AutoTrainer.ViewModels
         private ObservableCollection<string> modelList;
         [ObservableProperty]
         private string selectModel;
+        [ObservableProperty]
+        private string selectedLocalWeightText;
         [ObservableProperty]
         private string selectModelIntroduce;
         [ObservableProperty]
@@ -506,6 +510,34 @@ namespace AutoTrainer.ViewModels
                         SelectModelIntroduce = result.Output.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
                         IsVisibleIntroduce = true;
                     }
+                }
+            }
+        }
+        /// <summary>
+        /// 选择本地模型命令
+        /// </summary>
+        /// <returns></returns>
+        [RelayCommand]
+        public async Task SelectLocalModel()
+        {
+            var thisWindow = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var toplevel = TopLevel.GetTopLevel(thisWindow?.MainWindow);
+            FilePickerFileType onnxAll = new("All Pytorch")
+            {
+                Patterns = ["*.pth","*.pt"]
+            };
+            if (toplevel != null)
+            {
+                var model = await toplevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
+                {
+                    Title = $"请选择{SelectModel}类型的pytorch模型",
+                    AllowMultiple = false,
+                    FileTypeFilter = [onnxAll]
+                });
+                if (model.Count>0)
+                {
+                    SelectedLocalWeightText = model[0].Name;
+                    App.TrainModel.LocalWeightsPath = model[0].Path.LocalPath;
                 }
             }
         }

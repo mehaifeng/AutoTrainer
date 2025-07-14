@@ -40,10 +40,12 @@ class BaseModelConfig(ABC):
 class TorchvisionModelConfig(BaseModelConfig):
     """torchvision预训练模型的配置类"""
 
-    def __init__(self, model_name: str, num_classes: int, pretrained: bool = True):
+    def __init__(self, model_name: str, num_classes: int, config:Dict[str,Any], pretrained: bool = True,  logger: Any = None):
         self.model_name = model_name
         self.num_classes = num_classes
         self.pretrained = pretrained
+        self.config = config  # 存储配置字典
+        self.logger = logger
 
         # 不同模型的默认输入尺寸
         self.model_input_sizes = {
@@ -55,13 +57,137 @@ class TorchvisionModelConfig(BaseModelConfig):
             'mobilenet_v2': (224, 224),
             #'inception_v3': (299, 299),
         }
+    def _modify_classifier(self, model: nn.Module):
+        """
+        根据模型名称修改模型的最后分类层，以匹配 self.num_classes。
+
+        Args:
+            model: 需要修改的 PyTorch 模型对象。
+        """
+        if self.model_name.startswith('resnet'):
+            num_ftrs = model.fc.in_features
+            model.fc = nn.Linear(num_ftrs, self.num_classes)
+            self.logger.log_entry("Debug", f"Modified {self.model_name} final layer (fc) to output {self.num_classes} classes.")
+            print(f"Modified {self.model_name} final layer (fc) to output {self.num_classes} classes.")
+        elif self.model_name.startswith('vgg'):
+            # VGG 的 classifier 是一个 Sequential，最后一层是 Linear
+            num_ftrs = model.classifier[-1].in_features
+            model.classifier[-1] = nn.Linear(num_ftrs, self.num_classes)
+            self.logger.log_entry("Debug", f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+            print(f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+        elif self.model_name.startswith('densenet'):
+            # DenseNet 的 classifier 直接是 Linear
+            num_ftrs = model.classifier.in_features
+            model.classifier = nn.Linear(num_ftrs, self.num_classes)
+            self.logger.log_entry("Debug", f"Modified {self.model_name} final layer (classifier) to output {self.num_classes} classes.")
+            print(f"Modified {self.model_name} final layer (classifier) to output {self.num_classes} classes.")
+        elif self.model_name.startswith('efficientnet'):
+             # EfficientNet 的 classifier 是一个 Sequential，最后一层是 Linear
+            num_ftrs = model.classifier[-1].in_features
+            model.classifier[-1] = nn.Linear(num_ftrs, self.num_classes)
+            self.logger.log_entry("Debug", f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+            print(f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+        elif self.model_name.startswith('mobilenet'):
+            # MobileNet 的 classifier 是一个 Sequential，最后一层是 Linear
+            num_ftrs = model.classifier[-1].in_features
+            model.classifier[-1] = nn.Linear(num_ftrs, self.num_classes)
+            self.logger.log_entry("Debug", f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+            print(f"Modified {self.model_name} final layer (classifier[-1]) to output {self.num_classes} classes.")
+        # 如果有其他模型类型，可以在这里继续添加 elif 判断和修改逻辑
+        else:
+            # 如果是其他未知模型，打印警告或根据需要处理
+            self.logger.log_entry("Warning", f"Model type {self.model_name} not specifically handled for classifier modification.")
+            print(f"Warning: Model type {self.model_name} not specifically handled for classifier modification.")
 
     def get_model(self) -> nn.Module:
         if not hasattr(models, self.model_name):
             raise ValueError(f"不支持的模型: {self.model_name}")
 
         # 记录模型名称
-        model = getattr(models, self.model_name)(pretrained=self.pretrained)
+        model_loader = getattr(models, self.model_name, None) # [cite: 5] Use getattr with default None
+        if model_loader is None:
+            raise ValueError(f"不支持的模型: {self.model_name}")
+
+        # 检查是否提供了本地预训练权重文件路径
+        local_weights_path = self.config.get('local_weights_path', '')
+        is_local_weights = False
+        
+        # 检查是否为文件路径且文件存在
+        if isinstance(local_weights_path, str) and local_weights_path.endswith(('.pth', '.pt')) and os.path.isfile(local_weights_path):
+            is_local_weights = True
+            self.logger.log_entry("Debug", f"检测到本地预训练权重文件: {local_weights_path}")
+            print(f"检测到本地预训练权重文件: {local_weights_path}")
+        
+        # 初始化模型 - 如果是本地权重则不使用预训练
+        if is_local_weights:
+            # 创建不带预训练权重的模型
+            model = model_loader(weight=None)
+            # 该不带预训练权重的模型需要修改全连接层结构，主要是修改分类数量
+            self._modify_classifier(model)
+            
+            try:
+                # 加载本地权重
+                state_dict = torch.load(local_weights_path, map_location='cpu')
+                assert os.path.exists(local_weights_path), "file {} does not exist.".format(local_weights_path)
+                
+                # 尝试加载权重
+                model.load_state_dict(state_dict)
+                self.logger.log_entry("Info", f"成功从本地文件加载权重: {local_weights_path}")
+                print(f"成功从本地文件加载权重: {local_weights_path}")
+            except Exception as e:
+                error_msg = f"加载本地权重文件失败: {e}"
+                self.logger.log_entry("Error", error_msg)
+                print(f"错误: {error_msg}")
+                
+                # 出错时回退到默认初始化
+                self.logger.log_entry("Warning", "回退到默认模型初始化方式")
+                print("警告: 回退到默认模型初始化方式")
+                
+                # --- 使用标准初始化方式作为回退 ---
+                try:
+                    # 构建权重枚举字符串，例如："ResNet18_Weights"
+                    weights_enum_name = f"{self.model_name.capitalize().replace('_', '')}_Weights"
+                    # 尝试从models模块获取对应的权重枚举，例如：models.ResNet18_Weights
+                    weights_enum = getattr(models, weights_enum_name, None)
+
+                    if weights_enum:
+                        self.logger.log_entry("Debug", f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
+                        print(f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
+                        model = model_loader(weights=weights_enum.DEFAULT) # Use the 'DEFAULT' weights
+                    else:
+                        # 如果特定的权重枚举不存在或者用于没有该枚举的旧模型，则回退
+                        self.logger.log_entry("Debug", f"Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
+                        print(f"Warning: Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
+                        model = model_loader(pretrained=True) # Keep old way as fallback
+
+                except Exception as e:
+                    # 更广泛的回退，以防上述逻辑对某些模型失败
+                    self.logger.log_entry("Debug", f"Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
+                    print(f"Warning: Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
+                    model = model_loader(pretrained=True) # Keep old way as broad fallback
+        else:
+            # --- 使用原有的标准初始化方式 ---
+            try:
+                # 构建权重枚举字符串，例如："ResNet18_Weights"
+                weights_enum_name = f"{self.model_name.capitalize().replace('_', '')}_Weights"
+                # 尝试从models模块获取对应的权重枚举，例如：models.ResNet18_Weights
+                weights_enum = getattr(models, weights_enum_name, None)
+
+                if weights_enum:
+                    self.logger.log_entry("Debug", f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
+                    print(f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
+                    model = model_loader(weights=weights_enum.DEFAULT) # Use the 'DEFAULT' weights
+                else:
+                    # 如果特定的权重枚举不存在或者用于没有该枚举的旧模型，则回退
+                    self.logger.log_entry("Debug", f"Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
+                    print(f"Warning: Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
+                    model = model_loader(pretrained=True) # Keep old way as fallback
+
+            except Exception as e:
+                # 更广泛的回退，以防上述逻辑对某些模型失败
+                self.logger.log_entry("Debug", f"Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
+                print(f"Warning: Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
+                model = model_loader(pretrained=True) # Keep old way as broad fallback
 
         # 修改最后的分类层
         if self.model_name.startswith('resnet'):
@@ -92,7 +218,113 @@ class TorchvisionModelConfig(BaseModelConfig):
         ])
 
     def get_loss_function(self) -> nn.Module:
-        return nn.CrossEntropyLoss()
+        return self._create_loss_from_config()
+        #return nn.CrossEntropyLoss()
+
+    # 创建损失函数的辅助方法（可以在CustomModelConfig中共享或复制）
+    def _create_loss_from_config(self) -> nn.Module:
+        # 检查损失函数配置是否存在
+        if 'loss_function_config' not in self.config or not self.config['loss_function_config']:
+            self.logger.log_entry("Warning", "loss_function_config not found in config. Using default CrossEntropyLoss.")
+            print("Warning: loss_function_config not found in config. Using default CrossEntropyLoss.")
+            return nn.CrossEntropyLoss() # Sensible default
+
+        loss_config = self.config['loss_function_config']
+        loss_type_str = loss_config.get('type')
+        loss_args = loss_config.get('args', {})
+
+        if not loss_type_str:
+            self.logger.log_entry("Warning", "Loss function 'type' not specified in config. Using default CrossEntropyLoss.")
+            print("Warning: Loss function 'type' not specified in config. Using default CrossEntropyLoss.")
+            return nn.CrossEntropyLoss() # Default if type is missing
+
+        # --- 参数解析和验证 ---
+        parsed_args = {}
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Get device for weights
+
+        # 处理 'weight' 参数（用于 CrossEntropy, BCE, BCEWithLogits）
+        if 'weight' in loss_args and loss_args['weight'] is not None and loss_args['weight'] != '':
+            try:
+                weight_val = loss_args['weight']
+                if isinstance(weight_val, str):
+                    # 尝试解析逗号分隔的字符串
+                    weights_list = [float(w.strip()) for w in weight_val.split(',') if w.strip()]
+                elif isinstance(weight_val, list):
+                    weights_list = [float(w) for w in weight_val]
+                else:
+                    raise ValueError(f"Unsupported weight format: {type(weight_val)}. Expecting list or comma-separated string.")
+
+                if weights_list: # 解析后确保列表不为空
+                    parsed_args['weight'] = torch.tensor(weights_list, dtype=torch.float).to(device)
+                else:
+                     print(f"Warning: Parsed empty weight list from input: {loss_args['weight']}. Ignoring weight.")
+
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse 'weight' parameter ({loss_args['weight']}). Ignoring. Error: {e}")
+
+
+        # 处理 'pos_weight' 参数（用于 BCEWithLogitsLoss）
+        if 'pos_weight' in loss_args and loss_args['pos_weight'] is not None and loss_args['pos_weight'] != '':
+             try:
+                 # pos_weight 对于 BCEWithLogitsLoss 应该是每个类别的单个标量或张量
+                 # 通常它是一个应用于所有正样本的单个标量。
+                 # 假设这里传递的是一个标量。
+                 pos_weight_val = float(loss_args['pos_weight'])
+                 # PyTorch 期望 pos_weight 是一个 Tensor。
+                 parsed_args['pos_weight'] = torch.tensor([pos_weight_val], dtype=torch.float).to(device)
+             except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse 'pos_weight' parameter ({loss_args['pos_weight']}). Ignoring. Error: {e}")
+
+        # 处理 'label_smoothing' 参数（用于 CrossEntropyLoss）
+        if 'label_smoothing' in loss_args and loss_args['label_smoothing'] is not None and loss_args['label_smoothing'] != '':
+            try:
+                parsed_args['label_smoothing'] = float(loss_args['label_smoothing'])
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse 'label_smoothing' parameter ({loss_args['label_smoothing']}). Ignoring. Error: {e}")
+
+        # 处理 'beta' 参数（用于 SmoothL1Loss）
+        if 'beta' in loss_args and loss_args['beta'] is not None and loss_args['beta'] != '':
+             try:
+                 parsed_args['beta'] = float(loss_args['beta'])
+             except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse 'beta' parameter ({loss_args['beta']}). Ignoring. Error: {e}")
+
+
+        # 处理 'reduction' 参数（许多损失函数通用）
+        valid_reductions = ['mean', 'sum', 'none']
+        if 'reduction' in loss_args and loss_args['reduction'] in valid_reductions:
+            parsed_args['reduction'] = loss_args['reduction']
+        elif 'reduction' in loss_args and loss_args['reduction'] is not None and loss_args['reduction'] != '':
+             print(f"Warning: Invalid 'reduction' value '{loss_args['reduction']}'. Using loss function's default reduction.")
+
+
+        # --- 实例化损失函数 ---
+        try:
+            loss_fn_class = getattr(nn, loss_type_str)
+        except AttributeError:
+             # 如果可用则使用 logger（需要将 logger 传递给配置或使其可访问）
+             # self.logger.log_entry("Error", f"Unsupported loss function type: {loss_type_str}")
+             print(f"Error: Unsupported loss function type specified in config: {loss_type_str}")
+             raise ValueError(f"Unsupported loss function type: {loss_type_str}")
+
+
+        try:
+            # 确保只传递特定损失函数的有效参数
+            # PyTorch 的损失函数通常会忽略额外的 kwargs，但过滤掉更清晰
+            # 然而，过滤需要知道每个损失函数的确切签名，
+            # 这很复杂。现在我们依赖 PyTorch 的处理方式。
+            print(f"Initializing loss function: {loss_type_str} with args: {parsed_args}") # Debug output
+            criterion = loss_fn_class(**parsed_args)
+            # Use logger if available
+            # self.logger.log_entry("Info", f"Using loss function {loss_type_str} with arguments: {parsed_args}")
+            return criterion
+        except Exception as e:
+            # Use logger if available
+            # self.logger.log_entry("Error", f"Error initializing {loss_type_str} with arguments {parsed_args}: {e}")
+            print(f"Error initializing {loss_type_str} with arguments {parsed_args}: {e}")
+            raise e # Re-raise the exception
+
+    # ... (get_input_size method remains the same) ... [source: 8]
 
     def get_input_size(self) -> Tuple[int, int]:
         return self.model_input_sizes.get(self.model_name, (224, 224))
@@ -101,11 +333,13 @@ class CustomModelConfig(BaseModelConfig):
     """自定义模型的配置类"""
 
     def __init__(self, model_class: type, model_params: Dict[str, Any],
-                 input_size: Tuple[int, int], custom_transforms: Optional[transforms.Compose] = None):
+                 input_size: Tuple[int, int], custom_transforms: Optional[transforms.Compose] = None,
+                 config: Dict[str, Any] = None):  # 添加config参数
         self.model_class = model_class
         self.model_params = model_params
         self._input_size = input_size
         self.custom_transforms = custom_transforms
+        self.config = config # Store config
 
     def get_model(self) -> nn.Module:
         return self.model_class(**self.model_params)
@@ -122,10 +356,14 @@ class CustomModelConfig(BaseModelConfig):
         ])
 
     def get_loss_function(self) -> nn.Module:
-        return nn.CrossEntropyLoss()
+        # return nn.CrossEntropyLoss()
+        return TorchvisionModelConfig._create_loss_from_config(self) # Example call if method is on TorchvisionModelConfig
 
     def get_input_size(self) -> Tuple[int, int]:
         return self._input_size
+
+    def get_input_size(self) -> Tuple[int, int]:
+        return self._input_size # [source: 11]
 # trainer.py
 class ModelTrainer:
     """模型训练器类"""
@@ -138,7 +376,7 @@ class ModelTrainer:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # 记录模型名称
-        self.logger.log_entry("ModelName", f"模型名称: {self.config.get("pretrained_model")}")
+        self.logger.log_entry("ModelName", f"模型权重名称/地址: {self.config.get('pretrained_model')}")
         # 记录训练硬件
         self.logger.log_entry("TrainingDevice", f"用于训练的硬件: {self.device}")
 
@@ -274,22 +512,8 @@ def load_config():
         return json.load(f)
 class TrainingLogger:
     def __init__(self, base_log_path):
-        # # 生成唯一的日志文件名
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # log_name = "log"
-        # log_ext = ".json"
-        # log_filename = f"{log_name}_{timestamp}{log_ext}"
-        #
-        # # 获取当天的日期并创建当天的文件夹
-        # today_folder = datetime.now().strftime("%Y%m%d")
-        # today_log_path = os.path.join(base_log_path, today_folder)
-        # os.makedirs(today_log_path, exist_ok=True)
-        #
-        # # 生成完整的日志路径
-        # self.log_path = os.path.join(today_log_path, log_filename)
 
         self.log_path = base_log_path
-
         self.log_data = {
             "config": None,
             "status": {
@@ -302,9 +526,6 @@ class TrainingLogger:
             },
             "entries": []
         }
-
-        # 确保日志目录存在
-        # os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
     def update_status(self, **kwargs):
         self.log_data["status"].update(kwargs)
@@ -336,12 +557,21 @@ def main():
         logger = TrainingLogger(config['py_train_log_output_path'])
         logger.log_data["config"] = config
 
+        if not os.path.isdir(config['train_data_path']):
+             raise FileNotFoundError(f"Training data path not found or not a directory: {config['train_data_path']}")
+        num_classes = len([d for d in os.listdir(config['train_data_path']) if os.path.isdir(os.path.join(config['train_data_path'], d))])
+        if num_classes == 0:
+            raise ValueError(f"No subdirectories found in {config['train_data_path']}, cannot determine number of classes.")
+        logger.log_entry("Info", f"Determined number of classes: {num_classes}")
+
         # 创建模型配置
         num_classes = len(os.listdir(config['train_data_path']))
         model_config = TorchvisionModelConfig(
             model_name=config['pretrained_model'],
             num_classes=num_classes,
-            pretrained=True
+            config = config,
+            pretrained=True,
+            logger = logger
         )
 
         # 创建训练器

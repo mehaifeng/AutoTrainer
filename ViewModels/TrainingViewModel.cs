@@ -170,7 +170,7 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.RandomHorizonFlipChecked,
                 App.TrainModel.RandomVerticalFlipChecked
             ];
-            if (checks.Any(t => !t))
+            if (checks.All(t => !t))
             {
                 return;
             }

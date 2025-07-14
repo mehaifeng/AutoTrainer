@@ -57,8 +57,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = GetWeightArray(Weight),
                                 pos_weight = null,
@@ -77,8 +77,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "二分类交叉熵损失函数";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = GetWeightArray(Weight),
                                 pos_weight = null,
@@ -97,8 +97,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = GetWeightArray(Weight),
                                 pos_weight = GetWeightArray(Pos_weight),
@@ -117,8 +117,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "均方误差损失函数，适用于回归任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = null,
                                 pos_weight = null,
@@ -137,8 +137,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "L1损失函数，适用于回归任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = null,
                                 pos_weight = null,
@@ -157,8 +157,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "平滑L1损失函数，适用于回归任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = null,
                                 pos_weight = null,
@@ -177,8 +177,8 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "KL散度损失函数，适用于分布预测任务";
                         lossFunctionModel = new LossFunctionModel
                         {
-                            name = SelectedLossFunction,
-                            param = new Params
+                            type = SelectedLossFunction,
+                            args = new Params
                             {
                                 weight = null,
                                 pos_weight = null,
@@ -195,6 +195,7 @@ namespace AutoTrainer.ViewModels
                         break;
                 }
             }
+            
         }
         LossFunctionModel lossFunctionModel = new LossFunctionModel();
         #region 可绑定属性
@@ -279,8 +280,14 @@ namespace AutoTrainer.ViewModels
                 OnPropertyChanged(nameof(EarlyStopRound));
             }
         }
+        /// <summary>
+        /// 损失函数类型集合
+        /// </summary>
         [ObservableProperty]
         public ObservableCollection<string> lossFunctionTypes;
+        /// <summary>
+        /// 损失函数描述
+        /// </summary>
         [ObservableProperty]
         public string lossFunctionDescribe;
         /// <summary>
@@ -366,6 +373,12 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 命令
+
+        /// <summary>
+        /// 跳转到下一个选项卡
+        /// </summary>
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         private static async Task GoToNextTab(UserControl o)
         {
@@ -398,6 +411,10 @@ namespace AutoTrainer.ViewModels
                 return [];
             }
         }
+        /// <summary>
+        /// 保存配置
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task SaveConfig()
         {
@@ -415,6 +432,18 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
             App.TrainModel.RandomContrastChecked = RandomContrastChecked;
             App.TrainModel.RandomZoomChecked = RandomZoomChecked;
+            App.TrainModel.LossFunction = new LossFunctionModel
+            {
+                type = SelectedLossFunction,
+                args = new Params
+                {
+                    weight = GetWeightArray(Weight),
+                    pos_weight = GetWeightArray(Pos_weight),
+                    label_smoothing = LabelSmoothing,
+                    Beta = Beta,
+                    reduction = SelectedReduction
+                }
+            };
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
             string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
             await File.WriteAllTextAsync(configPath, jsonStr);

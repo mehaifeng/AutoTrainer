@@ -10,12 +10,12 @@ namespace AutoTrainer.Models
     [JsonObject("loss_function")]
     public class LossFunctionModel
     {
-        [JsonProperty("name")]
-        public string name { get; set; }
-        [JsonProperty("params")]
-        public Params param { get; set; }
+        [JsonProperty("type")]
+        public string type { get; set; }
+        [JsonProperty("args")]
+        public Params args { get; set; }
     }
-    [JsonObject("params")]
+    [JsonObject("args")]
     public class Params
     {
         [JsonProperty("weight")]
