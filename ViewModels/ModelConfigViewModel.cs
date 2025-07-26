@@ -19,6 +19,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace AutoTrainer.ViewModels
 {
@@ -28,6 +30,7 @@ namespace AutoTrainer.ViewModels
         public ModelConfigViewModel()
         {
             ModelList = [];
+            GetRequirementPackages();
             Requirements = string.Join("\r\n", requireApps);
             Task.Run(GetPython);
         }
@@ -35,6 +38,7 @@ namespace AutoTrainer.ViewModels
 
         #region 全局属性
         private string modelHelperScript = Path.Combine($"{Environment.CurrentDirectory}","PyScripts","ModelHelper.py");
+        private string requirementsFilePath = Path.Combine(Environment.CurrentDirectory, "Configs", "Requirements.yaml");
         private string[] requireApps = [
             "torch",
             "torchvision",
@@ -45,7 +49,6 @@ namespace AutoTrainer.ViewModels
             "albumentations",
             "tqdm",
             "onnx",
-            //"onnx2tf",
             "tensorflow",
             "tf_keras",
             "psutil",
@@ -115,20 +118,25 @@ namespace AutoTrainer.ViewModels
         private string scanningFolder = string.Empty;
         #endregion
 
-        public class PackageInfo
-        {
-            public string Name { get; set; }
-            public string Version { get; set; }
-        }
-
-        public class CheckResult
-        {
-            public bool IsMatch { get; set; }
-            public List<string> MissingPackages { get; set; }
-            public string Message { get; set; }
-        }
-
         #region 函数
+        private void GetRequirementPackages()
+        {
+            if (File.Exists(requirementsFilePath))
+            {
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .Build();
+                try
+                {
+                    var yamlContent = File.ReadAllText(requirementsFilePath);
+                    requireApps = deserializer.Deserialize<string[]>(yamlContent);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error reading requirements file: {ex.Message}");
+                }
+            }
+        }
         /// <summary>
         /// 找到Python
         /// </summary>
@@ -374,11 +382,16 @@ namespace AutoTrainer.ViewModels
         {
             string venvFolder = Path.Combine(Environment.CurrentDirectory, "Venvs");
             Directory.CreateDirectory(venvFolder);
-            string venvPath = Path.Combine(venvFolder, DateTime.Now.ToString("yyMMddHHmmss_Venv"));
+            string venvName = DateTime.Now.ToString("yyMMddHHmmss_Venv");
             IsEnablePythonConfigView = false;
-            await CmdHelper.ExecuteLine($"python -m venv {venvPath}");
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"cd {venvFolder}");
+            sb.Append("&&");
+            sb.Append($"python -m venv {venvName}");
+            var command = sb.ToString();
+            await CmdHelper.ExecuteLine(command);
             IsEnablePythonConfigView = true;
-            PythonVenvPath = venvPath;
+            PythonVenvPath = Path.Combine(venvFolder,venvName);
         }
         /// <summary>
         /// 进入Venv环境，执行Pip List
@@ -464,7 +477,7 @@ namespace AutoTrainer.ViewModels
                 foreach (var missingApp in missingApps)
                 {
                     sb.Append($"&& pip install {missingApp}");
-                }
+                 }
                 var command = sb.ToString();
                 try
                 {
@@ -561,5 +574,18 @@ namespace AutoTrainer.ViewModels
             }
         }
         #endregion
+
+        public class PackageInfo
+        {
+            public string? Name { get; set; }
+            public string? Version { get; set; }
+        }
+
+        public class CheckResult
+        {
+            public bool IsMatch { get; set; }
+            public List<string>? MissingPackages { get; set; }
+            public string? Message { get; set; }
+        }
     }
 }

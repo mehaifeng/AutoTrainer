@@ -45,6 +45,9 @@ namespace AutoTrainer.Models
         [JsonProperty("early_stopping_rounds")]
         public int EarlyStoppingRounds { get; set; }
 
+        [JsonProperty("early_stopping_delta")]
+        public float EarlyStoppingDelta { get; set; }
+
         [JsonProperty("model_output_path")]
         public string ModelOutputPath { get; set; }
 

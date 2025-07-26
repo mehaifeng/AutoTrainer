@@ -218,7 +218,7 @@ namespace AutoTrainer.ViewModels
                     var mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     foreach (var readyToDelete in mutationDatas)
                     {
-                        System.IO.File.Delete(readyToDelete);
+                        System.IO.File.Delete(readyToDelete);8
                     }
                     for(int i=0;i<tofiles.Length;i++)
                     {

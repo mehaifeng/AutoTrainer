@@ -193,7 +193,7 @@
 					Text="高级参数"
 					FontWeight="Bold"/>
 				<ScrollViewer Grid.Row="1" Padding="0,0,10,0" Margin="0,0,0,30">
-					<Grid RowDefinitions="80,80,80,*">
+					<Grid RowDefinitions="80,80,80,80,*">
 						<!--学习率调度策略-->
 						<ComboBox
 							Grid.Row="0"
@@ -226,8 +226,20 @@
 								Theme="{StaticResource OutlineNumericUpDown}"
 								Watermark="早停轮数" />
 						</StackPanel>
+						<!--早停阈值-->
+						<StackPanel
+							Grid.Row="3"
+							Margin="0,0,0,20"
+							Orientation="Vertical">
+							<TextBlock Text="早停阈值"/>
+							<NumericUpDown
+								Increment="0.0001"
+								Value="{Binding EarlyStopDelta}"
+								Theme="{StaticResource OutlineNumericUpDown}"
+								Watermark="早停阈值" />
+						</StackPanel>
 						<!--损失函数配置-->
-						<Grid Grid.Row="3" RowDefinitions="20,*">
+						<Grid Grid.Row="4" RowDefinitions="20,*">
 							<TextBlock
 								Grid.Row="0"
 								Width="88"

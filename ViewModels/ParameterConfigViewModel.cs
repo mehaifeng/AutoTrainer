@@ -37,6 +37,7 @@ namespace AutoTrainer.ViewModels
             SelectedLossFunction = LossFunctionTypes[0];
             Epochs = 25;
             EarlyStopRound = 5;
+            EarlyStopDelta = 0.0001f;
             this.PropertyChanged += ParameterConfigViewModel_PropertyChanged;
         }
 
@@ -281,6 +282,11 @@ namespace AutoTrainer.ViewModels
             }
         }
         /// <summary>
+        /// 早停阈值
+        /// </summary>
+        [ObservableProperty]
+        private float earlyStopDelta;
+        /// <summary>
         /// 损失函数类型集合
         /// </summary>
         [ObservableProperty]
@@ -425,6 +431,7 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.Optimizer = SelectedOptimizer;
             App.TrainModel.Epochs = Epochs;
             App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
+            App.TrainModel.EarlyStoppingDelta = EarlyStopDelta;
             App.TrainModel.ValidationSplit = SelectedValidationSetRate;
             App.TrainModel.RandomHorizonFlipChecked = RandomHorizonFlipChecked;
             App.TrainModel.RandomVerticalFlipChecked = RandomVerticalFlipChecked;

@@ -5,6 +5,7 @@ import traceback
 import argparse
 import os
 from typing import Dict, Any, Optional, Tuple
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import transforms, models, datasets
@@ -364,7 +365,59 @@ class CustomModelConfig(BaseModelConfig):
 
     def get_input_size(self) -> Tuple[int, int]:
         return self._input_size # [source: 11]
-# trainer.py
+
+class EarlyStopping:
+    """Early stops the training if validation loss doesn't improve after a given patience."""
+    def __init__(self, save_path, patience=5, verbose=True, delta=0):
+        """
+        Args:
+            save_path (str): 模型保存路径.
+            patient（int）：上次验证损失改进后等待的时间。默认值：5
+            verbose（bool）：如果为 True，则每次验证损失改进后打印一条消息。默认值：True
+            delta（float）：监控量中符合改进条件的最小变化量。默认值：0
+        """
+        self.save_path = save_path
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.inf
+        self.delta = delta
+        self.logger = None # 添加一个logger属性，方便集成日志
+
+    def set_logger(self, logger_instance):
+        self.logger = logger_instance
+
+    def __call__(self, val_loss, model):
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            log_message = f'EarlyStopping counter: {self.counter} out of {self.patience}'
+            if self.logger:
+                self.logger.log_entry("Info", log_message)
+            print(log_message)
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model):
+        '''Saves model when validation loss decrease.'''
+        if self.verbose:
+            log_message = f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model ...'
+            if self.logger:
+                self.logger.log_entry("Status", log_message)
+            print(log_message)
+        torch.save(model.state_dict(), self.save_path)
+        self.val_loss_min = val_loss
+
 class ModelTrainer:
     """模型训练器类"""
 
@@ -385,6 +438,17 @@ class ModelTrainer:
         self.criterion = self.model_config.get_loss_function()
         self.optimizer = self._get_optimizer()
         self.scheduler = self._get_scheduler()
+
+        # 初始化 EarlyStopping
+        # 定义模型保存路径
+        model_save_path = os.path.join(self.config['model_output_path'], f"{self.config['pretrained_model']}.pth")
+        self.early_stopping = EarlyStopping(
+            save_path=model_save_path,
+            patience=self.config.get('early_stopping_rounds', 5), # 从配置中获取 patience
+            verbose=True,
+            delta=self.config.get('early_stopping_delta', 0.0) # 从配置中获取 delta
+        )
+        self.early_stopping.set_logger(self.logger) # 将logger传递给EarlyStopping实例
 
 
     def _get_optimizer(self):
@@ -482,24 +546,6 @@ class ModelTrainer:
 
         return total_loss / len(val_loader), 100. * correct / total
 
-    def save_checkpoint(self, epoch: int, best_val_acc: float):
-        checkpoint = {
-            'epoch': epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
-            'config': self.config,
-            'best_val_acc': best_val_acc
-        }
-        self.symbolModelPath = os.path.join(self.config['model_output_path'], f"{self.config['pretrained_model']}.pth")
-        checkpoint_path = f"{self.symbolModelPath}.checkpoint"
-        torch.save(checkpoint, checkpoint_path)
-        # self.logger.log_entry("Status", f"保存检查点：epoch {epoch}")
-
-    def save_best_model(self, val_acc: float, epoch: int):
-        torch.save(self.model.state_dict(), f"{self.symbolModelPath}")
-        self.logger.log_entry("Status", f"保存最佳模型，验证准确率: {val_acc:.4f}")
-
 def load_config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, required=True, help='Path to config JSON file')
@@ -565,7 +611,6 @@ def main():
         logger.log_entry("Info", f"Determined number of classes: {num_classes}")
 
         # 创建模型配置
-        num_classes = len(os.listdir(config['train_data_path']))
         model_config = TorchvisionModelConfig(
             model_name=config['pretrained_model'],
             num_classes=num_classes,
@@ -581,8 +626,8 @@ def main():
         train_loader, val_loader = trainer.prepare_data()
 
         # 训练循环
-        best_val_acc = 0.0
-        early_stopping_counter = 0
+        # best_val_acc = 0.0
+        # early_stopping_counter = 0
 
         for epoch in range(config['epochs']):
             # 训练一个epoch
@@ -595,7 +640,7 @@ def main():
             metrics = {
                 "train_loss": train_loss,
                 "train_accuracy": train_acc,
-                "validation_loss": val_loss,
+                "validation_loss": val_loss, # 早停的监控指标，验证损失
                 "validation_accuracy": val_acc,
                 "learning_rate": trainer.optimizer.param_groups[0]['lr']
             }
@@ -607,28 +652,23 @@ def main():
                 metrics=metrics
             )
 
-            # 更新学习率
+            # 更新学习率 (如果使用 ReduceLROnPlateau，现在应该传入 val_loss)
             if isinstance(trainer.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                trainer.scheduler.step(val_acc)
+                # 如果 ReduceLROnPlateau 的 mode 是 'min' (默认)，则传入 val_loss
+                # 如果 mode 是 'max'，则保持传入 val_acc
+                # 根据配置的 scheduler mode 来选择传入 val_loss 或 val_acc
+                trainer.scheduler.step(val_loss) # 假设mode='min'，如果scheduler是mode='max'则改为val_acc
             elif trainer.scheduler:
                 trainer.scheduler.step()
 
-            # 保存最佳模型
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                early_stopping_counter = 0
-                trainer.save_best_model(val_acc, epoch)
-            else:
-                early_stopping_counter += 1
+            # 调用 EarlyStopping
+            trainer.early_stopping(val_loss, trainer.model) # 传入 val_loss 和模型
 
             # 检查是否早停
-            if early_stopping_counter >= config['early_stopping_rounds']:
+            if trainer.early_stopping.early_stop:
                 logger.log_entry("Status", "触发早停机制，停止训练")
-                trainer.save_best_model(val_acc, epoch)
+                # trainer.save_best_model(val_acc, epoch) # 这一行可以移除，EarlyStopping 会自动保存
                 break
-
-            # 保存检查点
-            trainer.save_checkpoint(epoch, best_val_acc)
 
         logger.update_status(is_training=False)
         logger.log_entry("System", "训练完成")
