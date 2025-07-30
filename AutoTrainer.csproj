@@ -22,6 +22,12 @@
   <ItemGroup>
     <None Remove="Assets\ImageClassify.webp" />
     <None Remove="Assets\ValuePredict.webp" />
+    <None Update="Configs\ModelParam.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Configs\Requirements.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="PyScripts\ImageClassifier.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

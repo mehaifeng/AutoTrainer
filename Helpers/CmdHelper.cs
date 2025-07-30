@@ -64,8 +64,8 @@ namespace AutoTrainer.Helpers
         }
 
         public delegate void OutputReceivedHandler(string data);
-    public static async Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
-    {
+        public static async Task<CommandResult> ExecuteLine(string arguments, string? workingDirectory = null, bool isShowTerminal = false, OutputReceivedHandler? onOutputReceived = null)
+        {
             var result = new CommandResult();
             // 根据操作系统确定shell程序路径和参数格式
             string shellPath;
@@ -73,6 +73,7 @@ namespace AutoTrainer.Helpers
             if (OperatingSystem.IsWindows())
             {
                 shellPath = "cmd.exe";
+                //shellPath = "powershell.exe";
                 shellArgs = "/c" + arguments;
             }
             else
