@@ -11,12 +11,19 @@ namespace AutoTrainer.Converters
     // IconTypeConverter.cs
     public class IconTypeConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            return value?.ToString() == "folder" ? "📁" : "📄";
+            if(value != null)
+            {
+                return value.ToString() == "folder" ? "📁" : "📄";
+            }
+            else
+            {
+                return "❓";
+            }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

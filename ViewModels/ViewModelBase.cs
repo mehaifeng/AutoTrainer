@@ -6,11 +6,14 @@ namespace AutoTrainer.ViewModels
 {
     public class ViewModelBase : ObservableObject
     {
-        public event Action<string> AnyPropertyChanged;
+        public event Action<string>? AnyPropertyChanged;
         protected override void OnPropertyChanged(PropertyChangedEventArgs e)
         {
             base.OnPropertyChanged(e);
-            AnyPropertyChanged?.Invoke(e.PropertyName);
+            if (e.PropertyName != null)
+            {
+                AnyPropertyChanged?.Invoke(e.PropertyName);
+            }
         }
     }
 }

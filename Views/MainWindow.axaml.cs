@@ -15,8 +15,11 @@ namespace AutoTrainer.Views
         {
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                Window mainWindow = desktop.MainWindow;
-                mainWindow.IsVisible = true;
+                if (desktop.MainWindow != null)
+                {
+                    Window mainWindow = desktop.MainWindow;
+                    mainWindow.IsVisible = true;
+                }
             }
         }
     }

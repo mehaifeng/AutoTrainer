@@ -36,27 +36,27 @@ namespace AutoTrainer.ViewModels
         #region 可绑定属性
 
         [ObservableProperty]
-        private ObservableCollection<ISeries> series;
+        private ObservableCollection<ISeries>? series;
         /// <summary>
         /// 训练准确度
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<ObservableValue> trainAccValues;
+        private ObservableCollection<ObservableValue>? trainAccValues;
         /// <summary>
         /// 训练损失度
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<ObservableValue> trainLossValues;
+        private ObservableCollection<ObservableValue>? trainLossValues;
         /// <summary>
         /// 验证准确度
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<ObservableValue> validationAccValues;
+        private ObservableCollection<ObservableValue>? validationAccValues;
         /// <summary>
         /// 验证损失度
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<ObservableValue> validationLossValues;
+        private ObservableCollection<ObservableValue>? validationLossValues;
         [ObservableProperty]
         private bool isShowNextPage = false;
         [ObservableProperty]
@@ -135,7 +135,7 @@ namespace AutoTrainer.ViewModels
             _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
             var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript,App.PythonVenvPath,arguments,isShowTerminal: true, null, cancellationTokenSource.Token);
-            if (result.ExitCode != 0)
+            if (result.ExitCode != 0 && result.Error != null)
             {
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", result.Error, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                 await cancellationTokenSource.CancelAsync();
@@ -177,21 +177,24 @@ namespace AutoTrainer.ViewModels
             PyOutput += "\n正在图像增强...";
             //先读取训练数据，然后增强图像，生成新的训练数据
             var dataSetPath = App.TrainModel.TrainDataPath;
-            var dataSetClassify = Directory.GetDirectories(dataSetPath);
-            var augemnetDataFolder = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
-            Directory.CreateDirectory(augemnetDataFolder);
-            Directory.Delete(augemnetDataFolder,true);
-            for (int i = 0; i<dataSetClassify.Length; i++)
+            if (dataSetPath != null)
             {
-                var augemnetTypeFolder = Path.Combine(augemnetDataFolder, Path.GetFileName(dataSetClassify[i]));
-                Directory.CreateDirectory(augemnetTypeFolder);
-                var imageFiles = Directory.GetFiles(dataSetClassify[i]);
-                foreach (var imageFile in imageFiles)
+                var dataSetClassify = Directory.GetDirectories(dataSetPath);
+                var augemnetDataFolder = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
+                Directory.CreateDirectory(augemnetDataFolder);
+                Directory.Delete(augemnetDataFolder, true);
+                for (int i = 0; i < dataSetClassify.Length; i++)
                 {
-                    ImageAugmentation.AugmentImageOne(i, checks, imageFile, augemnetTypeFolder,1);
+                    var augemnetTypeFolder = Path.Combine(augemnetDataFolder, Path.GetFileName(dataSetClassify[i]));
+                    Directory.CreateDirectory(augemnetTypeFolder);
+                    var imageFiles = Directory.GetFiles(dataSetClassify[i]);
+                    foreach (var imageFile in imageFiles)
+                    {
+                        ImageAugmentation.AugmentImageOne(i, checks, imageFile, augemnetTypeFolder, 1);
+                    }
                 }
+                App.TrainModel.TrainDataPath = augemnetDataFolder;
             }
-            App.TrainModel.TrainDataPath = augemnetDataFolder;
         }
         /// <summary>
         /// 初始化图表线条
@@ -316,15 +319,18 @@ namespace AutoTrainer.ViewModels
                     //画图方面，需要找到type为Validation的消息
                     if (string.Equals(pyExecuteOutput.Entries[i].Type, "Validation"))
                     {
-                        TrainAccValues.Add(new ObservableValue()
-                        { Value = pyExecuteOutput.Entries[i].Metrics.TrainAccuracy });
-                        TrainLossValues.Add(new ObservableValue()
-                        { Value = pyExecuteOutput.Entries[i].Metrics.TrainLoss });
-                        ValidationAccValues.Add(new ObservableValue()
-                        { Value = pyExecuteOutput.Entries[i].Metrics.ValidationAccuracy });
-                        ValidationLossValues.Add(new ObservableValue()
-                        { Value = pyExecuteOutput.Entries[i].Metrics.ValidationLoss });
-                        EpochState.CurrentEpoch = pyExecuteOutput.Entries[i].Epoch;
+                        if (TrainAccValues != null && TrainLossValues != null && ValidationAccValues != null && ValidationLossValues != null)
+                        {
+                            TrainAccValues.Add(new ObservableValue()
+                            { Value = pyExecuteOutput.Entries[i].Metrics?.TrainAccuracy });
+                            TrainLossValues.Add(new ObservableValue()
+                            { Value = pyExecuteOutput.Entries[i].Metrics?.TrainLoss });
+                            ValidationAccValues.Add(new ObservableValue()
+                            { Value = pyExecuteOutput.Entries[i].Metrics?.ValidationAccuracy });
+                            ValidationLossValues.Add(new ObservableValue()
+                            { Value = pyExecuteOutput.Entries[i].Metrics?.ValidationLoss });
+                            EpochState.CurrentEpoch = pyExecuteOutput.Entries[i].Epoch;
+                        }
                     }
                     //打印输出信息
                     PyOutput += pyExecuteOutput.Entries[i].Message + "\r\n";

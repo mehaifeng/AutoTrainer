@@ -52,67 +52,77 @@ namespace AutoTrainer.ViewModels
                 e.PropertyName == "Pos_weight" || e.PropertyName == "Beta" || e.PropertyName == "KLDivLoss_Reductions")
             {
                 LossFunctionModel lossFunctionModel;
+
                 switch (SelectedLossFunction)
                 {
                     case "CrossEntropyLoss":
                         LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
-                        lossFunctionModel = new LossFunctionModel
+                        if (!string.IsNullOrEmpty(Weight))
                         {
-                            type = SelectedLossFunction,
-                            args = new Params
+                            lossFunctionModel = new LossFunctionModel
                             {
-                                weight = GetWeightArray(Weight),
-                                pos_weight = null,
-                                Beta = null,
-                                label_smoothing = LabelSmoothing,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
+                                type = SelectedLossFunction,
+                                args = new Params
+                                {
+                                    weight = GetWeightArray(Weight),
+                                    pos_weight = null,
+                                    Beta = null,
+                                    label_smoothing = LabelSmoothing,
+                                    reduction = SelectedReduction
+                                }
+                            };
+                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                            {
+                                Formatting = Formatting.Indented,
+                                NullValueHandling = NullValueHandling.Ignore,
+                            });
+                        }
                         break;
                     case "BCELoss":
                         LossFunctionDescribe = "二分类交叉熵损失函数";
-                        lossFunctionModel = new LossFunctionModel
+                        if (!string.IsNullOrEmpty(Weight))
                         {
-                            type = SelectedLossFunction,
-                            args = new Params
+                            lossFunctionModel = new LossFunctionModel
                             {
-                                weight = GetWeightArray(Weight),
-                                pos_weight = null,
-                                Beta = null,
-                                label_smoothing = null,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
+                                type = SelectedLossFunction,
+                                args = new Params
+                                {
+                                    weight = GetWeightArray(Weight),
+                                    pos_weight = null,
+                                    Beta = null,
+                                    label_smoothing = null,
+                                    reduction = SelectedReduction
+                                }
+                            };
+                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                            {
+                                Formatting = Formatting.Indented,
+                                NullValueHandling = NullValueHandling.Ignore,
+                            });
+                        }
                         break;
                     case "BCEWithLogitsLoss":
                         LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
-                        lossFunctionModel = new LossFunctionModel
+                        if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight))
                         {
-                            type = SelectedLossFunction,
-                            args = new Params
+                            lossFunctionModel = new LossFunctionModel
                             {
-                                weight = GetWeightArray(Weight),
-                                pos_weight = GetWeightArray(Pos_weight),
-                                reduction = SelectedReduction,
-                                Beta = null,
-                                label_smoothing = null
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
+                                type = SelectedLossFunction,
+                                args = new Params
+                                {
+                                    weight = GetWeightArray(Weight),
+                                    pos_weight = GetWeightArray(Pos_weight),
+                                    reduction = SelectedReduction,
+                                    Beta = null,
+                                    label_smoothing = null
+                                }
+                            };
+                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+                            {
+                                Formatting = Formatting.Indented,
+                                NullValueHandling = NullValueHandling.Ignore,
+                            });
+                        }
                         break;
                     case "MSELoss":
                         LossFunctionDescribe = "均方误差损失函数，适用于回归任务";
@@ -194,11 +204,9 @@ namespace AutoTrainer.ViewModels
                             NullValueHandling = NullValueHandling.Ignore,
                         });
                         break;
-                }
+                }   
             }
-            
         }
-        LossFunctionModel lossFunctionModel = new LossFunctionModel();
         #region 可绑定属性
         /// <summary>
         /// 学习率集合
@@ -262,7 +270,7 @@ namespace AutoTrainer.ViewModels
         /// 选择的学习率调度策略
         /// </summary>
         [ObservableProperty]
-        private string selectedStrategy;
+        private string? selectedStrategy;
         /// <summary>
         /// 权重衰减
         /// </summary>
@@ -295,12 +303,12 @@ namespace AutoTrainer.ViewModels
         /// 损失函数描述
         /// </summary>
         [ObservableProperty]
-        public string lossFunctionDescribe;
+        public string? lossFunctionDescribe;
         /// <summary>
         /// 选择的损失函数
         /// </summary>
         [ObservableProperty]
-        public string selectedLossFunction;
+        public string? selectedLossFunction;
         /// <summary>
         /// 权重
         /// </summary>
@@ -335,12 +343,12 @@ namespace AutoTrainer.ViewModels
         /// 选择的损失计算方式
         /// </summary>
         [ObservableProperty]
-        public string selectedReduction;
+        public string? selectedReduction;
         /// <summary>
         /// 代码预览
         /// </summary>
         [ObservableProperty]
-        public string codePreview;
+        public string? codePreview;
         /// <summary>
         /// 是否可显示下一步按钮
         /// </summary>
@@ -439,18 +447,21 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
             App.TrainModel.RandomContrastChecked = RandomContrastChecked;
             App.TrainModel.RandomZoomChecked = RandomZoomChecked;
-            App.TrainModel.LossFunction = new LossFunctionModel
+            if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight)) 
             {
-                type = SelectedLossFunction,
-                args = new Params
+                App.TrainModel.LossFunction = new LossFunctionModel
                 {
-                    weight = GetWeightArray(Weight),
-                    pos_weight = GetWeightArray(Pos_weight),
-                    label_smoothing = LabelSmoothing,
-                    Beta = Beta,
-                    reduction = SelectedReduction
-                }
-            };
+                    type = SelectedLossFunction,
+                    args = new Params
+                    {
+                        weight = GetWeightArray(Weight),
+                        pos_weight = GetWeightArray(Pos_weight),
+                        label_smoothing = LabelSmoothing,
+                        Beta = Beta,
+                        reduction = SelectedReduction
+                    }
+                };
+            }
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
             string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
             await File.WriteAllTextAsync(configPath, jsonStr);

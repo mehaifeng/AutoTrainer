@@ -18,12 +18,8 @@ namespace AutoTrainer.ViewModels
 {
     public partial class ConvertToExportViewModel : ViewModelBase
     {
-        public ConvertToExportViewModel()
-        {
-
-        }
         [ObservableProperty]
-        private string modelName;
+        private string? modelName;
         [ObservableProperty]
         private bool isConverting = false;
         [ObservableProperty]
@@ -44,19 +40,21 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task ConvertToONNX(SnackbarHost o)
         {
-            var onnxFolder = Path.Combine(App.ModelOutputFolderPath, "onnx");
+            var onnxFolder = Path.Combine(App.ModelOutputFolderPath ?? string.Empty, "onnx");
             Directory.CreateDirectory(onnxFolder);
-            var modelPath = Path.Combine(App.TrainModel.ModelOutputPath, App.TrainModel.PretrainedModel + ".pth");
-            var pythonScript = Path.Combine(Environment.CurrentDirectory,"PyScripts","ModelConverter.py");
+            var modelOutputPath = App.TrainModel.ModelOutputPath ?? string.Empty;
+            var pretrainedModel = App.TrainModel.PretrainedModel ?? string.Empty;
+            var modelPath = Path.Combine(modelOutputPath, pretrainedModel + ".pth");
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelConverter.py");
             StringBuilder sb = new StringBuilder();
-            sb.Append($" --model {App.TrainModel.PretrainedModel}");
+            sb.Append($" --model {pretrainedModel}");
             sb.Append($" --format onnx");
             sb.Append($" --weights {modelPath}");
-            sb.Append($" --output {Path.Combine(onnxFolder, App.TrainModel.PretrainedModel)}");
+            sb.Append($" --output {Path.Combine(onnxFolder, pretrainedModel)}");
             var arguments = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript,App.PythonVenvPath,arguments,isShowTerminal: false, HandleOutput,System.Threading.CancellationToken.None);
+            var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, HandleOutput, System.Threading.CancellationToken.None);
             IsConverting = false;
             IsEnableConvert = true;
             SnackbarHost.Post(
@@ -64,7 +62,7 @@ namespace AutoTrainer.ViewModels
                 "模型已转换为onnx",
                 TimeSpan.FromSeconds(8),
                 new SnackbarButtonModel
-               { 
+                {
                     Text = "打开目录",
                     Action = () =>
                     {
@@ -76,13 +74,11 @@ namespace AutoTrainer.ViewModels
                         }
                         else if (OperatingSystem.IsLinux())
                         {
-                            // xdg-open 是 Linux 桌面环境的标准开启方式
                             psi.FileName = "xdg-open";
                             psi.Arguments = onnxFolder;
                         }
                         else if (OperatingSystem.IsMacOS())
                         {
-                            // 对 macOS 的支持
                             psi.FileName = "open";
                             psi.Arguments = onnxFolder;
                         }
@@ -97,7 +93,6 @@ namespace AutoTrainer.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            // 处理可能的异常
                             Console.WriteLine($"打开目录失败: {ex.Message}");
                         }
                     }
@@ -111,20 +106,22 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task ConvertToTensorFlow(SnackbarHost o)
         {
-            var tensorflowFolder = Path.Combine(App.ModelOutputFolderPath, "tensorflow");
+            var tensorflowFolder = Path.Combine(App.ModelOutputFolderPath ?? string.Empty, "tensorflow");
             Directory.CreateDirectory(tensorflowFolder);
-            var modelPath = Path.Combine(App.TrainModel.ModelOutputPath, App.TrainModel.PretrainedModel + ".pth");
+            var modelOutputPath = App.TrainModel.ModelOutputPath ?? string.Empty;
+            var pretrainedModel = App.TrainModel.PretrainedModel ?? string.Empty;
+            var modelPath = Path.Combine(modelOutputPath, pretrainedModel + ".pth");
             var sb = new StringBuilder();
             var venvFolder = App.PythonVenvPath;
             var pythonScript = $"{Environment.CurrentDirectory}\\PyScripts\\ModelConverter.py";
-            sb.Append($" --model {App.TrainModel.PretrainedModel}");
+            sb.Append($" --model {pretrainedModel}");
             sb.Append($" --format tensorflow");
             sb.Append($" --weights {modelPath}");
-            sb.Append($" --output {Path.Combine(tensorflowFolder, App.TrainModel.PretrainedModel)}");
+            sb.Append($" --output {Path.Combine(tensorflowFolder, pretrainedModel)}");
             var argument = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            await CmdHelper.ExecutePythonScriptAsync(pythonScript,venvFolder,argument,false, HandleOutput);
+            await CmdHelper.ExecutePythonScriptAsync(pythonScript, venvFolder, argument, false, HandleOutput);
             IsConverting = false;
             IsEnableConvert = true;
             SnackbarHost.Post(

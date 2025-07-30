@@ -28,7 +28,7 @@ namespace AutoTrainer.ViewModels
 {
     public partial class DataPickerViewModel : ViewModelBase
     {
-        private readonly string appPath = AppDomain.CurrentDomain.BaseDirectory;
+        private readonly string? appPath = AppDomain.CurrentDomain.BaseDirectory;
         private int ConfigCount { get; set; } = 0;
         private CancellationTokenSource cts = new();
         public DataPickerViewModel()
@@ -44,9 +44,9 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         public ObservableCollection<PreviewImageModel> imageCategories;
         [ObservableProperty]
-        private CropConfigModel cropConfig;
+        private CropConfigModel? cropConfig;
         [ObservableProperty]
-        private IImage imagepath;
+        private IImage? imagepath;
         [ObservableProperty]
         private bool isEnableLeftBtn;
         [ObservableProperty]
@@ -56,19 +56,19 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isEnableDeleteBtn = false;
         [ObservableProperty]
-        private string cropOutputPath;
+        private string? cropOutputPath;
         [ObservableProperty]
         private int progressValue;
         [ObservableProperty]
         private int progressMax;
         [ObservableProperty]
-        private string progressState = "0/0";
+        private string? progressState = "0/0";
         [ObservableProperty]
         private bool isEnableEndBtn = false;
         [ObservableProperty]
         private bool isVisibleFuncArea = false;
         [ObservableProperty]
-        private string previewState;
+        private string? previewState;
         [ObservableProperty]
         private bool isVisibleIntroduce = false;
 
@@ -135,8 +135,8 @@ namespace AutoTrainer.ViewModels
                 X2 = 270,
                 Y2 = 270
             };
-            CropConfig.Coprs.Add(newArea);
-            var displayImage = (canvas.Parent as Grid).Children[0] as Image;
+            CropConfig?.Coprs.Add(newArea);
+            var displayImage = (canvas.Parent as Grid)?.Children[0] as Image;
             DraggableRectangle.AddDraggableRectangle(newArea, canvas, Imagepath as Bitmap, displayImage, "Class");
         }
         /// <summary>
@@ -178,7 +178,7 @@ namespace AutoTrainer.ViewModels
             if (CropConfigs == null || CropConfigs.Count == 0)
                 return;
 
-            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
+            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig?.Name)));
             if (currentIndex == -1)
                 return;
 
@@ -191,8 +191,8 @@ namespace AutoTrainer.ViewModels
 
             foreach (var crop in CropConfig.Coprs)
             {
-                var displayImage = (canvas.Parent as Grid).Children[0] as Image;
-                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name);
+                var displayImage = (canvas.Parent as Grid)?.Children[0] as Image;
+                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name??"Unknow");
             }
 
             // 更新按钮状态
@@ -209,7 +209,7 @@ namespace AutoTrainer.ViewModels
             if (CropConfigs == null || CropConfigs.Count == 0)
                 return;
 
-            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
+            var currentIndex = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig?.Name)));
             if (currentIndex == -1)
                 return;
 
@@ -222,8 +222,8 @@ namespace AutoTrainer.ViewModels
 
             foreach (var crop in CropConfig.Coprs)
             {
-                var displayImage = (canvas.Parent as Grid).Children[0] as Image;
-                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name);
+                var displayImage = (canvas.Parent as Grid)?.Children[0] as Image;
+                DraggableRectangle.AddDraggableRectangle(crop, canvas, Imagepath as Bitmap, displayImage, crop.Name??"Unknow");
             }
 
             // 更新按钮状态
@@ -237,7 +237,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void Delete(Canvas canvas)
         {
-            if (string.IsNullOrEmpty(CropConfig.Name) || CropConfigs.Count == 0)
+            if (string.IsNullOrEmpty(CropConfig?.Name) || CropConfigs.Count == 0)
                 return;
 
             var index = CropConfigs.IndexOf(CropConfigs.First(t => string.Equals(t.Name, CropConfig.Name)));
@@ -256,7 +256,6 @@ namespace AutoTrainer.ViewModels
                 // 清空配置和状态
                 CropConfig = new CropConfigModel();
                 canvas.Children.Clear();
-                Imagepath = null;
                 IsEnableLeftBtn = false;
                 IsEnableDeleteBtn = false;
             }
@@ -269,7 +268,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task QuickCrop()
         {
-            if (CropConfig != null)
+            if (CropConfig != null && CropOutputPath!=null)
             {
                 try
                 {
@@ -363,42 +362,49 @@ namespace AutoTrainer.ViewModels
         {
             var thisWindow = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
             var toplevel = TopLevel.GetTopLevel(thisWindow?.MainWindow);
-            CropOutputPath = System.IO.Path.Combine(appPath, "CropImages");
-            if (toplevel != null)
+            if (appPath != null && CropConfig != null)
             {
-                var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+                CropOutputPath = System.IO.Path.Combine(appPath, "CropImages");
+                if (toplevel != null)
                 {
-                    Title = "选择文件夹",
-                    AllowMultiple = true,
-                });
-                if (folders != null)
-                {
-                    ProgressState = "0/0";//开始时，进度设置为0/0
-                    IsEnableEndBtn = true;//中止按钮设置为可见
-                    IsVisibleFuncArea = true;
-                    List<string> files = [];
-                    foreach (var folder in folders)
+                    var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
                     {
-                        files.AddRange(Directory.GetFiles(folder.Path.LocalPath));
-                    }
-                    ProgressMax = files.Count;//进度条最大值设置为文件数目
-                    for (int i = 0; i < files.Count; i++)
+                        Title = "选择文件夹",
+                        AllowMultiple = true,
+                    });
+                    if (folders != null)
                     {
-                        if (!token.IsCancellationRequested)
+                        ProgressState = "0/0";//开始时，进度设置为0/0
+                        IsEnableEndBtn = true;//中止按钮设置为可见
+                        IsVisibleFuncArea = true;
+                        List<string> files = [];
+                        foreach (var folder in folders)
                         {
-                            int index = files[i].LastIndexOf('.');
-                            string extents = files[i].Substring(index);
-                            if (extents == ".jpeg" || extents == ".jpg" || extents == ".png" || extents == ".bmp")
+                            files.AddRange(Directory.GetFiles(folder.Path.LocalPath));
+                        }
+                        ProgressMax = files.Count;//进度条最大值设置为文件数目
+                        for (int i = 0; i < files.Count; i++)
+                        {
+                            if (!token.IsCancellationRequested)
                             {
-                                CropImageHelper.CropImage(files[i], CropOutputPath, CropConfig);
-                                ProgressValue = i + 1;
-                                ProgressState = $"{i + 1}/{ProgressMax}";
+                                int index = files[i].LastIndexOf('.');
+                                string extents = files[i].Substring(index);
+                                if (extents == ".jpeg" || extents == ".jpg" || extents == ".png" || extents == ".bmp")
+                                {
+                                    CropImageHelper.CropImage(files[i], CropOutputPath, CropConfig);
+                                    ProgressValue = i + 1;
+                                    ProgressState = $"{i + 1}/{ProgressMax}";
+                                }
                             }
                         }
+                        IsVisibleFuncArea = false;
+                        IsEnableEndBtn = false;
                     }
-                    IsVisibleFuncArea = false;
-                    IsEnableEndBtn = false;
                 }
+            }
+            else
+            {
+                throw new Exception("应用程序路径或裁剪配置为空，请检查设置。");
             }
         }
         /// <summary>
@@ -471,9 +477,16 @@ namespace AutoTrainer.ViewModels
             if (File.Exists(configPath))
             {
                 string jsonStr = await File.ReadAllTextAsync(configPath);
-                CropConfigs = JsonConvert.DeserializeObject<ObservableCollection<CropConfigModel>>(jsonStr);
-                ConfigCount = CropConfigs.Count;
-                CropConfig = CropConfigs.First();
+                if (!string.IsNullOrEmpty(jsonStr))
+                {
+                    var configs = JsonConvert.DeserializeObject<ObservableCollection<CropConfigModel>>(jsonStr);
+                    if (configs != null)
+                    {
+                        CropConfigs = configs;
+                        ConfigCount = CropConfigs.Count;
+                        CropConfig = CropConfigs.First();
+                    }
+                }
             }
         }
         /// <summary>

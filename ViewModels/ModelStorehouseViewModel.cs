@@ -241,9 +241,9 @@ namespace AutoTrainer.ViewModels
                 ModelFactoryModel model = new()
                 {
                     IsChecked = false,
-                    ModelName = obj.Name,
-                    ModelType = obj.Name.Split('.')[1],
-                    ModelVersion = obj.VersionId,
+                    ModelName = obj.Name?? "Unknown",
+                    ModelType = obj.Name ?? "Unknown".Split('.')[1],
+                    ModelVersion = obj.VersionId ?? "Unknown",
                     ModelSize = obj.Size,
                     LastModifiedDateTime = obj.LastModified,
                 };

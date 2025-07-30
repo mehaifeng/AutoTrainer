@@ -11,14 +11,14 @@ namespace AutoTrainer.Models
     public partial class CropConfigModel : ViewModelBase
     {
         [ObservableProperty]
-        private string name;
+        private string? name;
         [ObservableProperty]
         private List<SingleCropArea> coprs = [];
     }
     public partial class SingleCropArea : ViewModelBase
     {
         [ObservableProperty]
-        private string name;
+        private string? name;
         [ObservableProperty]
         private int x1;
         [ObservableProperty]
