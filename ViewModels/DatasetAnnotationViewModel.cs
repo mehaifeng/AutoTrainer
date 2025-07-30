@@ -1,6 +1,7 @@
 ﻿using AutoTrainer.ControlHelper;
 using AutoTrainer.Helpers;
 using AutoTrainer.Models;
+using AutoTrainer.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -9,6 +10,7 @@ using Avalonia.Data;
 using Avalonia.Dialogs;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -205,11 +207,30 @@ namespace AutoTrainer.ViewModels
         #region 图像导入和导航命令
 
         [RelayCommand]
-        private async Task ImportImages()
+        private async Task ImportImages(UserControl control)
         {
             try
             {
-                // TODO: 实现文件选择对话框
+                FilePickerFileType imageAll = new FilePickerFileType("ImageAll")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"],
+                    AppleUniformTypeIdentifiers = ["sample.jpg"],
+                    MimeTypes = ["image/*"]
+                };
+                var topLevel = TopLevel.GetTopLevel(control);
+                if (topLevel != null)
+                {
+                    var file = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
+                    {
+                        Title = "选择一张图片",
+                        AllowMultiple = false,
+                        FileTypeFilter = [imageAll],
+                    });
+                    if (file.Count != 0)
+                    {
+                        CurrentImage = new Bitmap(file[0].Path.LocalPath);
+                    }
+                }
             }
             catch (Exception ex)
             {

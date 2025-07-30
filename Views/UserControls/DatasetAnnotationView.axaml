@@ -1,468 +1,679 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
-			 xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
-			 xmlns:model="using:AutoTrainer.Models"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
-             mc:Ignorable="d" 
-			 d:DesignWidth="1300" 
-			 d:DesignHeight="850"
-			 Padding="10,0,10,0"
-			 x:Name="DataTabItem"
-			 x:DataType="vm:DatasetAnnotationViewModel"
-             x:Class="AutoTrainer.DatasetAnnotationView">
-	<Grid>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="250" />
-			<!-- 左侧工具栏 -->
-			<ColumnDefinition Width="*" />
-			<!-- 主图像区域 -->
-			<ColumnDefinition Width="300" />
-			<!-- 右侧属性面板 -->
-		</Grid.ColumnDefinitions>
-
-		<!-- 左侧工具栏 -->
-		<Border Grid.Column="0" Background="#F5F5F5" BorderBrush="LightGray" BorderThickness="0,0,1,0">
-			<ScrollViewer>
-				<StackPanel Margin="10" Spacing="15">
-
-					<!-- 标注模式选择 -->
-					<Expander Header="标注模式" IsExpanded="True">
-						<StackPanel Margin="10" Spacing="8">
-							<RadioButton Content="手动标注" IsChecked="True"
-									   ToolTip.Tip="逐张手动标注图片"
-										 Command="{Binding SelectManualModeCommand}"/>
-
-							<RadioButton Content="模板标注"
-									   ToolTip.Tip="使用预设模板批量标注" 
-										 Command="{Binding SelectTemplateModeCommand}"/>
-							<!-- Command="{Binding SelectTemplateModeCommand}" -->
-
-							<RadioButton Content="智能辅助"
-									   ToolTip.Tip="AI辅助预标注" 
-										 Command="{Binding SelectAIModeCommand}"/>
-							<!-- Command="{Binding SelectAIModeCommand}" -->
-						</StackPanel>
-					</Expander>
-
-					<!-- 标注工具 -->
-					<Expander Header="标注工具" IsExpanded="True">
-						<StackPanel Margin="10" Spacing="8">
-							<ToggleButton Content="矩形框" IsChecked="True"
-										ToolTip.Tip="绘制矩形标注框" 
-										  Command="{Binding SelectRectangleToolCommand}"/>
-							<!-- Command="{Binding SelectRectangleToolCommand}" -->
-
-							<ToggleButton Content="多边形"
-										ToolTip.Tip="绘制多边形标注区域" 
-										  Command="{Binding SelectPolygonToolCommand}"/>
-							<!-- Command="{Binding SelectPolygonToolCommand}" -->
-
-							<ToggleButton Content="点标注"
-										ToolTip.Tip="关键点标注" 
-										  Command="{Binding SelectPointToolCommand}" />
-							<!-- Command="{Binding SelectPointToolCommand}" -->
-
-							<Separator />
-
-							<Button Content="清除标注" Classes="light"
-								  ToolTip.Tip="清除当前图片所有标注"
-									Command="{Binding ClearAnnotationsCommand}"/>
-							<!-- Command="{Binding ClearAnnotationsCommand}" -->
-
-							<Button Content="复制标注" Classes="light"
-								  ToolTip.Tip="复制到下一张图片" 
-									Command="{Binding CopyAnnotationsCommand}"/>
-							<!-- Command="{Binding CopyAnnotationsCommand}" -->
-						</StackPanel>
-					</Expander>
-
-					<!-- 类别管理 -->
-					<Expander Header="类别管理" IsExpanded="True">
-						<StackPanel Margin="10" Spacing="8">
-							<TextBox Watermark="输入新类别名称" 
-									 Text="{Binding NewClassName}"/>
-							<!-- Text="{Binding NewClassName}" -->
-
-							<Button Content="添加类别" Classes="accent" 
-									Command="{Binding AddClassCommand}"/>
-							<!-- Command="{Binding AddClassCommand}" -->
-
-							<ListBox MaxHeight="150" 
-									 ItemsSource="{Binding ClassNames}" 
-                                 SelectedItem="{Binding SelectedClassName}" >
-								<ListBox.ItemTemplate>
-									<DataTemplate>
-										<Grid>
-											<Grid.ColumnDefinitions>
-												<ColumnDefinition Width="*" />
-												<ColumnDefinition Width="Auto" />
-											</Grid.ColumnDefinitions>
-											<TextBlock Grid.Column="0" Text="ABC" VerticalAlignment="Center" />
-											<Button Grid.Column="1" Content="×" Classes="light" Width="20" Height="20" ToolTip.Tip="删除类别"/>
-										</Grid>
-									</DataTemplate>
-								</ListBox.ItemTemplate>
-							</ListBox>
-						</StackPanel>
-					</Expander>
-
-					<!-- 数据管理 -->
-					<Expander Header="数据管理" IsExpanded="False">
-						<StackPanel Margin="10" Spacing="8">
-							<Button Content="导入图片" Classes="light" Command="{Binding ImportImagesCommand}"/>
-							<!-- Command="{Binding ImportImagesCommand}" -->
-
-							<Button Content="导入标注" Classes="light" Command="{Binding ImportAnnotationsCommand}"/>
-							<!-- Command="{Binding ImportAnnotationsCommand}" -->
-
-							<Button Content="导出标注" Classes="light" Command="{Binding ExportAnnotationsCommand}"/>
-							<!-- Command="{Binding ExportAnnotationsCommand}" -->
-
-							<Separator />
-
-							<Button Content="数据增强" Classes="light"/>
-							<!-- Command="{Binding ShowDataAugmentationCommand}" -->
-
-							<Button Content="质量检查" Classes="light"/>
-							<!-- Command="{Binding ValidateAnnotationsCommand}" -->
-						</StackPanel>
-					</Expander>
-
-					<!-- 统计信息 -->
-					<Expander Header="统计信息" IsExpanded="False">
-						<StackPanel Margin="10" Spacing="5">
-							<TextBlock Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}" />
-							<!-- Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}" -->
-
-							<TextBlock Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}"/>
-							<!-- Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}" -->
-
-							<TextBlock Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}" />
-							<!-- Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}" -->
-
-							<ProgressBar Maximum="{Binding TotalImageCount}" Value="{Binding AnnotatedImageCount}" Height="6" />
-							<!-- Maximum="{Binding TotalImageCount}" Value="{Binding AnnotatedImageCount}" -->
-						</StackPanel>
-					</Expander>
-
-				</StackPanel>
-			</ScrollViewer>
-		</Border>
-
-		<!-- 主图像区域 -->
-		<Grid Grid.Column="1">
-			<Grid.RowDefinitions>
-				<RowDefinition Height="50" />
-				<!-- 顶部工具栏 -->
-				<RowDefinition Height="*" />
-				<!-- 图像显示区 -->
-				<RowDefinition Height="120" />
-				<!-- 底部缩略图 -->
-			</Grid.RowDefinitions>
-
-			<!-- 顶部工具栏 -->
-			<Border Grid.Row="0" Background="White" BorderBrush="LightGray" BorderThickness="0,0,0,1">
-				<Grid Margin="10,0">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="Auto" />
-						<ColumnDefinition Width="*" />
-						<ColumnDefinition Width="Auto" />
-					</Grid.ColumnDefinitions>
-
-					<!-- 左侧按钮组 -->
-					<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-						<Button Classes="light" ToolTip.Tip="上一张图片" Height="30" Width="60" Command="{Binding PreviousImageCommand}" IsEnabled="{Binding CanGoPrevious}">
-							<!-- Command="{Binding PreviousImageCommand}" IsEnabled="{Binding CanGoPrevious}" -->
-							<avalonia:MaterialIcon Kind="ChevronLeft" Width="20" Height="20" />
-						</Button>
-
-						<Button Classes="light" ToolTip.Tip="下一张图片" Height="30" Width="60" Command="{Binding NextImageCommand}" IsEnabled="{Binding CanGoNext}">
-							<!-- Command="{Binding NextImageCommand}" IsEnabled="{Binding CanGoNext}" -->
-							<avalonia:MaterialIcon Kind="ChevronRight" Width="20" Height="20" />
-						</Button>
-
-						<Separator />
-
-						<Button Classes="light" ToolTip.Tip="缩放适应" Height="30" Width="60">
-							<!-- Command="{Binding FitToWindowCommand}" -->
-							<avalonia:MaterialIcon Kind="FitToPage" Width="20" Height="20" />
-						</Button>
-
-						<Button Classes="light" ToolTip.Tip="实际大小" Height="30" Width="60">
-							<!-- Command="{Binding ActualSizeCommand}" -->
-							<avalonia:MaterialIcon Kind="ImageSizeSelectActual" Width="20" Height="20" />
-						</Button>
-					</StackPanel>
-
-					<!-- 中间图片信息 -->
-					<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10,0,10,0" Spacing="10">
-						<TextBlock Text="{Binding CurrentImageSize}" VerticalAlignment="Center" FontWeight="Bold" />
-						<!-- Text="{Binding CurrentImageInfo}" -->
-
-						<TextBlock Text="缩放: 100%" VerticalAlignment="Center" />
-						<!-- Text="{Binding ZoomPercentage, StringFormat='缩放: {0:F0}%'}" -->
-					</StackPanel>
-
-					<!-- 右侧按钮组 -->
-					<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-						<Button Classes="light" ToolTip.Tip="撤销"  Height="30" Width="60" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}">
-							<!-- Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" -->
-							<avalonia:MaterialIcon Kind="Undo" Width="20" Height="20" />
-						</Button>
-
-						<Button Classes="light" ToolTip.Tip="重做" Height="30" Width="60" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}">
-							<!-- Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" -->
-							<avalonia:MaterialIcon Kind="Redo" Width="20" Height="20" />
-						</Button>
-
-						<Button Classes="light" ToolTip.Tip="保存标注" Height="30" Width="60" Command="{Binding SaveAnnotationCommand}">
-							<!-- Command="{Binding SaveAnnotationCommand}" -->
-							<avalonia:MaterialIcon Kind="ContentSave" Width="20" Height="20" />
-						</Button>
-					</StackPanel>
-				</Grid>
-			</Border>
-
-			<!-- 图像显示区域 -->
-			<Border Grid.Row="1" Background="Gray" BorderBrush="LightGray" BorderThickness="1">
-				<ScrollViewer x:Name="ImageScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-					<Grid>
-						<!-- 主图像 -->
-						<Image x:Name="MainImage"
-							   Stretch="None"
-							   Source="{Binding CurrentImage}"
-							   RenderOptions.BitmapInterpolationMode="HighQuality" />
-						<!-- Source="{Binding CurrentImage}" -->
-
-						<!-- 标注层 -->
-						<Canvas x:Name="AnnotationCanvas"
-								Background="Transparent"
-								ClipToBounds="True">
-							<!-- 这里会动态添加标注框、多边形等UI元素 -->
-							<!-- Children="{Binding AnnotationElements}" -->
-						</Canvas>
-					</Grid>
-				</ScrollViewer>
-			</Border>
-
-			<!-- 底部缩略图导航 -->
-			<Border Grid.Row="2" Background="White" BorderBrush="LightGray" BorderThickness="0,1,0,0">
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="*" />
-					</Grid.RowDefinitions>
-
-					<TextBlock Grid.Row="0" Text="图片导航" Margin="10,5" FontWeight="Bold" />
-
-					<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-						<ItemsControl Margin="10,0,10,10" ItemsSource="{Binding ImageList}">
-							<!-- ItemsSource="{Binding ImageThumbnails}" -->
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<StackPanel Orientation="Horizontal" Spacing="5" />
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<Border Width="80" Height="60"
-											BorderThickness="2"
-											CornerRadius="3"
-											Cursor="Hand"
-											BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}">
-										<!-- BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}" -->
-										<Grid>
-											<Image Stretch="UniformToFill" Source="{Binding Thumbnail}"/>
-											<!-- Source="{Binding Thumbnail}" -->
-
-											<!-- 标注状态指示 -->
-											<Border Width="16" Height="16"
-													IsVisible="{Binding IsAnnotated}"
-													HorizontalAlignment="Right"
-													VerticalAlignment="Top"
-													Margin="2"
-													Background="Green"
-													CornerRadius="8">
-												<!-- IsVisible="{Binding IsAnnotated}" -->
-												<avalonia:MaterialIcon Kind="Check"
-																	 Width="12" Height="12"
-																	 Foreground="White" />
-											</Border>
-
-											<!-- 选中遮罩 -->
-											<Border Background="Blue" Opacity="0.3" IsVisible="{Binding IsSelected}">
-												<!-- IsVisible="{Binding IsSelected}" -->
-											</Border>
-										</Grid>
-									</Border>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
-				</Grid>
-			</Border>
-		</Grid>
-
-		<!-- 右侧属性面板 -->
-		<Border Grid.Column="2" Background="#F5F5F5" BorderBrush="LightGray" BorderThickness="1,0,0,0">
-			<ScrollViewer>
-				<StackPanel Margin="10" Spacing="15">
-
-					<!-- 当前标注信息 -->
-					<Expander Header="当前标注" IsExpanded="True">
-						<StackPanel Margin="10" Spacing="8">
-							<!-- 当前选中的标注框信息 -->
-							<TextBlock Text="{Binding SelectedAnnotation.BoundsInfo}" FontStyle="Italic">
-								<!-- Text="{Binding SelectedAnnotationInfo}" -->
-							</TextBlock>
-
-							<!-- 类别选择 -->
-							<ComboBox ItemsSource="{Binding ClassNames}"
-                                 SelectedItem="{Binding SelectedAnnotation.ClassName}"
-                                 IsEnabled="{Binding HasSelectedAnnotation}">
-								<!-- ItemsSource="{Binding ClassNames}" 
-                                 SelectedItem="{Binding SelectedAnnotation.ClassName}"
-                                 IsEnabled="{Binding HasSelectedAnnotation}" -->
-							</ComboBox>
-
-							<!-- 坐标信息 -->
-							<Grid IsEnabled="{Binding HasSelectedAnnotation}">
-								<!-- IsEnabled="{Binding HasSelectedAnnotation}" -->
-								<Grid.ColumnDefinitions>
-									<ColumnDefinition Width="Auto" />
-									<ColumnDefinition Width="*" />
-								</Grid.ColumnDefinitions>
-								<Grid.RowDefinitions>
-									<RowDefinition />
-									<RowDefinition />
-									<RowDefinition />
-									<RowDefinition />
-								</Grid.RowDefinitions>
-
-								<TextBlock Grid.Row="0" Grid.Column="0" Text="X:" VerticalAlignment="Center" Margin="0,0,5,0" />
-								<NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Value="{Binding SelectedAnnotation.X}"/>
-								<!-- Value="{Binding SelectedAnnotation.X}" -->
-
-								<TextBlock Grid.Row="1" Grid.Column="0" Text="Y:" VerticalAlignment="Center" Margin="0,0,5,0" />
-								<NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Value="{Binding SelectedAnnotation.Y}"/>
-								<!-- Value="{Binding SelectedAnnotation.Y}" -->
-
-								<TextBlock Grid.Row="2" Grid.Column="0" Text="W:" VerticalAlignment="Center" Margin="0,0,5,0" />
-								<NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="1" Value="{Binding SelectedAnnotation.Width}"/>
-								<!-- Value="{Binding SelectedAnnotation.Width}" -->
-
-								<TextBlock Grid.Row="3" Grid.Column="0" Text="H:" VerticalAlignment="Center" Margin="0,0,5,0" />
-								<NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="1" Value="{Binding SelectedAnnotation.Height}"/>
-								<!-- Value="{Binding SelectedAnnotation.Height}" -->
-							</Grid>
-
-							<Button Content="删除标注" Classes="light" Command="{Binding DeleteSelectedAnnotationCommand}"
-                                 IsEnabled="{Binding HasSelectedAnnotation}">
-								<!-- Command="{Binding DeleteSelectedAnnotationCommand}" 
-                                 IsEnabled="{Binding HasSelectedAnnotation}" -->
-							</Button>
-						</StackPanel>
-					</Expander>
-
-					<!-- 图片信息 -->
-					<Expander Header="图片信息" IsExpanded="True">
-						<StackPanel Margin="10" Spacing="5">
-							<TextBlock Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" TextWrapping="Wrap" />
-							<!-- Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" -->
-
-							<TextBlock Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" />
-							<!-- Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" -->
-
-							<TextBlock Text="{Binding AnnotatedImageCount, StringFormat='标注数: {0}'}" />
-							<!-- Text="{Binding CurrentImageAnnotationCount, StringFormat='标注数: {0}'}" -->
-
-							<TextBlock Text="{Binding CurrentImage.Dpi, StringFormat='状态: {0}'}" />
-							<!-- Text="{Binding CurrentImageStatus, StringFormat='状态: {0}'}" -->
-						</StackPanel>
-					</Expander>
-
-					<!-- 标注列表 -->
-					<Expander Header="标注列表" IsExpanded="True">
-						<ListBox MaxHeight="200" ItemsSource="{Binding CurrentImageAnnotations}"
-                             SelectedItem="{Binding SelectedAnnotation}">
-							<!-- ItemsSource="{Binding CurrentImageAnnotations}" 
-                             SelectedItem="{Binding SelectedAnnotation}" -->
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<Grid>
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="*" />
-											<ColumnDefinition Width="Auto" />
-										</Grid.ColumnDefinitions>
-
-										<StackPanel Grid.Column="0" Spacing="2">
-											<TextBlock Text="ClassName" FontWeight="Bold" />
-											<TextBlock Text="BoundsInfo" FontSize="10" Foreground="Gray" />
-										</StackPanel>
-
-										<CheckBox Grid.Column="1" IsChecked="True"
-												ToolTip.Tip="显示/隐藏标注" />
-									</Grid>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-					</Expander>
-
-					<!-- 快捷操作 -->
-					<Expander Header="快捷操作" IsExpanded="False">
-						<StackPanel Margin="10" Spacing="8">
-							<Button Content="标记为完成" Classes="accent"/>
-							<!-- Command="{Binding MarkAsCompletedCommand}" -->
-
-							<Button Content="跳过此图片" Classes="light"/>
-							<!-- Command="{Binding SkipImageCommand}" -->
-
-							<Button Content="复制到剪贴板" Classes="light"/>
-							<!-- Command="{Binding CopyImageCommand}" -->
-
-							<Button Content="在文件管理器中显示" Classes="light"/>
-							<!-- Command="{Binding ShowInExplorerCommand}" -->
-						</StackPanel>
-					</Expander>
-
-					<!-- 批量操作 -->
-					<Expander Header="批量操作" IsExpanded="False">
-						<StackPanel Margin="10" Spacing="8">
-							<Button Content="批量设置类别" Classes="light"/>
-							<!-- Command="{Binding BatchSetClassCommand}" -->
-
-							<Button Content="批量调整大小" Classes="light"/>
-							<!-- Command="{Binding BatchResizeCommand}" -->
-
-							<Button Content="批量删除标注" Classes="light"/>
-							<!-- Command="{Binding BatchDeleteCommand}" -->
-
-							<Button Content="应用到相似图片" Classes="light"/>
-							<!-- Command="{Binding ApplyToSimilarCommand}" -->
-						</StackPanel>
-					</Expander>
-
-				</StackPanel>
-			</ScrollViewer>
-		</Border>
-
-		<!-- 加载遮罩 -->
-		<Border Grid.ColumnSpan="3"
-				Background="White"
-				Opacity="0.8"
-			IsVisible="{Binding IsLoading}">
-			<!-- IsVisible="{Binding IsLoading}" -->
-			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-				<avalonia:MaterialIcon Kind="Loading" Width="40" Height="40" />
-				<TextBlock Text="处理中..." HorizontalAlignment="Center" />
-			</StackPanel>
-		</Border>
-
-	</Grid>
+<UserControl
+    x:Class="AutoTrainer.DatasetAnnotationView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+    xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+    xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:AutoTrainer.Models"
+    xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+    xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+    xmlns:vm="using:AutoTrainer.ViewModels"
+    x:Name="DataAnnotationView"
+    Padding="10,0,10,0"
+    d:DesignHeight="850"
+    d:DesignWidth="1300"
+    x:DataType="vm:DatasetAnnotationViewModel"
+    mc:Ignorable="d">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <!--  左侧工具栏  -->
+            <ColumnDefinition Width="*" />
+            <!--  主图像区域  -->
+            <ColumnDefinition Width="300" />
+            <!--  右侧属性面板  -->
+        </Grid.ColumnDefinitions>
+
+        <!--  左侧工具栏  -->
+        <Border
+            Grid.Column="0"
+            Background="#F5F5F5"
+            BorderBrush="LightGray"
+            BorderThickness="0,0,1,0">
+            <ScrollViewer>
+                <StackPanel Margin="10" Spacing="15">
+
+                    <!--  标注模式选择  -->
+                    <Expander Header="标注模式" IsExpanded="True">
+                        <StackPanel Margin="10" Spacing="8">
+                            <RadioButton
+                                Command="{Binding SelectManualModeCommand}"
+                                Content="手动标注"
+                                IsChecked="True"
+                                ToolTip.Tip="逐张手动标注图片" />
+
+                            <RadioButton
+                                Command="{Binding SelectTemplateModeCommand}"
+                                Content="模板标注"
+                                ToolTip.Tip="使用预设模板批量标注" />
+                            <!--  Command="{Binding SelectTemplateModeCommand}"  -->
+
+                            <RadioButton
+                                Command="{Binding SelectAIModeCommand}"
+                                Content="智能辅助"
+                                ToolTip.Tip="AI辅助预标注" />
+                            <!--  Command="{Binding SelectAIModeCommand}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  标注工具  -->
+                    <Expander Header="标注工具" IsExpanded="True">
+                        <StackPanel Margin="10" Spacing="8">
+                            <ToggleButton
+                                Command="{Binding SelectRectangleToolCommand}"
+                                Content="矩形框"
+                                IsChecked="True"
+                                ToolTip.Tip="绘制矩形标注框" />
+                            <!--  Command="{Binding SelectRectangleToolCommand}"  -->
+
+                            <ToggleButton
+                                Command="{Binding SelectPolygonToolCommand}"
+                                Content="多边形"
+                                ToolTip.Tip="绘制多边形标注区域" />
+                            <!--  Command="{Binding SelectPolygonToolCommand}"  -->
+
+                            <ToggleButton
+                                Command="{Binding SelectPointToolCommand}"
+                                Content="点标注"
+                                ToolTip.Tip="关键点标注" />
+                            <!--  Command="{Binding SelectPointToolCommand}"  -->
+
+                            <Separator />
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding ClearAnnotationsCommand}"
+                                Content="清除标注"
+                                ToolTip.Tip="清除当前图片所有标注" />
+                            <!--  Command="{Binding ClearAnnotationsCommand}"  -->
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding CopyAnnotationsCommand}"
+                                Content="复制标注"
+                                ToolTip.Tip="复制到下一张图片" />
+                            <!--  Command="{Binding CopyAnnotationsCommand}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  类别管理  -->
+                    <Expander Header="类别管理" IsExpanded="True">
+                        <StackPanel Margin="10" Spacing="8">
+                            <TextBox Text="{Binding NewClassName}" Watermark="输入新类别名称" />
+                            <!--  Text="{Binding NewClassName}"  -->
+
+                            <Button
+                                Classes="accent"
+                                Command="{Binding AddClassCommand}"
+                                Content="添加类别" />
+                            <!--  Command="{Binding AddClassCommand}"  -->
+
+                            <ListBox
+                                MaxHeight="150"
+                                ItemsSource="{Binding ClassNames}"
+                                SelectedItem="{Binding SelectedClassName}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="ABC" />
+                                            <Button
+                                                Grid.Column="1"
+                                                Width="20"
+                                                Height="20"
+                                                Classes="light"
+                                                Content="×"
+                                                ToolTip.Tip="删除类别" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  数据管理  -->
+                    <Expander Header="数据管理" IsExpanded="False">
+                        <StackPanel Margin="10" Spacing="8">
+                            <Button
+                                Classes="light"
+                                Command="{Binding ImportImagesCommand}"
+                                CommandParameter="{Binding ElementName=DataAnnotationView}"
+                                Content="导入图片" />
+                            <!--  Command="{Binding ImportImagesCommand}"  -->
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding ImportAnnotationsCommand}"
+                                Content="导入标注" />
+                            <!--  Command="{Binding ImportAnnotationsCommand}"  -->
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding ExportAnnotationsCommand}"
+                                Content="导出标注" />
+                            <!--  Command="{Binding ExportAnnotationsCommand}"  -->
+
+                            <Separator />
+
+                            <Button Classes="light" Content="数据增强" />
+                            <!--  Command="{Binding ShowDataAugmentationCommand}"  -->
+
+                            <Button Classes="light" Content="质量检查" />
+                            <!--  Command="{Binding ValidateAnnotationsCommand}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  统计信息  -->
+                    <Expander Header="统计信息" IsExpanded="False">
+                        <StackPanel Margin="10" Spacing="5">
+                            <TextBlock Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}" />
+                            <!--  Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}"  -->
+
+                            <TextBlock Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}" />
+                            <!--  Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}"  -->
+
+                            <TextBlock Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}" />
+                            <!--  Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}"  -->
+
+                            <ProgressBar
+                                Height="6"
+                                Maximum="{Binding TotalImageCount}"
+                                Value="{Binding AnnotatedImageCount}" />
+                            <!--  Maximum="{Binding TotalImageCount}" Value="{Binding AnnotatedImageCount}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!--  主图像区域  -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50" />
+                <!--  顶部工具栏  -->
+                <RowDefinition Height="*" />
+                <!--  图像显示区  -->
+                <RowDefinition Height="120" />
+                <!--  底部缩略图  -->
+            </Grid.RowDefinitions>
+
+            <!--  顶部工具栏  -->
+            <Border
+                Grid.Row="0"
+                Background="White"
+                BorderBrush="LightGray"
+                BorderThickness="0,0,0,1">
+                <Grid Margin="10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  左侧按钮组  -->
+                    <StackPanel
+                        Grid.Column="0"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            Command="{Binding PreviousImageCommand}"
+                            IsEnabled="{Binding CanGoPrevious}"
+                            ToolTip.Tip="上一张图片">
+                            <!--  Command="{Binding PreviousImageCommand}" IsEnabled="{Binding CanGoPrevious}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="ChevronLeft" />
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            Command="{Binding NextImageCommand}"
+                            IsEnabled="{Binding CanGoNext}"
+                            ToolTip.Tip="下一张图片">
+                            <!--  Command="{Binding NextImageCommand}" IsEnabled="{Binding CanGoNext}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="ChevronRight" />
+                        </Button>
+
+                        <Separator />
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            ToolTip.Tip="缩放适应">
+                            <!--  Command="{Binding FitToWindowCommand}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="FitToPage" />
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            ToolTip.Tip="实际大小">
+                            <!--  Command="{Binding ActualSizeCommand}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="ImageSizeSelectActual" />
+                        </Button>
+                    </StackPanel>
+
+                    <!--  中间图片信息  -->
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="10,0,10,0"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="Bold"
+                            Text="{Binding CurrentImageSize}" />
+                        <!--  Text="{Binding CurrentImageInfo}"  -->
+
+                        <TextBlock VerticalAlignment="Center" Text="缩放: 100%" />
+                        <!--  Text="{Binding ZoomPercentage, StringFormat='缩放: {0:F0}%'}"  -->
+                    </StackPanel>
+
+                    <!--  右侧按钮组  -->
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            Command="{Binding UndoCommand}"
+                            IsEnabled="{Binding CanUndo}"
+                            ToolTip.Tip="撤销">
+                            <!--  Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="Undo" />
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            Command="{Binding RedoCommand}"
+                            IsEnabled="{Binding CanRedo}"
+                            ToolTip.Tip="重做">
+                            <!--  Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="Redo" />
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Classes="light"
+                            Command="{Binding SaveAnnotationCommand}"
+                            ToolTip.Tip="保存标注">
+                            <!--  Command="{Binding SaveAnnotationCommand}"  -->
+                            <avalonia:MaterialIcon
+                                Width="20"
+                                Height="20"
+                                Kind="ContentSave" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--  图像显示区域  -->
+            <Border
+                Grid.Row="1"
+                Background="Gray"
+                BorderBrush="LightGray"
+                BorderThickness="1">
+                <paz:ZoomBorder
+                    ClipToBounds="True"
+                    Focusable="True"
+                    Stretch="None"
+                    ZIndex="-1"
+                    ZoomSpeed="1.2">
+                    <Grid>
+                        <!--  主图像  -->
+                        <Image
+                            x:Name="MainImage"
+                            RenderOptions.BitmapInterpolationMode="HighQuality"
+                            Source="{Binding CurrentImage}" />
+                        <!--  标注层  -->
+                        <Canvas
+                            x:Name="AnnotationCanvas"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            IsVisible="False">
+                            <!--  这里会动态添加标注框、多边形等UI元素  -->
+                            <!--  Children="{Binding AnnotationElements}"  -->
+                        </Canvas>
+                    </Grid>
+                </paz:ZoomBorder>
+            </Border>
+
+            <!--  底部缩略图导航  -->
+            <Border
+                Grid.Row="2"
+                Background="White"
+                BorderBrush="LightGray"
+                BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock
+                        Grid.Row="0"
+                        Margin="10,5"
+                        FontWeight="Bold"
+                        Text="图片导航" />
+
+                    <ScrollViewer
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl Margin="10,0,10,10" ItemsSource="{Binding ImageList}">
+                            <!--  ItemsSource="{Binding ImageThumbnails}"  -->
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="5" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Width="80"
+                                        Height="60"
+                                        BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}"
+                                        BorderThickness="2"
+                                        CornerRadius="3"
+                                        Cursor="Hand">
+                                        <!--  BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}"  -->
+                                        <Grid>
+                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                            <!--  Source="{Binding Thumbnail}"  -->
+
+                                            <!--  标注状态指示  -->
+                                            <Border
+                                                Width="16"
+                                                Height="16"
+                                                Margin="2"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Background="Green"
+                                                CornerRadius="8"
+                                                IsVisible="{Binding IsAnnotated}">
+                                                <!--  IsVisible="{Binding IsAnnotated}"  -->
+                                                <avalonia:MaterialIcon
+                                                    Width="12"
+                                                    Height="12"
+                                                    Foreground="White"
+                                                    Kind="Check" />
+                                            </Border>
+
+                                            <!--  选中遮罩  -->
+                                            <Border
+                                                Background="Blue"
+                                                IsVisible="{Binding IsSelected}"
+                                                Opacity="0.3">
+                                                <!--  IsVisible="{Binding IsSelected}"  -->
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!--  右侧属性面板  -->
+        <Border
+            Grid.Column="2"
+            Background="#F5F5F5"
+            BorderBrush="LightGray"
+            BorderThickness="1,0,0,0">
+            <ScrollViewer>
+                <StackPanel Margin="10" Spacing="15">
+
+                    <!--  当前标注信息  -->
+                    <Expander Header="当前标注" IsExpanded="True">
+                        <StackPanel Margin="10" Spacing="8">
+                            <!--  当前选中的标注框信息  -->
+                            <TextBlock FontStyle="Italic" Text="{Binding SelectedAnnotation.BoundsInfo}">
+                                <!--  Text="{Binding SelectedAnnotationInfo}"  -->
+                            </TextBlock>
+
+                            <!--  类别选择  -->
+                            <ComboBox
+                                IsEnabled="{Binding HasSelectedAnnotation}"
+                                ItemsSource="{Binding ClassNames}"
+                                SelectedItem="{Binding SelectedAnnotation.ClassName}">
+                                <!--
+                                    ItemsSource="{Binding ClassNames}"
+                                    SelectedItem="{Binding SelectedAnnotation.ClassName}"
+                                    IsEnabled="{Binding HasSelectedAnnotation}"
+                                -->
+                            </ComboBox>
+
+                            <!--  坐标信息  -->
+                            <Grid IsEnabled="{Binding HasSelectedAnnotation}">
+                                <!--  IsEnabled="{Binding HasSelectedAnnotation}"  -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="X:" />
+                                <NumericUpDown
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Value="{Binding SelectedAnnotation.X}" />
+                                <!--  Value="{Binding SelectedAnnotation.X}"  -->
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="Y:" />
+                                <NumericUpDown
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Value="{Binding SelectedAnnotation.Y}" />
+                                <!--  Value="{Binding SelectedAnnotation.Y}"  -->
+
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="W:" />
+                                <NumericUpDown
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Minimum="1"
+                                    Value="{Binding SelectedAnnotation.Width}" />
+                                <!--  Value="{Binding SelectedAnnotation.Width}"  -->
+
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="H:" />
+                                <NumericUpDown
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Minimum="1"
+                                    Value="{Binding SelectedAnnotation.Height}" />
+                                <!--  Value="{Binding SelectedAnnotation.Height}"  -->
+                            </Grid>
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding DeleteSelectedAnnotationCommand}"
+                                Content="删除标注"
+                                IsEnabled="{Binding HasSelectedAnnotation}">
+                                <!--
+                                    Command="{Binding DeleteSelectedAnnotationCommand}"
+                                    IsEnabled="{Binding HasSelectedAnnotation}"
+                                -->
+                            </Button>
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  图片信息  -->
+                    <Expander Header="图片信息" IsExpanded="True">
+                        <StackPanel Margin="10" Spacing="5">
+                            <TextBlock Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" TextWrapping="Wrap" />
+                            <!--  Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}"  -->
+
+                            <TextBlock Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" />
+                            <!--  Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}"  -->
+
+                            <TextBlock Text="{Binding AnnotatedImageCount, StringFormat='标注数: {0}'}" />
+                            <!--  Text="{Binding CurrentImageAnnotationCount, StringFormat='标注数: {0}'}"  -->
+
+                            <TextBlock Text="{Binding CurrentImage.Dpi, StringFormat='状态: {0}'}" />
+                            <!--  Text="{Binding CurrentImageStatus, StringFormat='状态: {0}'}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  标注列表  -->
+                    <Expander Header="标注列表" IsExpanded="True">
+                        <ListBox
+                            MaxHeight="200"
+                            ItemsSource="{Binding CurrentImageAnnotations}"
+                            SelectedItem="{Binding SelectedAnnotation}">
+                            <!--
+                                ItemsSource="{Binding CurrentImageAnnotations}"
+                                SelectedItem="{Binding SelectedAnnotation}"
+                            -->
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <TextBlock FontWeight="Bold" Text="ClassName" />
+                                            <TextBlock
+                                                FontSize="10"
+                                                Foreground="Gray"
+                                                Text="BoundsInfo" />
+                                        </StackPanel>
+
+                                        <CheckBox
+                                            Grid.Column="1"
+                                            IsChecked="True"
+                                            ToolTip.Tip="显示/隐藏标注" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Expander>
+
+                    <!--  快捷操作  -->
+                    <Expander Header="快捷操作" IsExpanded="False">
+                        <StackPanel Margin="10" Spacing="8">
+                            <Button Classes="accent" Content="标记为完成" />
+                            <!--  Command="{Binding MarkAsCompletedCommand}"  -->
+
+                            <Button Classes="light" Content="跳过此图片" />
+                            <!--  Command="{Binding SkipImageCommand}"  -->
+
+                            <Button Classes="light" Content="复制到剪贴板" />
+                            <!--  Command="{Binding CopyImageCommand}"  -->
+
+                            <Button Classes="light" Content="在文件管理器中显示" />
+                            <!--  Command="{Binding ShowInExplorerCommand}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  批量操作  -->
+                    <Expander Header="批量操作" IsExpanded="False">
+                        <StackPanel Margin="10" Spacing="8">
+                            <Button Classes="light" Content="批量设置类别" />
+                            <!--  Command="{Binding BatchSetClassCommand}"  -->
+
+                            <Button Classes="light" Content="批量调整大小" />
+                            <!--  Command="{Binding BatchResizeCommand}"  -->
+
+                            <Button Classes="light" Content="批量删除标注" />
+                            <!--  Command="{Binding BatchDeleteCommand}"  -->
+
+                            <Button Classes="light" Content="应用到相似图片" />
+                            <!--  Command="{Binding ApplyToSimilarCommand}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!--  加载遮罩  -->
+        <Border
+            Grid.ColumnSpan="3"
+            Background="White"
+            IsVisible="{Binding IsLoading}"
+            Opacity="0.8">
+            <!--  IsVisible="{Binding IsLoading}"  -->
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="10">
+                <avalonia:MaterialIcon
+                    Width="40"
+                    Height="40"
+                    Kind="Loading" />
+                <TextBlock HorizontalAlignment="Center" Text="处理中..." />
+            </StackPanel>
+        </Border>
+
+    </Grid>
 </UserControl>
