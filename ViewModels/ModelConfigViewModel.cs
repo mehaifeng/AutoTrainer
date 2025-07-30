@@ -73,33 +73,33 @@ namespace AutoTrainer.ViewModels
         #region 绑定属性
 
         [ObservableProperty]
-        private string pythonPath;
+        private string? pythonPath;
         [ObservableProperty]
-        private string pythonVenvPath;
+        private string? pythonVenvPath;
         [ObservableProperty]
-        private string pipApps;
+        private string? pipApps;
         [ObservableProperty]
-        private string requirements;
+        private string? requirements;
         [ObservableProperty]
         private bool isEnablePythonConfigView = true;
         [ObservableProperty]
-        private string environmentState = "Environment State";
+        private string? environmentState = "Environment State";
         [ObservableProperty]
         private IBrush stateForeground = Brushes.Green;
         [ObservableProperty]
         private ObservableCollection<string> modelList;
         [ObservableProperty]
-        private string selectModel;
+        private string? selectModel;
         [ObservableProperty]
-        private string selectedLocalWeightText;
+        private string? selectedLocalWeightText;
         [ObservableProperty]
-        private string selectModelIntroduce;
+        private string? selectModelIntroduce;
         [ObservableProperty]
         private bool isLoadingModelList = false;
         [ObservableProperty]
         private bool isVisibleIntroduce;
         [ObservableProperty]
-        private string outputs;
+        private string? outputs;
         [ObservableProperty]
         private bool isCheckedGlobal;
         [ObservableProperty]
@@ -115,7 +115,7 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isScanningVenv = false;
         [ObservableProperty]
-        private string scanningFolder = string.Empty;
+        private string? scanningFolder = string.Empty;
         #endregion
 
         #region 函数
@@ -175,15 +175,18 @@ namespace AutoTrainer.ViewModels
                 var result = await CmdHelper.ExecuteLine(command);
                 if (result.ExitCode == 0)
                 {
-                    if (result.Output.Contains("###Models###"))
+                    if (!string.IsNullOrEmpty(result.Output))
                     {
-                        var modelNames = result.Output.Split("###Models###")[1].TrimStart().TrimEnd().Split(App.LineBreak);
-                        for (int i = 0; i < modelNames.Length; i++)
+                        if (result.Output.Contains("###Models###"))
                         {
-                            var name = modelNames[i].ToLower();
-                            if (name.StartsWith("resnet") || name.StartsWith("efficientnet") || name.StartsWith("mobilenet") || name.StartsWith("densenet") || name.StartsWith("vgg"))
+                            var modelNames = result.Output.Split("###Models###")[1].TrimStart().TrimEnd().Split(App.LineBreak);
+                            for (int i = 0; i < modelNames.Length; i++)
                             {
-                                ModelList.Add(name);
+                                var name = modelNames[i].ToLower();
+                                if (name.StartsWith("resnet") || name.StartsWith("efficientnet") || name.StartsWith("mobilenet") || name.StartsWith("densenet") || name.StartsWith("vgg"))
+                                {
+                                    ModelList.Add(name);
+                                }
                             }
                         }
                     }
@@ -267,7 +270,13 @@ namespace AutoTrainer.ViewModels
         {
             // 处理空行或无效输入
             if (string.IsNullOrWhiteSpace(line))
-                return null;
+            {
+                return new PackageInfo
+                {
+                    Name = null,
+                    Version = null
+                };
+            }
 
             // 分割包名和版本号
             var parts = line.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -292,8 +301,8 @@ namespace AutoTrainer.ViewModels
                 var installedPackages = installedPackagesStr
                     .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(line => ParsePackageLine(line))
-                    .Where(pkg => pkg != null)
-                    .ToDictionary(pkg => pkg.Name, pkg => pkg.Version);
+                    .Where(pkg => !string.IsNullOrEmpty(pkg.Name))
+                    .ToDictionary(pkg => pkg.Name!, pkg => pkg.Version);
 
                 // 检查所需的包
                 foreach (var requiredPackage in requiredPackages.Select(p => p.Trim().ToLowerInvariant()))
@@ -418,29 +427,38 @@ namespace AutoTrainer.ViewModels
                     var result = await CmdHelper.ExecuteLine(command);
                     if (result.ExitCode == 0)
                     {
-                        string envName = $"({PythonVenvPath.Split("\\").Last()})";
-                        PipApps = result.Output.TrimStart().TrimEnd();
+                        if (!string.IsNullOrEmpty(result.Output))
+                        {
+                            string envName = $"({PythonVenvPath.Split("\\").Last()})";
+                            PipApps = result.Output.TrimStart().TrimEnd();
+                        }
                     }
                     sb.Append(result.Output);
                     Outputs = sb.ToString();
                     try
                     {
-                        var checkResult = CheckPackages(PipApps, requireApps);
-                        if (!checkResult.IsMatch)
+                        if (PipApps != null)
                         {
-                            environmentState = "Python软件包不匹配";
-                            sb.Append(checkResult.Message);
-                            Outputs = sb.ToString();
-                            StateForeground = Brushes.Red;
-                            IsVisibleInstallMissing = true;
-                            missingApps.AddRange(checkResult.MissingPackages);
-                        }
-                        else
-                        {
-                            await GetModels();
-                            environmentState = "Python软件包已安装";
-                            StateForeground = Brushes.Green;
-                            IsVisibleInstallMissing = false;
+                            var checkResult = CheckPackages(PipApps, requireApps);
+                            if (!checkResult.IsMatch)
+                            {
+                                EnvironmentState = "Python软件包不匹配";
+                                sb.Append(checkResult.Message);
+                                Outputs = sb.ToString();
+                                StateForeground = Brushes.Red;
+                                IsVisibleInstallMissing = true;
+                                if (checkResult.MissingPackages != null)
+                                {
+                                    missingApps.AddRange(checkResult.MissingPackages);
+                                }
+                            }
+                            else
+                            {
+                                await GetModels();
+                                EnvironmentState = "Python软件包已安装";
+                                StateForeground = Brushes.Green;
+                                IsVisibleInstallMissing = false;
+                            }
                         }
                     }
                     catch(Exception ex)
@@ -518,10 +536,13 @@ namespace AutoTrainer.ViewModels
                 IsLoadingModelList = false;
                 if (result.ExitCode == 0)
                 {
-                    if (result.Output.Contains("###ModelInfo###"))
+                    if (!string.IsNullOrEmpty(result.Output))
                     {
-                        SelectModelIntroduce = result.Output.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
-                        IsVisibleIntroduce = true;
+                        if (result.Output.Contains("###ModelInfo###"))
+                        {
+                            SelectModelIntroduce = result.Output.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
+                            IsVisibleIntroduce = true;
+                        }
                     }
                 }
             }

@@ -12,11 +12,11 @@ namespace AutoTrainer.Models
     public class TrainingLog
     {
         [JsonProperty("config")]
-        public TrainModel Config { get; set; }
+        public TrainModel? Config { get; set; }
         [JsonProperty("status")]
-        public Status Status { get; set; }
+        public Status? Status { get; set; }
         [JsonProperty("entries")]
-        public List<Entry> Entries { get; set; }
+        public List<Entry>? Entries { get; set; }
     }
 
     public class TrainModel
@@ -31,13 +31,13 @@ namespace AutoTrainer.Models
         public int Epochs { get; set; }
 
         [JsonProperty("optimizer")]
-        public string Optimizer { get; set; }
+        public string? Optimizer { get; set; }
 
         [JsonProperty("validation_split")]
         public float ValidationSplit { get; set; }
 
         [JsonProperty("lr_scheduler")]
-        public string LrScheduler { get; set; }
+        public string? LrScheduler { get; set; }
 
         [JsonProperty("weight_decay")]
         public float WeightDecay { get; set; }
@@ -49,25 +49,25 @@ namespace AutoTrainer.Models
         public float EarlyStoppingDelta { get; set; }
 
         [JsonProperty("model_output_path")]
-        public string ModelOutputPath { get; set; }
+        public string? ModelOutputPath { get; set; }
 
         [JsonProperty("py_train_log_output_path")]
-        public string PyTrainLogOutputPath { get; set; }
+        public string? PyTrainLogOutputPath { get; set; }
 
         [JsonProperty("pretrained_model")]
-        public string PretrainedModel { get; set; }
+        public string? PretrainedModel { get; set; }
         [JsonProperty("local_weights_path")]
-        public string LocalWeightsPath { get; set; }
+        public string? LocalWeightsPath { get; set; }
 
         [JsonProperty("train_data_path")]
-        public string TrainDataPath { get; set; }
+        public string? TrainDataPath { get; set; }
 
         [JsonProperty("val_data_path")]
-        public string ValDataPath { get; set; }
+        public string? ValDataPath { get; set; }
         [JsonProperty("num_classes")]
         public int NumClasses { get; set; }
         [JsonProperty("mutation_data_path")]
-        public string MutationDataPath { get; set; }
+        public string? MutationDataPath { get; set; }
         [JsonProperty("random_horizon_flip_checked")]
         public bool RandomHorizonFlipChecked { get; set; }
         [JsonProperty("random_vertical_flip_checked")]
@@ -105,13 +105,13 @@ namespace AutoTrainer.Models
         [JsonProperty("timestamp")]
         public DateTime Timestamp { get; set; }
         [JsonProperty("type")]
-        public string Type { get; set; }
+        public string? Type { get; set; }
         [JsonProperty("message")]
-        public string Message { get; set; }
+        public string? Message { get; set; }
         [JsonProperty("epoch")]
         public int? Epoch { get; set; }
         [JsonProperty("metrics")]
-        public Metrics Metrics { get; set; }
+        public Metrics? Metrics { get; set; }
     }
 
     public class Metrics

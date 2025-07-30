@@ -25,6 +25,11 @@ namespace AutoTrainer.ControlHelper
         public static void AddDraggableRectangle(SingleCropArea area, Canvas DragCanvas,
             Bitmap? sourceImage, Image? displayImage, string label = "")
         {
+            if(sourceImage == null || displayImage == null)
+            {
+                var errorMessage = "Source image or display image cannot be null.";
+                throw new ArgumentNullException(errorMessage);
+            }
             // 计算显示坐标和原始图像坐标之间的比例
             double scaleX = sourceImage.PixelSize.Width / displayImage.Bounds.Width;
             double scaleY = sourceImage.PixelSize.Height / displayImage.Bounds.Height;
@@ -111,7 +116,7 @@ namespace AutoTrainer.ControlHelper
 
             // 拖动事件处理
             Point dragStart = new Point();
-            EventHandler<PointerEventArgs> pointerMovedHandler = null;
+            EventHandler<PointerEventArgs>? pointerMovedHandler = null;
 
             container.PointerPressed += (s, e) =>
                 {
@@ -166,7 +171,7 @@ namespace AutoTrainer.ControlHelper
 
             // 调整大小事件处理
             Point resizeStartPoint = new Point();
-            EventHandler<PointerEventArgs> resizeMovedHandler = null;
+            EventHandler<PointerEventArgs>? resizeMovedHandler = null;
 
             resizeHandle.PointerPressed += (s, e) =>
             {

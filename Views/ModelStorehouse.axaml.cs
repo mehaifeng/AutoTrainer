@@ -8,7 +8,7 @@ namespace AutoTrainer;
 
 public partial class ModelStorehouse : Window
 {
-    private ModelStorehouseViewModel _viewModel;
+    private ModelStorehouseViewModel? _viewModel;
     public ModelStorehouse()
     {
         InitializeComponent();

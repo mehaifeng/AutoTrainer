@@ -125,7 +125,7 @@ namespace AutoTrainer.ViewModels
                         List<Thumbnail> thumbnails = [];
                         foreach (var result in thisGroup)
                         {
-                            if (result.imagePath == string.Empty) continue;
+                            if (string.IsNullOrEmpty(result.imagePath)) continue;
                             using (var stream = System.IO.File.OpenRead(result.imagePath))
                             {
                                 var actualClass = result.imagePath.Split("_CLASS_")[1];

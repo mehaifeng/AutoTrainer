@@ -52,7 +52,7 @@ namespace AutoTrainer.Helpers
         string bucketName,
         string objectName,
         string destinationPath,
-        IProgress<double> progress = null,
+        IProgress<double> progress,
         CancellationToken cancellationToken = default)
         {
             try
@@ -296,7 +296,7 @@ namespace AutoTrainer.Helpers
             string bucketName,
             string sourcePath,
             string destinationBasePath,
-            IProgress<(string File, double Progress)> progress = null,
+            IProgress<(string File, double Progress)> progress,
             CancellationToken cancellationToken = default)
         {
             try
@@ -314,6 +314,8 @@ namespace AutoTrainer.Helpers
 
                 foreach (var item in contents)
                 {
+                    if (item.Path == null)
+                        break;
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
@@ -329,7 +331,11 @@ namespace AutoTrainer.Helpers
                     else
                     {
                         // 确保目标文件夹存在
-                        Directory.CreateDirectory(Path.GetDirectoryName(fullDestinationPath));
+                        var destinationDirectory = Path.GetDirectoryName(fullDestinationPath);
+                        if (destinationDirectory != null && !Directory.Exists(destinationDirectory))
+                        {
+                            Directory.CreateDirectory(destinationDirectory);
+                        }
 
                         // 下载文件
                         var fileProgress = new Progress<double>(percent =>
@@ -392,11 +398,11 @@ namespace AutoTrainer.Helpers
     public class FileInfo
     {
         public bool IsDirectory { get; set; }
-        public string Path { get; set; }
-        public string Name { get; set; }
+        public string? Path { get; set; }
+        public string? Name { get; set; }
         public long Size { get; set; }
         public DateTime LastModified { get; set; }
-        public string ETag { get; set; }
-        public string VersionId { get; set; }
+        public string? ETag { get; set; }
+        public string? VersionId { get; set; }
     }
 }

@@ -18,13 +18,16 @@ namespace AutoTrainer.Helpers
             var CropPoint = new List<(string, Point, Point)>();
             foreach (var crop in CropConfig.Coprs)
             {
-                (string, Point, Point) dualPoint = new()
+                if (crop != null )
                 {
-                    Item1 = crop.Name,
-                    Item2 = new Point(crop.X1, crop.Y1),
-                    Item3 = new Point(crop.X2, crop.Y2)
-                };
-                CropPoint.Add(dualPoint);
+                    (string, Point, Point) dualPoint = new()
+                    {
+                        Item1 = crop.Name ?? "Unknow",
+                        Item2 = new Point(crop.X1, crop.Y1),
+                        Item3 = new Point(crop.X2, crop.Y2)
+                    };
+                    CropPoint.Add(dualPoint);
+                }
             }
 
             // 加载原始图像
