@@ -30,9 +30,9 @@ namespace AutoTrainer.ViewModels
 {
     public class MutationImage
     {
-        public string ClassName { get; set; }
-        public string ImagePath { get; set; }
-        public IImage Thumbnail { get; set; }
+        public string? ClassName { get; set; }
+        public string? ImagePath { get; set; }
+        public IImage? Thumbnail { get; set; }
     }
     public partial class VisualVerifyViewModel : ViewModelBase
     {
@@ -52,15 +52,15 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isInSortingTask = false;
         [ObservableProperty]
-        private Thumbnail selectImage;
+        private Thumbnail? selectImage;
         [ObservableProperty]
-        private string predictClass;
+        private string? predictClass;
         [ObservableProperty]
-        private string confidence;
+        private string? confidence;
         [ObservableProperty]
-        private string actualClass;
+        private string? actualClass;
         [ObservableProperty]
-        private string imagePath;
+        private string? imagePath;
         [ObservableProperty]
         private bool isShowNextPageBtn = false;
         [ObservableProperty]
@@ -218,7 +218,7 @@ namespace AutoTrainer.ViewModels
                     var mutationDatas = Directory.GetFiles(App.MutationDataPath);
                     foreach (var readyToDelete in mutationDatas)
                     {
-                        System.IO.File.Delete(readyToDelete);8
+                        System.IO.File.Delete(readyToDelete);
                     }
                     for(int i=0;i<tofiles.Length;i++)
                     {
@@ -287,7 +287,10 @@ namespace AutoTrainer.ViewModels
             {
                 var predicted = result.predictedClass;
                 var actual = MutationImages.First(t => t.ImagePath == result.imagePath).ClassName;
-                valueKeys.Add((actual, predicted));
+                if (actual != null && predicted != null)
+                {
+                    valueKeys.Add((actual, predicted));
+                }
             }
             ModelMacroQuality modelMacroQuality = new();
             var groups = valueKeys.GroupBy(x => x.Item1).ToArray();

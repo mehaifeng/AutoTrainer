@@ -73,14 +73,17 @@
 						<Button Classes="light"
 							Command="{Binding ScanningVenvCommand}"
 							Margin="10,0,0,0"
+							ToolTip.Tip="搜索Venv环境"
 							VerticalAlignment="Center"
 							Height="30"
 							FontSize="12">
 							<Button.Content>
 								<Panel>
 									<!-- 默认文本 -->
-									<TextBlock Text="扫描Venv"
-											  IsVisible="{Binding !IsScanningVenv}"/>
+									<StackPanel Orientation="Horizontal">
+										<avalonia:MaterialIcon Kind="FileSearch" IsVisible="{Binding !IsScanningVenv}"/>
+										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
+									</StackPanel>
 									<!-- Loading图标 -->
 									<avalonia:MaterialIcon Kind="Loading"
 														 IsVisible="{Binding IsScanningVenv}">
@@ -108,12 +111,15 @@
 							Margin="10,0,0,0"
 							VerticalAlignment="Center"
 							Height="30"
+							ToolTip.Tip="创建Venv环境"
 							FontSize="12">
 							<Button.Content>
 								<Panel>
 									<!-- 默认文本 -->
-									<TextBlock Text="创建Venv"
-											  IsVisible="{Binding IsEnablePythonConfigView}"/>
+									<StackPanel Orientation="Horizontal">
+										<avalonia:MaterialIcon Kind="PlusCircle" IsVisible="{Binding IsEnablePythonConfigView}"/>
+										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
+									</StackPanel>
 
 									<!-- Loading图标 -->
 									<avalonia:MaterialIcon Kind="Loading"

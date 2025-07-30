@@ -14,14 +14,14 @@ using System.Collections.ObjectModel;
 
 namespace AutoTrainer;
 
-public partial class DataPickerView : UserControl
+public partial class DatasetAnnotationView : UserControl
 {
 
-    private DataPickerViewModel _viewmodel;
-    public DataPickerView()
+    private DatasetAnnotationViewModel _viewmodel;
+    public DatasetAnnotationView()
     {
         InitializeComponent();
-        _viewmodel = new DataPickerViewModel();
+        _viewmodel = new DatasetAnnotationViewModel();
         DataContext = _viewmodel;
     }
 }

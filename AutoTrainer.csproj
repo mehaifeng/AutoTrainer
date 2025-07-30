@@ -72,6 +72,9 @@
     <Compile Update="Views\SelectTrainingTypeView.axaml.cs">
       <DependentUpon>SelectTrainingTypeView.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\UserControls\DatasetAnnotationView.axaml.cs">
+      <DependentUpon>DatasetAnnotationView.axaml</DependentUpon>
+    </Compile>
     <Compile Update="Views\UserControls\TrainingView.axaml.cs">
       <DependentUpon>TrainingView.axaml</DependentUpon>
     </Compile>

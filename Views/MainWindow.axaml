@@ -6,9 +6,9 @@
 		xmlns:local="clr-namespace:AutoTrainer;assembly=AutoTrainer"
 		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
         mc:Ignorable="d" 
-		d:DesignWidth="1200" 
+		d:DesignWidth="1300" 
 		d:DesignHeight="850"
-		Width="1200"
+		Width="1300"
 		Height="850"
 		WindowStartupLocation="CenterScreen"
 		Closed="Window_Closed"
@@ -22,7 +22,7 @@
 				<local:ModelConfigView />
 			</TabItem>
 			<TabItem Header="训练集">
-				<local:DataPickerView/>
+				<local:DatasetAnnotationView/>
 			</TabItem>
 			<TabItem Header="参数配置" IsEnabled="{Binding IsEnableParaTab}">
 				<local:ParameterConfigView/>
