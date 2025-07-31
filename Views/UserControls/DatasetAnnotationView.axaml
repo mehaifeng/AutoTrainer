@@ -63,25 +63,22 @@
                     <!--  标注工具  -->
                     <Expander Header="标注工具" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
-                            <ToggleButton
+                            <RadioButton
                                 Command="{Binding SelectRectangleToolCommand}"
                                 Content="矩形框"
+                                GroupName="AnnotationTools"
                                 IsChecked="True"
                                 ToolTip.Tip="绘制矩形标注框" />
-                            <!--  Command="{Binding SelectRectangleToolCommand}"  -->
-
-                            <ToggleButton
+                            <RadioButton
                                 Command="{Binding SelectPolygonToolCommand}"
                                 Content="多边形"
+                                GroupName="AnnotationTools"
                                 ToolTip.Tip="绘制多边形标注区域" />
-                            <!--  Command="{Binding SelectPolygonToolCommand}"  -->
-
-                            <ToggleButton
+                            <RadioButton
                                 Command="{Binding SelectPointToolCommand}"
                                 Content="点标注"
+                                GroupName="AnnotationTools"
                                 ToolTip.Tip="关键点标注" />
-                            <!--  Command="{Binding SelectPointToolCommand}"  -->
-
                             <Separator />
 
                             <Button
@@ -370,10 +367,7 @@
                             x:Name="AnnotationCanvas"
                             Background="Transparent"
                             ClipToBounds="True"
-                            IsVisible="False">
-                            <!--  这里会动态添加标注框、多边形等UI元素  -->
-                            <!--  Children="{Binding AnnotationElements}"  -->
-                        </Canvas>
+                            IsVisible="True" />
                     </Grid>
                 </paz:ZoomBorder>
             </Border>
