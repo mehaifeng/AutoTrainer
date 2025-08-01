@@ -89,6 +89,7 @@ namespace AutoTrainer.ViewModels
         // 多边形绘制状态
         [ObservableProperty]
         private bool isDrawingPolygon = false;
+        private ObservableCollection<Point> currentPolygonPoints = new();
 
         // 存储绘制的起始点
         public Point? drawingStartPoint = null;
@@ -526,6 +527,185 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 私有方法
+
+        #region 绘制标注
+        /// <summary>
+        /// 开始绘制标注
+        /// </summary>
+        public void StartDrawing(Point position)
+        {
+            switch (CurrentTool)
+            {
+                case AnnotationTool.Rectangle:
+                    StartRectangleDrawing(position);
+                    break;
+                case AnnotationTool.Point:
+                    CreatePointAnnotation(position);
+                    break;
+                case AnnotationTool.Polygon:
+                    HandlePolygonDrawing(position);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 更新绘制中的标注
+        /// </summary>
+        public void UpdateDrawing(Point position)
+        {
+            if (!IsDrawing || CurrentDrawingItem == null) return;
+
+            switch (CurrentTool)
+            {
+                case AnnotationTool.Rectangle:
+                    UpdateRectangleDrawing(position);
+                    break;
+                case AnnotationTool.Polygon:
+                    UpdatePolygonDrawing(position);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 完成绘制
+        /// </summary>
+        public void FinishDrawing(Point position)
+        {
+            if (!IsDrawing) return;
+
+            switch (CurrentTool)
+            {
+                case AnnotationTool.Rectangle:
+                    FinishRectangleDrawing();
+                    break;
+                case AnnotationTool.Polygon:
+                    // 多边形通过双击或右键完成
+                    break;
+            }
+        }
+
+        private void StartRectangleDrawing(Point position)
+        {
+            IsDrawing = true;
+            drawingStartPoint = position;
+
+            CurrentDrawingItem = new AnnotationItem(
+                position.X, position.Y, 0, 0, CurrentClassName);
+
+            CurrentImageAnnotations.Add(CurrentDrawingItem);
+        }
+
+        private void UpdateRectangleDrawing(Point currentPosition)
+        {
+            if (drawingStartPoint == null || CurrentDrawingItem == null) return;
+
+            var startPoint = drawingStartPoint.Value;
+
+            double x = Math.Min(startPoint.X, currentPosition.X);
+            double y = Math.Min(startPoint.Y, currentPosition.Y);
+            double width = Math.Abs(currentPosition.X - startPoint.X);
+            double height = Math.Abs(currentPosition.Y - startPoint.Y);
+
+            CurrentDrawingItem.X = x;
+            CurrentDrawingItem.Y = y;
+            CurrentDrawingItem.Width = width;
+            CurrentDrawingItem.Height = height;
+        }
+
+        private void FinishRectangleDrawing()
+        {
+            if (CurrentDrawingItem == null) return;
+
+            // 检查矩形是否有效
+            if (CurrentDrawingItem.Width < 5 || CurrentDrawingItem.Height < 5)
+            {
+                CurrentImageAnnotations.Remove(CurrentDrawingItem);
+            }
+
+            IsDrawing = false;
+            CurrentDrawingItem = null;
+            drawingStartPoint = null;
+        }
+
+        private void CreatePointAnnotation(Point position)
+        {
+            var pointAnnotation = new AnnotationItem(position.X, position.Y, CurrentClassName);
+            CurrentImageAnnotations.Add(pointAnnotation);
+        }
+
+        private void HandlePolygonDrawing(Point position)
+        {
+            if (!IsDrawingPolygon)
+            {
+                // 开始新的多边形
+                IsDrawingPolygon = true;
+                IsDrawing = true;
+                currentPolygonPoints.Clear();
+                currentPolygonPoints.Add(position);
+
+                CurrentDrawingItem = new AnnotationItem(currentPolygonPoints, CurrentClassName);
+                CurrentImageAnnotations.Add(CurrentDrawingItem);
+            }
+            else
+            {
+                // 添加新的点到当前多边形
+                currentPolygonPoints.Add(position);
+                CurrentDrawingItem?.Points.Add(position);
+                CurrentDrawingItem?.UpdateBoundingBox();
+            }
+        }
+
+        private void UpdatePolygonDrawing(Point position)
+        {
+            if (!IsDrawingPolygon || CurrentDrawingItem == null) return;
+
+            // 更新最后一个点的位置（预览效果）
+            if (CurrentDrawingItem.Points.Count > 0)
+            {
+                // 这里可以添加预览线的逻辑
+            }
+        }
+
+        /// <summary>
+        /// 完成多边形绘制
+        /// </summary>
+        public void FinishPolygonDrawing()
+        {
+            if (!IsDrawingPolygon || CurrentDrawingItem == null) return;
+
+            // 检查多边形是否有效（至少3个点）
+            if (CurrentDrawingItem.Points.Count < 3)
+            {
+                CurrentImageAnnotations.Remove(CurrentDrawingItem);
+            }
+            else
+            {
+                CurrentDrawingItem.UpdateBoundingBox();
+            }
+
+            IsDrawingPolygon = false;
+            IsDrawing = false;
+            CurrentDrawingItem = null;
+            currentPolygonPoints.Clear();
+        }
+
+        /// <summary>
+        /// 取消当前绘制
+        /// </summary>
+        public void CancelDrawing()
+        {
+            if (CurrentDrawingItem != null)
+            {
+                CurrentImageAnnotations.Remove(CurrentDrawingItem);
+            }
+
+            IsDrawing = false;
+            IsDrawingPolygon = false;
+            CurrentDrawingItem = null;
+            drawingStartPoint = null;
+            currentPolygonPoints.Clear();
+        }
+        #endregion
 
         private async void LoadCurrentImage()
         {

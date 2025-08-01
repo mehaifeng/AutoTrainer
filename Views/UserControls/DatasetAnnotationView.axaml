@@ -146,25 +146,18 @@
                                 Command="{Binding ImportImagesCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}"
                                 Content="导入图片" />
-                            <!--  Command="{Binding ImportImagesCommand}"  -->
-
                             <Button
                                 Classes="light"
                                 Command="{Binding ImportAnnotationsCommand}"
                                 Content="导入标注" />
-                            <!--  Command="{Binding ImportAnnotationsCommand}"  -->
-
                             <Button
                                 Classes="light"
                                 Command="{Binding ExportAnnotationsCommand}"
                                 Content="导出标注" />
-                            <!--  Command="{Binding ExportAnnotationsCommand}"  -->
-
                             <Separator />
 
                             <Button Classes="light" Content="数据增强" />
                             <!--  Command="{Binding ShowDataAugmentationCommand}"  -->
-
                             <Button Classes="light" Content="质量检查" />
                             <!--  Command="{Binding ValidateAnnotationsCommand}"  -->
                         </StackPanel>
@@ -551,10 +544,6 @@
                                 Command="{Binding DeleteSelectedAnnotationCommand}"
                                 Content="删除标注"
                                 IsEnabled="{Binding HasSelectedAnnotation}">
-                                <!--
-                                    Command="{Binding DeleteSelectedAnnotationCommand}"
-                                    IsEnabled="{Binding HasSelectedAnnotation}"
-                                -->
                             </Button>
                         </StackPanel>
                     </Expander>
