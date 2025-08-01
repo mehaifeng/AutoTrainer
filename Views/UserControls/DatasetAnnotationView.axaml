@@ -542,9 +542,9 @@
                             <Button
                                 Classes="light"
                                 Command="{Binding DeleteSelectedAnnotationCommand}"
+                                CommandParameter="{Binding ElementName=AnnotationCanvas}"
                                 Content="删除标注"
-                                IsEnabled="{Binding HasSelectedAnnotation}">
-                            </Button>
+                                IsEnabled="{Binding HasSelectedAnnotation}" />
                         </StackPanel>
                     </Expander>
 
