@@ -5,6 +5,7 @@ using AutoTrainer.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.PanAndZoom;
 using Avalonia.Controls.Shapes;
 using Avalonia.Data;
 using Avalonia.Dialogs;
@@ -20,6 +21,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -143,7 +145,6 @@ namespace AutoTrainer.ViewModels
 
         // 是否有选中的标注
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
-
         #endregion
 
         #region 构造函数
@@ -222,6 +223,162 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 图像导入和导航命令
+        /// <summary>
+        /// 导入图像目录
+        /// </summary>
+        /// <param name="control"></param>
+        [RelayCommand]
+        private async Task ImportImageFolder(UserControl control)
+        {
+            try
+            {
+                var topLevel = TopLevel.GetTopLevel(control);
+                if (topLevel == null) return;
+
+                var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+                {
+                    AllowMultiple = false,
+                    Title = "选择图像目录"
+                });
+
+                if (folders?.Count > 0)
+                {
+                    var selectedFolder = folders[0];
+                    await LoadImagesFromFolder(selectedFolder);
+                }
+            }
+            catch (Exception ex)
+            {
+                // TODO: 显示错误消息
+                Debug.WriteLine($"导入目录图像失败: {ex.Message}");
+                // 可以考虑添加用户通知，例如：
+                // await ShowErrorDialog("导入失败", $"无法导入图像目录：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 从文件夹加载图像文件
+        /// </summary>
+        /// <param name="folder"></param>
+        private async Task LoadImagesFromFolder(IStorageFolder folder)
+        {
+            try
+            {
+                var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tiff", ".tif"
+                };
+
+                // 清空现有列表（可选，根据需求决定是否保留原有图像）
+                ImageList.Clear();
+
+                var files = folder.GetItemsAsync();
+                var imageFiles = new List<IStorageFile>();
+                await foreach (var item in files)
+                {
+                    if (item is IStorageFile file &&
+                        supportedExtensions.Contains(System.IO.Path.GetExtension(file.Name)))
+                    {
+                        imageFiles.Add(file);
+                    }
+                }
+
+                // 按文件名排序
+                imageFiles = imageFiles.OrderBy(file => file.Name).ToList();
+
+                var totalFiles = imageFiles.Count;
+                var processedFiles = 0;
+
+                var semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
+                var tasks = imageFiles.Select(async file =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var imageItem = await CreateImageItem(file);
+                        if (imageItem != null)
+                        {
+                            await Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                ImageList.Add(imageItem);
+                            });
+                        }
+
+                        var current = Interlocked.Increment(ref processedFiles);
+                        var progress = (int)((double)current / totalFiles * 100);
+                        //ImportProgressChanged?.Invoke(this, progress);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"加载图像失败: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 创建图像项目
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        private async Task<ImageItem?> CreateImageItem(IStorageFile file)
+        {
+            try
+            {
+                var imageItem = new ImageItem
+                {
+                    FilePath = file.Path.LocalPath
+                };
+
+                // 创建缩略图
+                imageItem.Thumbnail = await CreateThumbnail(file);
+
+                return imageItem;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"创建图像项失败 {file.Name}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 创建缩略图
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="maxSize"></param>
+        /// <returns></returns>
+        private async Task<Bitmap?> CreateThumbnail(IStorageFile file, int maxSize = 150)
+        {
+            try
+            {
+                using var stream = await file.OpenReadAsync();
+                using var originalBitmap = new Bitmap(stream);
+
+                // 计算缩略图尺寸，保持宽高比
+                var scale = Math.Min((double)maxSize / originalBitmap.PixelSize.Width,
+                                   (double)maxSize / originalBitmap.PixelSize.Height);
+
+                var newWidth = (int)(originalBitmap.PixelSize.Width * scale);
+                var newHeight = (int)(originalBitmap.PixelSize.Height * scale);
+
+                // 创建缩略图
+                return originalBitmap.CreateScaledBitmap(new PixelSize(newWidth, newHeight));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"创建缩略图失败 {file.Name}: {ex.Message}");
+                return null;
+            }
+        }
+
 
         [RelayCommand]
         private async Task ImportImages(UserControl control)
@@ -245,14 +402,16 @@ namespace AutoTrainer.ViewModels
                     });
                     if (file.Count != 0)
                     {
+                        CurrentImageFileName = System.IO.Path.GetFileName(file[0].TryGetLocalPath() ?? string.Empty);
                         CurrentImage = new Bitmap(file[0].Path.LocalPath);
+                        CurrentImageSize = $"{CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height}";
                     }
                 }
             }
             catch (Exception ex)
             {
                 // TODO: 显示错误消息
-                Console.WriteLine($"导入图像失败: {ex.Message}");
+                Debug.WriteLine($"导入图像失败: {ex.Message}");
             }
         }
 
@@ -314,12 +473,13 @@ namespace AutoTrainer.ViewModels
         #region 标注操作命令
 
         [RelayCommand]
-        private void ClearAnnotations()
+        private void ClearAllAnnotations(Canvas canvas)
         {
             if (CurrentImageAnnotations.Any())
             {
                 SaveToUndoStack();
                 CurrentImageAnnotations.Clear();
+                canvas.Children.Clear();
                 UpdateStatistics();
             }
         }

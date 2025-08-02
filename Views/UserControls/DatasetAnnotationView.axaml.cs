@@ -8,10 +8,11 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Avalonia.Media.Imaging;
 using System.Linq;
 
 namespace AutoTrainer;
@@ -35,11 +36,11 @@ public partial class DatasetAnnotationView : UserControl
         AnnotationCanvas.PointerPressed += OnCanvasPointerPressed;
         AnnotationCanvas.PointerMoved += OnCanvasPointerMoved;
         AnnotationCanvas.PointerReleased += OnCanvasPointerReleased;
-
         // 添加键盘事件处理（用于完成多边形绘制等）
         this.KeyDown += OnViewKeyDown;
         this.Focusable = true; // 确保能接收键盘事件
     }
+
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -334,6 +335,10 @@ public partial class DatasetAnnotationView : UserControl
         // 直接添加到标注集合
         _viewmodel.CurrentImageAnnotations.Add(pointAnnotation);
     }
+    /// <summary>
+    /// 创建矩形标注元素
+    /// </summary>
+    /// <param name="item"></param>
 
     private void CreateRectangleElement(AnnotationItem item)
     {
@@ -374,7 +379,10 @@ public partial class DatasetAnnotationView : UserControl
             rectangle.Height = Math.Max(0, item.Height);
         }
     }
-
+    /// <summary>
+    /// 创建多边形标注
+    /// </summary>
+    /// <param name="item"></param>
     private void CreatePolygonElement(AnnotationItem item)
     {
         var polygon = new Polygon
@@ -460,6 +468,10 @@ public partial class DatasetAnnotationView : UserControl
             AnnotationCanvas.Children.Remove(existingPreviewLine);
         }
     }
+    /// <summary>
+    /// 创建点标注元素
+    /// </summary>
+    /// <param name="item"></param>
 
     private void CreatePointElement(AnnotationItem item)
     {
@@ -473,7 +485,6 @@ public partial class DatasetAnnotationView : UserControl
             StrokeThickness = 2,
             IsHitTestVisible = false
         };
-
         Canvas.SetLeft(ellipse, item.X - 4); // 居中
         Canvas.SetTop(ellipse, item.Y - 4);
 
