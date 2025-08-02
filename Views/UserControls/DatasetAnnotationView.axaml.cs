@@ -20,6 +20,12 @@ public partial class DatasetAnnotationView : UserControl
 {
 
     private DatasetAnnotationViewModel _viewmodel;
+    // 拖动相关字段
+    private bool _isDragging = false;
+    private AnnotationItem? _draggingItem = null;
+    private Point _dragStartPoint;
+    private Point _elementStartPosition;
+    private List<Avalonia.Point>? _originalPolygonPoints;
     public DatasetAnnotationView()
     {
         InitializeComponent();
@@ -38,8 +44,13 @@ public partial class DatasetAnnotationView : UserControl
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_viewmodel == null) return;
+        //没有加载图片时，不响应标注绘制
+        if (_viewmodel.CurrentImage == null)
+        {
+            return;
+        }
         //不阻止滚轮中键点击，滚轮中键用于拖动图像
-        if(e.GetCurrentPoint(sender as Visual).Properties.IsMiddleButtonPressed)
+        else if (e.GetCurrentPoint(sender as Visual).Properties.IsMiddleButtonPressed)
         {
             return;
         }
@@ -51,6 +62,15 @@ public partial class DatasetAnnotationView : UserControl
         }
         var canvas = sender as Canvas;
         var position = e.GetPosition(canvas);
+
+        // 首先检查是否点击了已存在的标注元素（用于拖动）
+        var hitElement = GetHitAnnotationElement(position);
+        if (hitElement != null)
+        {
+            StartDragging(hitElement, position);
+            e.Handled = true;
+            return;
+        }
 
         switch (_viewmodel.CurrentTool)
         {
@@ -77,6 +97,14 @@ public partial class DatasetAnnotationView : UserControl
         var canvas = sender as Canvas;
         var currentPosition = e.GetPosition(canvas);
 
+        // 如果正在拖动标注元素
+        if (_isDragging && _draggingItem != null)
+        {
+            UpdateDragging(currentPosition);
+            return;
+        }
+
+        //如果没有正在拖动的标注元素，则处理绘制逻辑
         switch (_viewmodel.CurrentTool)
         {
             case AnnotationTool.Rectangle:
@@ -87,14 +115,19 @@ public partial class DatasetAnnotationView : UserControl
                 UpdatePolygonPreview(currentPosition);
                 break;
         }
-
-        //e.Handled = true;
     }
 
     private void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (_viewmodel == null) return;
 
+        // 如果正在拖动，结束拖动
+        if (_isDragging)
+        {
+            FinishDragging();
+            return;
+        }
+        // 如果没有正在拖动的标注元素，则处理绘制完成逻辑
         switch (_viewmodel.CurrentTool)
         {
             case AnnotationTool.Rectangle:
@@ -102,8 +135,6 @@ public partial class DatasetAnnotationView : UserControl
                 break;
                 // 多边形和点标注在Released事件中不需要特殊处理
         }
-
-        //e.Handled = true;
     }
 
     private void OnViewKeyDown(object? sender, KeyEventArgs e)
@@ -121,11 +152,10 @@ public partial class DatasetAnnotationView : UserControl
                 if (_viewmodel.CurrentTool == AnnotationTool.Polygon && _viewmodel.IsDrawingPolygon)
                 {
                     FinishPolygonDrawing();
+                    CancelCurrentDrawing();
                 }
                 break;
         }
-
-        e.Handled = true;
     }
 
     /// <summary>
@@ -325,6 +355,15 @@ public partial class DatasetAnnotationView : UserControl
         item.UIElement = rectangle;
     }
 
+    private void UpdatePointElement(AnnotationItem item)
+    {
+        if (item.UIElement is Ellipse ellipse)
+        {
+            Canvas.SetLeft(ellipse, item.X - 4); // 居中
+            Canvas.SetTop(ellipse, item.Y - 4);
+        }
+    }
+
     private void UpdateRectangleElement(AnnotationItem item)
     {
         if (item.UIElement is Rectangle rectangle)
@@ -472,4 +511,228 @@ public partial class DatasetAnnotationView : UserControl
             _viewmodel.IsDrawingPolygon = false;
         }
     }
+
+    #region 拖动功能相关方法
+
+    /// <summary>
+    /// 获取点击位置的标注元素
+    /// </summary>
+    /// <param name="position">点击位置</param>
+    /// <returns>被点击的标注项，如果没有则返回null</returns>
+    private AnnotationItem? GetHitAnnotationElement(Point position)
+    {
+        // 遍历所有标注项，检查点击位置是否在标注元素内
+        foreach (var annotation in _viewmodel.CurrentImageAnnotations)
+        {
+            if (IsPointInAnnotation(position, annotation))
+            {
+                return annotation;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 检查点是否在标注元素内
+    /// </summary>
+    /// <param name="point">检查的点</param>
+    /// <param name="annotation">标注项</param>
+    /// <returns>是否在元素内</returns>
+    private bool IsPointInAnnotation(Point point, AnnotationItem annotation)
+    {
+        switch (annotation.ToolType)
+        {
+            case AnnotationTool.Rectangle:
+                // 矩形：检查点是否在矩形边界内
+                return point.X >= annotation.X && point.X <= annotation.X + annotation.Width &&
+                       point.Y >= annotation.Y && point.Y <= annotation.Y + annotation.Height;
+
+            case AnnotationTool.Point:
+                // 点：检查点是否在点的容忍范围内（8像素半径）
+                var distance = Math.Sqrt(Math.Pow(point.X - annotation.X, 2) + Math.Pow(point.Y - annotation.Y, 2));
+                return distance <= 8;
+
+            case AnnotationTool.Polygon:
+                // 多边形：使用射线法检查点是否在多边形内
+                return IsPointInPolygon(point, annotation.Points);
+
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// 使用射线法检查点是否在多边形内
+    /// </summary>
+    /// <param name="point">检查的点</param>
+    /// <param name="polygonPoints">多边形顶点</param>
+    /// <returns>是否在多边形内</returns>
+    private bool IsPointInPolygon(Point point, ObservableCollection<Avalonia.Point> polygonPoints)
+    {
+        if (polygonPoints.Count < 3) return false;
+
+        bool inside = false;
+        int j = polygonPoints.Count - 1;
+
+        for (int i = 0; i < polygonPoints.Count; i++)
+        {
+            var pi = polygonPoints[i];
+            var pj = polygonPoints[j];
+
+            if (((pi.Y > point.Y) != (pj.Y > point.Y)) &&
+                (point.X < (pj.X - pi.X) * (point.Y - pi.Y) / (pj.Y - pi.Y) + pi.X))
+            {
+                inside = !inside;
+            }
+            j = i;
+        }
+
+        return inside;
+    }
+
+    /// <summary>
+    /// 开始拖动标注元素
+    /// </summary>
+    /// <param name="item">要拖动的标注项</param>
+    /// <param name="startPosition">拖动起始位置</param>
+    private void StartDragging(AnnotationItem item, Point startPosition)
+    {
+        _isDragging = true;
+        _draggingItem = item;
+        _dragStartPoint = startPosition;
+
+        // 记录元素的初始位置
+        switch (item.ToolType)
+        {
+            case AnnotationTool.Rectangle:
+            case AnnotationTool.Point:
+                _elementStartPosition = new Point(item.X, item.Y);
+                break;
+            case AnnotationTool.Polygon:
+                // 对于多边形，保存所有原始点的位置
+                _originalPolygonPoints = new List<Avalonia.Point>();
+                foreach (var point in item.Points)
+                {
+                    _originalPolygonPoints.Add(new Avalonia.Point(point.X, point.Y));
+                }
+                break;
+        }
+
+        // 改变UI元素的视觉状态，表示正在拖动
+        SetElementDraggingStyle(item, true);
+    }
+
+    /// <summary>
+    /// 更新拖动过程
+    /// </summary>
+    /// <param name="currentPosition">当前鼠标位置</param>
+    private void UpdateDragging(Point currentPosition)
+    {
+        if (_draggingItem == null) return;
+
+        // 计算偏移量
+        var deltaX = currentPosition.X - _dragStartPoint.X;
+        var deltaY = currentPosition.Y - _dragStartPoint.Y;
+
+        switch (_draggingItem.ToolType)
+        {
+            case AnnotationTool.Rectangle:
+                // 更新矩形位置
+                _draggingItem.X = _elementStartPosition.X + deltaX;
+                _draggingItem.Y = _elementStartPosition.Y + deltaY;
+                UpdateRectangleElement(_draggingItem);
+                break;
+
+            case AnnotationTool.Point:
+                // 更新点位置
+                _draggingItem.X = _elementStartPosition.X + deltaX;
+                _draggingItem.Y = _elementStartPosition.Y + deltaY;
+                UpdatePointElement(_draggingItem);
+                break;
+
+            case AnnotationTool.Polygon:
+                // 更新多边形所有顶点位置
+                UpdatePolygonPosition(_draggingItem, deltaX, deltaY);
+                UpdatePolygonElement(_draggingItem);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 更新多边形位置
+    /// </summary>
+    /// <param name="item">多边形标注项</param>
+    /// <param name="deltaX">X轴偏移</param>
+    /// <param name="deltaY">Y轴偏移</param>
+    private void UpdatePolygonPosition(AnnotationItem item, double deltaX, double deltaY)
+    {
+        if (_originalPolygonPoints == null || _originalPolygonPoints.Count != item.Points.Count)
+            return;
+
+        // 清空当前点集合
+        item.Points.Clear();
+
+        // 基于保存的原始点位置计算新位置
+        for (int i = 0; i < _originalPolygonPoints.Count; i++)
+        {
+            var originalPoint = _originalPolygonPoints[i];
+            var newPoint = new Avalonia.Point(
+                originalPoint.X + deltaX,
+                originalPoint.Y + deltaY
+            );
+            item.Points.Add(newPoint);
+        }
+
+        // 更新边界框
+        item.UpdateBoundingBox();
+    }
+
+    /// <summary>
+    /// 完成拖动
+    /// </summary>
+    private void FinishDragging()
+    {
+        if (_draggingItem != null)
+        {
+            // 恢复UI元素的正常视觉状态
+            SetElementDraggingStyle(_draggingItem, false);
+        }
+
+        // 清理拖动状态
+        _isDragging = false;
+        _draggingItem = null;
+        _originalPolygonPoints = null;
+    }
+    /// <summary>
+    /// 设置元素的拖动视觉状态
+    /// </summary>
+    /// <param name="item">标注项</param>
+    /// <param name="isDragging">是否正在拖动</param>
+    private void SetElementDraggingStyle(AnnotationItem item, bool isDragging)
+    {
+        if (item.UIElement == null) return;
+
+        var opacity = isDragging ? 0.7 : 1.0;
+
+        switch (item.UIElement)
+        {
+            case Rectangle rectangle:
+                rectangle.Opacity = opacity;
+                rectangle.StrokeThickness = isDragging ? 3 : 2;
+                break;
+
+            case Polygon polygon:
+                polygon.Opacity = opacity;
+                polygon.StrokeThickness = isDragging ? 3 : 2;
+                break;
+
+            case Ellipse ellipse:
+                ellipse.Opacity = opacity;
+                ellipse.StrokeThickness = isDragging ? 3 : 2;
+                break;
+        }
+    }
+
+    #endregion
+
 }

@@ -123,7 +123,7 @@
                                             <TextBlock
                                                 Grid.Column="0"
                                                 VerticalAlignment="Center"
-                                                Text="ABC" />
+                                                Text="{Binding .}" />
                                             <Button
                                                 Grid.Column="1"
                                                 Width="20"
@@ -452,6 +452,23 @@
             <ScrollViewer>
                 <StackPanel Margin="10" Spacing="15">
 
+					<!--  图片信息  -->
+					<Expander Header="图片信息" IsExpanded="True">
+						<StackPanel Margin="10" Spacing="5">
+							<TextBlock Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" TextWrapping="Wrap" />
+							<!--  Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}"  -->
+
+							<TextBlock Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" />
+							<!--  Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}"  -->
+
+							<TextBlock Text="{Binding AnnotatedImageCount, StringFormat='标注数: {0}'}" />
+							<!--  Text="{Binding CurrentImageAnnotationCount, StringFormat='标注数: {0}'}"  -->
+
+							<TextBlock Text="{Binding CurrentImage.Dpi, StringFormat='状态: {0}'}" />
+							<!--  Text="{Binding CurrentImageStatus, StringFormat='状态: {0}'}"  -->
+						</StackPanel>
+					</Expander>
+					
                     <!--  当前标注信息  -->
                     <Expander Header="当前标注" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
@@ -474,7 +491,6 @@
 
                             <!--  坐标信息  -->
                             <Grid IsEnabled="{Binding HasSelectedAnnotation}">
-                                <!--  IsEnabled="{Binding HasSelectedAnnotation}"  -->
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -496,9 +512,7 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.X}" />
-                                <!--  Value="{Binding SelectedAnnotation.X}"  -->
-
+                                    Value="{Binding SelectedAnnotation.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="0"
@@ -509,9 +523,7 @@
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.Y}" />
-                                <!--  Value="{Binding SelectedAnnotation.Y}"  -->
-
+                                    Value="{Binding SelectedAnnotation.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -522,9 +534,7 @@
                                     Grid.Row="2"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.Width}" />
-                                <!--  Value="{Binding SelectedAnnotation.Width}"  -->
-
+                                    Value="{Binding SelectedAnnotation.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -535,8 +545,7 @@
                                     Grid.Row="3"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.Height}" />
-                                <!--  Value="{Binding SelectedAnnotation.Height}"  -->
+                                    Value="{Binding SelectedAnnotation.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
 
                             <Button
@@ -545,23 +554,6 @@
                                 CommandParameter="{Binding ElementName=AnnotationCanvas}"
                                 Content="删除标注"
                                 IsEnabled="{Binding HasSelectedAnnotation}" />
-                        </StackPanel>
-                    </Expander>
-
-                    <!--  图片信息  -->
-                    <Expander Header="图片信息" IsExpanded="True">
-                        <StackPanel Margin="10" Spacing="5">
-                            <TextBlock Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" TextWrapping="Wrap" />
-                            <!--  Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}"  -->
-
-                            <TextBlock Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" />
-                            <!--  Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}"  -->
-
-                            <TextBlock Text="{Binding AnnotatedImageCount, StringFormat='标注数: {0}'}" />
-                            <!--  Text="{Binding CurrentImageAnnotationCount, StringFormat='标注数: {0}'}"  -->
-
-                            <TextBlock Text="{Binding CurrentImage.Dpi, StringFormat='状态: {0}'}" />
-                            <!--  Text="{Binding CurrentImageStatus, StringFormat='状态: {0}'}"  -->
                         </StackPanel>
                     </Expander>
 
@@ -584,11 +576,11 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Spacing="2">
-                                            <TextBlock FontWeight="Bold" Text="ClassName" />
+                                            <TextBlock FontWeight="Bold" Text="{Binding ClassName}" />
                                             <TextBlock
                                                 FontSize="10"
                                                 Foreground="Gray"
-                                                Text="BoundsInfo" />
+                                                Text="{Binding BoundsInfo}" />
                                         </StackPanel>
 
                                         <CheckBox
