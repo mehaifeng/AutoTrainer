@@ -49,19 +49,10 @@
                                 Content="手动标注"
                                 IsChecked="True"
                                 ToolTip.Tip="逐张手动标注图片" />
-
-                            <RadioButton
-                                x:Name="Radio_TemplateAnnovation"
-                                Command="{Binding SelectTemplateModeCommand}"
-                                Content="模板标注"
-                                ToolTip.Tip="使用预设模板批量标注" />
-                            <!--  Command="{Binding SelectTemplateModeCommand}"  -->
-
                             <RadioButton
                                 Command="{Binding SelectAIModeCommand}"
                                 Content="智能辅助"
                                 ToolTip.Tip="AI辅助预标注" />
-                            <!--  Command="{Binding SelectAIModeCommand}"  -->
                         </StackPanel>
                     </Expander>
 
@@ -370,7 +361,6 @@
                         HorizontalScrollBarVisibility="Auto"
                         VerticalScrollBarVisibility="Disabled">
                         <ItemsControl Margin="10,0,10,10" ItemsSource="{Binding ImageList}">
-                            <!--  ItemsSource="{Binding ImageThumbnails}"  -->
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="5" />
@@ -385,11 +375,11 @@
                                         BorderThickness="2"
                                         CornerRadius="3"
                                         Cursor="Hand">
-                                        <!--  BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}"  -->
                                         <Grid Margin="3">
-                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
-                                            <!--  Source="{Binding Thumbnail}"  -->
-
+                                            <Image
+                                                Source="{Binding Thumbnail}"
+                                                Stretch="UniformToFill"
+                                                ZIndex="0" />
                                             <!--  标注状态指示  -->
                                             <Border
                                                 Width="16"
@@ -399,8 +389,8 @@
                                                 VerticalAlignment="Top"
                                                 Background="Green"
                                                 CornerRadius="8"
-                                                IsVisible="{Binding IsAnnotated}">
-                                                <!--  IsVisible="{Binding IsAnnotated}"  -->
+                                                IsVisible="{Binding IsAnnotated}"
+                                                ZIndex="1">
                                                 <avalonia:MaterialIcon
                                                     Width="12"
                                                     Height="12"
@@ -412,9 +402,8 @@
                                             <Border
                                                 Background="Blue"
                                                 IsVisible="{Binding IsSelected}"
-                                                Opacity="0.5">
-                                                <!--  IsVisible="{Binding IsSelected}"  -->
-                                            </Border>
+                                                Opacity="0.5"
+                                                ZIndex="2" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -572,19 +561,25 @@
                     <!--  快捷操作  -->
                     <Expander Header="快捷操作" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
+
+                            <CheckBox
+                                x:Name="Chk_ApplyAsTemplate"
+                                HorizontalAlignment="Center"
+                                Content="作为模板应用至全体图片"
+                                IsChecked="{Binding IsApplyAsTemplate}" />
+
                             <Button Classes="light" Content="标记为完成" />
-                            <!--  Command="{Binding MarkAsCompletedCommand}"  -->
 
                             <Button Classes="light" Content="在文件管理器中显示" />
-                            <!--  Command="{Binding ShowInExplorerCommand}"  -->
+
+                            <Button
+                                Classes="light"
+                                Command="{Binding GenerateDataSetCommand}"
+                                Content="生成数据集" />
                         </StackPanel>
                     </Expander>
 
-                    <Button
-                        Margin="10"
-                        Classes="light"
-                        Content="应用到相似图片"
-                        IsVisible="{Binding ElementName=Radio_TemplateAnnovation, Path=IsChecked}" />
+
                     <!--  Command="{Binding ApplyToSimilarCommand}"  -->
 
 
