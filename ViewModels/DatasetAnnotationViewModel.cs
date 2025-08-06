@@ -139,6 +139,9 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool canRedo = false;
 
+        [ObservableProperty]
+        private bool isApplyAsTemplate = false;
+
         // 导航状态
         public bool CanGoPrevious => CurrentImageIndex > 0;
         public bool CanGoNext => CurrentImageIndex < ImageList.Count - 1;
@@ -187,12 +190,6 @@ namespace AutoTrainer.ViewModels
         {
             CurrentMode = AnnotationMode.Manual;
             IsCreatingTemplate = false;
-        }
-
-        [RelayCommand]
-        private void SelectTemplateMode()
-        {
-            CurrentMode = AnnotationMode.Template;
         }
 
         [RelayCommand]
@@ -693,6 +690,24 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        #endregion
+
+        #region 生成数据集
+        [RelayCommand]
+        private void GenerateDataSet()
+        {
+            if (IsApplyAsTemplate)
+            {
+               if(CurrentImageAnnotations.Count > 0)
+                {
+
+                }
+                else
+                {
+
+                }
+            }
+        }
         #endregion
 
         #region 私有方法

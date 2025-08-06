@@ -313,6 +313,8 @@ public partial class DatasetAnnotationView : UserControl
         {
             // 如果点太少，删除UI元素
             RemoveAnnotationElement(_viewmodel.CurrentDrawingItem);
+            // 删除正在绘制的虚线
+            RemovePolygonPreviewLine(_viewmodel.CurrentDrawingItem);
         }
 
         // 清理
@@ -519,6 +521,8 @@ public partial class DatasetAnnotationView : UserControl
         {
             // 取消多边形绘制
             RemoveAnnotationElement(_viewmodel.CurrentDrawingItem);
+            // 移除正在绘制的虚线
+            RemovePolygonPreviewLine(_viewmodel.CurrentDrawingItem);
             _viewmodel.CurrentDrawingItem = null;
             _viewmodel.IsDrawingPolygon = false;
         }
