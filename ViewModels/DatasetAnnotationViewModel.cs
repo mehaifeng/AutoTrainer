@@ -147,6 +147,10 @@ namespace AutoTrainer.ViewModels
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
         #endregion
 
+        #region 事件和委托
+        public Action<AnnotationItem>? OnAnnotationSelected;
+        #endregion
+
         #region 构造函数
 
         public DatasetAnnotationViewModel()
@@ -154,7 +158,7 @@ namespace AutoTrainer.ViewModels
             // 初始化默认类别
             ClassNames.Add("默认类别");
             SelectedClassName = ClassNames.FirstOrDefault() ?? string.Empty;
-
+            OnAnnotationSelected += SelectedAnnvationChanged;
             // 监听属性变化
             PropertyChanged += DatasetAnnotationViewModel_PropertyChanged;
         }
@@ -713,6 +717,14 @@ namespace AutoTrainer.ViewModels
                     Console.WriteLine($"加载图像失败: {ex.Message}");
                 }
             }
+        }
+        /// <summary>
+        /// 图像中选择的标注项发生变化调用
+        /// </summary>
+        /// <param name="annotation"></param>
+        private void SelectedAnnvationChanged(AnnotationItem? annotation)
+        {
+            SelectedAnnotation = annotation;
         }
 
         private async Task LoadAnnotationsForCurrentImage()

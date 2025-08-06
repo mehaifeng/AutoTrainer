@@ -69,6 +69,7 @@ public partial class DatasetAnnotationView : UserControl
         if (hitElement != null)
         {
             StartDragging(hitElement, position);
+            _viewmodel?.OnAnnotationSelected?.Invoke(hitElement);
             e.Handled = true;
             return;
         }
@@ -267,7 +268,7 @@ public partial class DatasetAnnotationView : UserControl
         var firstPoint = _viewmodel.CurrentDrawingItem.Points.FirstOrDefault();
         var distance = Math.Sqrt(Math.Pow(newPoint.X - firstPoint.X, 2) + Math.Pow(newPoint.Y - firstPoint.Y, 2));
 
-        if (_viewmodel.CurrentDrawingItem.Points.Count >= 3 && distance < 10) // 10像素容差
+        if (_viewmodel.CurrentDrawingItem.Points.Count >= 3 && distance < 5) // 5像素容差
         {
             // 闭合多边形
             FinishPolygonDrawing();

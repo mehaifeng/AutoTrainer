@@ -460,7 +460,10 @@
                             </TextBlock>
 
                             <!--  类别选择  -->
-                            <ComboBox
+							<ComboBox
+								Theme="{StaticResource MaterialOutlineComboBox}"
+								Classes="dense"
+								p1:ComboBoxAssist.Label = "选择类别"
                                 IsEnabled="{Binding HasSelectedAnnotation}"
                                 ItemsSource="{Binding ClassNames}"
                                 SelectedItem="{Binding SelectedAnnotation.ClassName}" />
