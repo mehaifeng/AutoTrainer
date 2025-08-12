@@ -267,7 +267,7 @@ namespace AutoTrainer.ViewModels
             {
                 var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tiff", ".tif"
+                    ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
                 };
 
                 // 清空现有列表（可选，根据需求决定是否保留原有图像）
@@ -316,6 +316,8 @@ namespace AutoTrainer.ViewModels
                 });
 
                 await Task.WhenAll(tasks);
+                CurrentImage = new Bitmap(ImageList[0].FilePath);
+                CurrentImageIndex = 0;
             }
             catch (Exception ex)
             {
@@ -379,8 +381,50 @@ namespace AutoTrainer.ViewModels
                 return null;
             }
         }
+        /// <summary>
+        /// 加载一张图片
+        /// </summary>
+        /// <param name="operateType">0：不在ImageList中，且bitmapImage不为null；1：左；2：右</param>
+        /// <param name="bitmapImage"></param>
+        /// <returns></returns>
+        private void LoadAPicture(int operateType, Bitmap bitmapImage)
+        {
+            switch (operateType)
+            {
+                case 0:
+                    {
+                        if (bitmapImage != null)
+                        {
+                            CurrentImage = bitmapImage;
+                        }
+                    }
+                    break;
+                case 1:
+                    {
+                        if (CurrentImageIndex > 0)
+                        {
+                            CurrentImage = new Bitmap(ImageList[CurrentImageIndex-1].FilePath);
+                            CurrentImageIndex--;
+                        }
+                    }
+                    break;
+                case 2:
+                    {
+                        if(CurrentImageIndex < ImageList.Count)
+                        {
+                            CurrentImage = new Bitmap(ImageList[CurrentImageIndex + 1].FilePath);
+                            CurrentImageIndex++;
+                        }
+                    }
+                    break;
+            }
+        }
 
-
+        /// <summary>
+        /// 导入选择的图片
+        /// </summary>
+        /// <param name="control"></param>
+        /// <returns></returns>
         [RelayCommand]
         private async Task ImportImages(UserControl control)
         {
