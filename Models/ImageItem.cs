@@ -24,5 +24,6 @@ namespace AutoTrainer.Models
 
         [ObservableProperty]
         private int annotationCount = 0;
+
     }
 }

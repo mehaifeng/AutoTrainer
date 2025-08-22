@@ -76,15 +76,15 @@ public partial class DatasetAnnotationView : UserControl
 
         switch (_viewmodel.CurrentTool)
         {
-            case AnnotationTool.Rectangle:
+            case AnnotationToolEnum.Rectangle:
                 StartRectangleDrawing(position);
                 break;
 
-            case AnnotationTool.Polygon:
+            case AnnotationToolEnum.Polygon:
                 HandlePolygonClick(position);
                 break;
 
-            case AnnotationTool.Point:
+            case AnnotationToolEnum.Point:
                 CreatePointAnnotation(position);
                 break;
         }
@@ -109,11 +109,11 @@ public partial class DatasetAnnotationView : UserControl
         //如果没有正在拖动的标注元素，则处理绘制逻辑
         switch (_viewmodel.CurrentTool)
         {
-            case AnnotationTool.Rectangle:
+            case AnnotationToolEnum.Rectangle:
                 UpdateRectangleDrawing(currentPosition);
                 break;
 
-            case AnnotationTool.Polygon:
+            case AnnotationToolEnum.Polygon:
                 UpdatePolygonPreview(currentPosition);
                 break;
         }
@@ -132,7 +132,7 @@ public partial class DatasetAnnotationView : UserControl
         // 如果没有正在拖动的标注元素，则处理绘制完成逻辑
         switch (_viewmodel.CurrentTool)
         {
-            case AnnotationTool.Rectangle:
+            case AnnotationToolEnum.Rectangle:
                 FinishRectangleDrawing();
                 break;
                 // 多边形和点标注在Released事件中不需要特殊处理
@@ -151,7 +151,7 @@ public partial class DatasetAnnotationView : UserControl
 
             case Key.Enter:
             case Key.Space:
-                if (_viewmodel.CurrentTool == AnnotationTool.Polygon && _viewmodel.IsDrawingPolygon)
+                if (_viewmodel.CurrentTool == AnnotationToolEnum.Polygon && _viewmodel.IsDrawingPolygon)
                 {
                     FinishPolygonDrawing();
                     CancelCurrentDrawing();
@@ -172,11 +172,10 @@ public partial class DatasetAnnotationView : UserControl
         _viewmodel.drawingStartPoint = startPoint;
 
         // 创建矩形标注项
-        _viewmodel.CurrentDrawingItem = new AnnotationItem(
-            startPoint.X, startPoint.Y, 0, 0, _viewmodel.CurrentClassName);
+        _viewmodel.CurrentDrawingItem = new AnnotationItem(startPoint.X, startPoint.Y, 0, 0, _viewmodel.CurrentClassName);
 
         // 创建矩形UI元素
-        CreateRectangleElement(_viewmodel.CurrentDrawingItem);
+        CreateRectangleElement(_viewmodel.CurrentDrawingItem.RectangleModel);
     }
 
     private void UpdateRectangleDrawing(Point currentPosition)
@@ -255,9 +254,8 @@ public partial class DatasetAnnotationView : UserControl
         // 创建多边形标注项
         var points = new List<Avalonia.Point> { startPoint };
         _viewmodel.CurrentDrawingItem = new AnnotationItem(points, _viewmodel.CurrentClassName);
-
         // 创建多边形UI元素
-        CreatePolygonElement(_viewmodel.CurrentDrawingItem);
+        CreatePolygonElement(_viewmodel.CurrentDrawingItem.PoloygenModel);
     }
 
     private void AddPolygonPoint(Point newPoint)
@@ -265,10 +263,10 @@ public partial class DatasetAnnotationView : UserControl
         if (_viewmodel?.CurrentDrawingItem == null || !_viewmodel.IsDrawingPolygon) return;
 
         // 检查是否点击了起始点附近（闭合多边形）
-        var firstPoint = _viewmodel.CurrentDrawingItem.Points.FirstOrDefault();
+        var firstPoint = _viewmodel.CurrentDrawingItem.PoloygenModel.Points.FirstOrDefault();
         var distance = Math.Sqrt(Math.Pow(newPoint.X - firstPoint.X, 2) + Math.Pow(newPoint.Y - firstPoint.Y, 2));
 
-        if (_viewmodel.CurrentDrawingItem.Points.Count >= 3 && distance < 5) // 5像素容差
+        if (_viewmodel.CurrentDrawingItem.PoloygenModel.Points.Count >= 3 && distance < 5) // 5像素容差
         {
             // 闭合多边形
             FinishPolygonDrawing();
@@ -276,7 +274,7 @@ public partial class DatasetAnnotationView : UserControl
         }
 
         // 添加新顶点
-        _viewmodel.CurrentDrawingItem.Points.Add(newPoint);
+        _viewmodel.CurrentDrawingItem.PoloygenModel.Points.Add(newPoint);
         _viewmodel.CurrentDrawingItem.UpdateBoundingBox();
 
         // 更新UI元素
@@ -298,7 +296,7 @@ public partial class DatasetAnnotationView : UserControl
         _viewmodel.IsDrawingPolygon = false;
 
         // 检查多边形是否有效（至少3个点）
-        if (_viewmodel.CurrentDrawingItem.Points.Count >= 3)
+        if (_viewmodel.CurrentDrawingItem.PoloygenModel.Points.Count >= 3)
         {
             // 更新边界框
             _viewmodel.CurrentDrawingItem.UpdateBoundingBox();
@@ -328,13 +326,10 @@ public partial class DatasetAnnotationView : UserControl
     private void CreatePointAnnotation(Point clickPoint)
     {
         if (_viewmodel == null) return;
-
         // 创建点标注
         var pointAnnotation = new AnnotationItem(clickPoint.X, clickPoint.Y, _viewmodel.CurrentClassName);
-
         // 创建点UI元素
         CreatePointElement(pointAnnotation);
-
         // 直接添加到标注集合
         _viewmodel.CurrentImageAnnotations.Add(pointAnnotation);
     }
@@ -343,11 +338,11 @@ public partial class DatasetAnnotationView : UserControl
     /// </summary>
     /// <param name="item"></param>
 
-    private void CreateRectangleElement(AnnotationItem item)
+    private void CreateRectangleElement(RectangleModel item)
     {
         var rectangle = new Rectangle
         {
-            Tag = item.AnnotataionItemGuid,
+            Tag = item.AnnotationGuid,
             Stroke = Brushes.Red,
             StrokeThickness = 2,
             Fill = Brushes.Transparent,
@@ -365,32 +360,39 @@ public partial class DatasetAnnotationView : UserControl
 
     private void UpdatePointElement(AnnotationItem item)
     {
-        if (item.UIElement is Ellipse ellipse)
+        if (item.PointModel.UIElement is Ellipse ellipse)
         {
             Canvas.SetLeft(ellipse, item.X - 4); // 居中
             Canvas.SetTop(ellipse, item.Y - 4);
+            item.PointModel.X = Canvas.GetLeft(ellipse);
+            item.PointModel.Y = Canvas.GetTop(ellipse);
         }
     }
 
     private void UpdateRectangleElement(AnnotationItem item)
     {
-        if (item.UIElement is Rectangle rectangle)
+        if (item.RectangleModel.UIElement is Rectangle rectangle)
         {
             Canvas.SetLeft(rectangle, item.X);
             Canvas.SetTop(rectangle, item.Y);
             rectangle.Width = Math.Max(0, item.Width);
             rectangle.Height = Math.Max(0, item.Height);
+
+            item.RectangleModel.X = item.X;
+            item.RectangleModel.Y = item.Y;
+            item.RectangleModel.Width = rectangle.Width;
+            item.RectangleModel.Height = rectangle.Height;
         }
     }
     /// <summary>
     /// 创建多边形标注
     /// </summary>
     /// <param name="item"></param>
-    private void CreatePolygonElement(AnnotationItem item)
+    private void CreatePolygonElement(PoloygenModel item)
     {
         var polygon = new Polygon
         {
-            Tag = item.AnnotataionItemGuid,
+            Tag = item.AnnotationGuid,
             Stroke = Brushes.Blue,
             StrokeThickness = 2,
             Fill = new SolidColorBrush(Colors.Blue) { Opacity = 0.1 },
@@ -406,9 +408,9 @@ public partial class DatasetAnnotationView : UserControl
 
     private void UpdatePolygonElement(AnnotationItem item)
     {
-        if (item.UIElement is Polygon polygon)
+        if (item.PoloygenModel.UIElement is Polygon polygon)
         {
-            UpdatePolygonPoints(polygon, item.Points);
+            UpdatePolygonPoints(polygon, item.PoloygenModel.Points);
         }
     }
 
@@ -423,7 +425,7 @@ public partial class DatasetAnnotationView : UserControl
 
     private void UpdatePolygonPreviewLine(AnnotationItem item, Point currentPosition)
     {
-        if (item.Points.Count < 1)
+        if (item.PoloygenModel.Points.Count < 1)
         {
             return;
         }
@@ -439,7 +441,7 @@ public partial class DatasetAnnotationView : UserControl
         }
 
         // Get the last point of the polygon.
-        var lastPoint = item.Points.Last();
+        var lastPoint = item.PoloygenModel.Points.Last();
 
         // Create a new Line element for the preview.
         var previewLine = new Line
@@ -480,7 +482,7 @@ public partial class DatasetAnnotationView : UserControl
     {
         var ellipse = new Ellipse
         {
-            Tag = item.AnnotataionItemGuid,
+            Tag = item.PointModel.AnnotationGuid,
             Width = 4,
             Height = 4,
             Fill = Brushes.Green,
@@ -492,15 +494,25 @@ public partial class DatasetAnnotationView : UserControl
         Canvas.SetTop(ellipse, item.Y - 4);
 
         AnnotationCanvas.Children.Add(ellipse);
-        item.UIElement = ellipse;
+        item.PointModel.UIElement = ellipse;
     }
 
     private void RemoveAnnotationElement(AnnotationItem item)
     {
-        if (item.UIElement != null)
+        if (item.RectangleModel?.UIElement != null)
         {
-            AnnotationCanvas.Children.Remove(item.UIElement);
-            item.UIElement = null;
+            AnnotationCanvas.Children.Remove(item.RectangleModel.UIElement);
+            item.RectangleModel.UIElement = null;
+        }
+        if (item.PoloygenModel?.UIElement != null)
+        {
+            AnnotationCanvas.Children.Remove(item.PoloygenModel.UIElement);
+            item.PoloygenModel.UIElement = null;
+        }
+        if (item.PointModel?.UIElement != null)
+        {
+            AnnotationCanvas.Children.Remove(item.PointModel.UIElement);
+            item.PointModel.UIElement = null;
         }
     }
 
@@ -558,19 +570,19 @@ public partial class DatasetAnnotationView : UserControl
     {
         switch (annotation.ToolType)
         {
-            case AnnotationTool.Rectangle:
+            case AnnotationToolEnum.Rectangle:
                 // 矩形：检查点是否在矩形边界内
                 return point.X >= annotation.X && point.X <= annotation.X + annotation.Width &&
                        point.Y >= annotation.Y && point.Y <= annotation.Y + annotation.Height;
 
-            case AnnotationTool.Point:
+            case AnnotationToolEnum.Point:
                 // 点：检查点是否在点的容忍范围内（8像素半径）
                 var distance = Math.Sqrt(Math.Pow(point.X - annotation.X, 2) + Math.Pow(point.Y - annotation.Y, 2));
                 return distance <= 8;
 
-            case AnnotationTool.Polygon:
+            case AnnotationToolEnum.Polygon:
                 // 多边形：使用射线法检查点是否在多边形内
-                return IsPointInPolygon(point, annotation.Points);
+                return IsPointInPolygon(point, annotation.PoloygenModel.Points);
 
             default:
                 return false;
@@ -620,14 +632,14 @@ public partial class DatasetAnnotationView : UserControl
         // 记录元素的初始位置
         switch (item.ToolType)
         {
-            case AnnotationTool.Rectangle:
-            case AnnotationTool.Point:
+            case AnnotationToolEnum.Rectangle:
+            case AnnotationToolEnum.Point:
                 _elementStartPosition = new Point(item.X, item.Y);
                 break;
-            case AnnotationTool.Polygon:
+            case AnnotationToolEnum.Polygon:
                 // 对于多边形，保存所有原始点的位置
                 _originalPolygonPoints = new List<Avalonia.Point>();
-                foreach (var point in item.Points)
+                foreach (var point in item.PoloygenModel.Points)
                 {
                     _originalPolygonPoints.Add(new Avalonia.Point(point.X, point.Y));
                 }
@@ -652,21 +664,21 @@ public partial class DatasetAnnotationView : UserControl
 
         switch (_draggingItem.ToolType)
         {
-            case AnnotationTool.Rectangle:
+            case AnnotationToolEnum.Rectangle:
                 // 更新矩形位置
                 _draggingItem.X = _elementStartPosition.X + deltaX;
                 _draggingItem.Y = _elementStartPosition.Y + deltaY;
                 UpdateRectangleElement(_draggingItem);
                 break;
 
-            case AnnotationTool.Point:
+            case AnnotationToolEnum.Point:
                 // 更新点位置
                 _draggingItem.X = _elementStartPosition.X + deltaX;
                 _draggingItem.Y = _elementStartPosition.Y + deltaY;
                 UpdatePointElement(_draggingItem);
                 break;
 
-            case AnnotationTool.Polygon:
+            case AnnotationToolEnum.Polygon:
                 // 更新多边形所有顶点位置
                 UpdatePolygonPosition(_draggingItem, deltaX, deltaY);
                 UpdatePolygonElement(_draggingItem);
@@ -682,11 +694,11 @@ public partial class DatasetAnnotationView : UserControl
     /// <param name="deltaY">Y轴偏移</param>
     private void UpdatePolygonPosition(AnnotationItem item, double deltaX, double deltaY)
     {
-        if (_originalPolygonPoints == null || _originalPolygonPoints.Count != item.Points.Count)
+        if (_originalPolygonPoints == null || _originalPolygonPoints.Count != item.PoloygenModel.Points.Count)
             return;
 
         // 清空当前点集合
-        item.Points.Clear();
+        item.PoloygenModel.Points.Clear();
 
         // 基于保存的原始点位置计算新位置
         for (int i = 0; i < _originalPolygonPoints.Count; i++)
@@ -696,7 +708,7 @@ public partial class DatasetAnnotationView : UserControl
                 originalPoint.X + deltaX,
                 originalPoint.Y + deltaY
             );
-            item.Points.Add(newPoint);
+            item.PoloygenModel.Points.Add(newPoint);
         }
 
         // 更新边界框
@@ -726,26 +738,33 @@ public partial class DatasetAnnotationView : UserControl
     /// <param name="isDragging">是否正在拖动</param>
     private void SetElementDraggingStyle(AnnotationItem item, bool isDragging)
     {
-        if (item.UIElement == null) return;
-
         var opacity = isDragging ? 0.7 : 1.0;
-
-        switch (item.UIElement)
+        if (item.PoloygenModel?.UIElement != null)
         {
-            case Rectangle rectangle:
-                rectangle.Opacity = opacity;
-                rectangle.StrokeThickness = isDragging ? 3 : 2;
-                break;
-
-            case Polygon polygon:
-                polygon.Opacity = opacity;
-                polygon.StrokeThickness = isDragging ? 3 : 2;
-                break;
-
-            case Ellipse ellipse:
+            var ploygon = item.PoloygenModel.UIElement as Polygon;
+            if (ploygon != null)
+            {
+                ploygon.Opacity = opacity;
+                ploygon.StrokeThickness = isDragging ? 3 : 2;
+            }
+        }
+        if (item.PointModel?.UIElement != null)
+        {
+            var ellipse = item.PointModel.UIElement as Ellipse;
+            if (ellipse != null)
+            {
                 ellipse.Opacity = opacity;
                 ellipse.StrokeThickness = isDragging ? 3 : 2;
-                break;
+            }
+        }
+        if(item.RectangleModel?.UIElement != null)
+        {
+            var rectangle = item.RectangleModel.UIElement as Rectangle;
+            if (rectangle != null)
+            {
+                rectangle.Opacity = opacity;
+                rectangle.StrokeThickness = isDragging ? 3 : 2;
+            }
         }
     }
 

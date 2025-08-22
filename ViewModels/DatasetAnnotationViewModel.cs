@@ -32,15 +32,26 @@ namespace AutoTrainer.ViewModels
 {
     public partial class DatasetAnnotationViewModel : ViewModelBase
     {
-        #region 可绑定字段属性
 
+        // 操作历史（撤销重做）
+        private Stack<List<AnnotationItem>> undoStack = new();
+        private Stack<List<AnnotationItem>> redoStack = new();
+        // 导航状态
+        public bool CanGoPrevious => CurrentImageIndex > 0;
+        public bool CanGoNext => CurrentImageIndex < ImageList.Count - 1;
+        // 是否有选中的标注
+        public bool HasSelectedAnnotation => SelectedAnnotation != null;
+        //图片文件夹
+        public string Imagefolder = string.Empty;
+
+        #region 可绑定字段属性
         // 标注模式
         [ObservableProperty]
-        private AnnotationMode currentMode = AnnotationMode.Manual;
+        private AnnotationMethodEnum currentMode = AnnotationMethodEnum.Manual;
 
         // 标注工具
         [ObservableProperty]
-        private AnnotationTool currentTool = AnnotationTool.Rectangle;
+        private AnnotationToolEnum currentTool = AnnotationToolEnum.Rectangle;
 
         // 当前图像
         [ObservableProperty]
@@ -91,17 +102,9 @@ namespace AutoTrainer.ViewModels
         // 多边形绘制状态
         [ObservableProperty]
         private bool isDrawingPolygon = false;
-        private ObservableCollection<Point> currentPolygonPoints = new();
 
         // 存储绘制的起始点
         public Point? drawingStartPoint = null;
-
-        // 模板标注相关
-        [ObservableProperty]
-        private ObservableCollection<TemplateConfig> templateConfigs = new();
-
-        [ObservableProperty]
-        private TemplateConfig? currentTemplate;
 
         [ObservableProperty]
         private bool isCreatingTemplate = false;
@@ -129,9 +132,6 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private int totalAnnotationCount = 0;
 
-        // 操作历史（撤销重做）
-        private Stack<List<AnnotationItem>> undoStack = new();
-        private Stack<List<AnnotationItem>> redoStack = new();
 
         [ObservableProperty]
         private bool canUndo = false;
@@ -141,13 +141,6 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private bool isApplyAsTemplate = false;
-
-        // 导航状态
-        public bool CanGoPrevious => CurrentImageIndex > 0;
-        public bool CanGoNext => CurrentImageIndex < ImageList.Count - 1;
-
-        // 是否有选中的标注
-        public bool HasSelectedAnnotation => SelectedAnnotation != null;
         #endregion
 
         #region 事件和委托
@@ -188,14 +181,14 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void SelectManualMode()
         {
-            CurrentMode = AnnotationMode.Manual;
+            CurrentMode = AnnotationMethodEnum.Manual;
             IsCreatingTemplate = false;
         }
 
         [RelayCommand]
         private void SelectAIMode()
         {
-            CurrentMode = AnnotationMode.AIAssisted;
+            CurrentMode = AnnotationMethodEnum.AIAssisted;
             // TODO: 实现AI辅助标注
         }
 
@@ -206,19 +199,19 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void SelectRectangleTool()
         {
-            CurrentTool = AnnotationTool.Rectangle;
+            CurrentTool = AnnotationToolEnum.Rectangle;
         }
 
         [RelayCommand]
         private void SelectPolygonTool()
         {
-            CurrentTool = AnnotationTool.Polygon;
+            CurrentTool = AnnotationToolEnum.Polygon;
         }
 
         [RelayCommand]
         private void SelectPointTool()
         {
-            CurrentTool = AnnotationTool.Point;
+            CurrentTool = AnnotationToolEnum.Point;
         }
 
         #endregion
@@ -241,10 +234,10 @@ namespace AutoTrainer.ViewModels
                     AllowMultiple = false,
                     Title = "选择图像目录"
                 });
-
                 if (folders?.Count > 0)
                 {
                     var selectedFolder = folders[0];
+                    Imagefolder = folders[0].TryGetLocalPath() ?? string.Empty;
                     await LoadImagesFromFolder(selectedFolder);
                 }
             }
@@ -541,10 +534,40 @@ namespace AutoTrainer.ViewModels
             if (SelectedAnnotation != null)
             {
                 SaveToUndoStack();
-                var willDeleteItem = canvas.Children.FirstOrDefault(t => string.Equals(t.Tag ,SelectedAnnotation.AnnotataionItemGuid));
-                if (willDeleteItem != null)
+                if(SelectedAnnotation.ToolType == AnnotationToolEnum.Rectangle)
                 {
-                    canvas.Children.Remove(willDeleteItem);
+                    // 删除矩形标注
+                    var rectangle = SelectedAnnotation.RectangleModel;
+                    if (rectangle != null)
+                    {
+                        var rectItem = canvas.Children.FirstOrDefault(t => t is Rectangle rect && rect.Tag?.ToString() == SelectedAnnotation.RectangleModel.AnnotationGuid);
+                        if (rectItem != null)
+                        {
+                            canvas.Children.Remove(rectItem);
+                        }
+                    }
+                }
+                else if (SelectedAnnotation.ToolType == AnnotationToolEnum.Polygon)
+                {
+                    // 删除多边形标注
+                    var polygon = SelectedAnnotation.PoloygenModel;
+                    if (polygon != null)
+                    {
+                        var polyItem = canvas.Children.FirstOrDefault(t => t is Polygon poly && poly.Tag?.ToString() == SelectedAnnotation.PoloygenModel.AnnotationGuid);
+                        if (polyItem != null)
+                        {
+                            canvas.Children.Remove(polyItem);
+                        }
+                    }
+                }
+                else if (SelectedAnnotation.ToolType == AnnotationToolEnum.Point)
+                {
+                    // 删除点标注
+                    var pointItem = canvas.Children.FirstOrDefault(t => t is Ellipse ellipse && ellipse.Tag?.ToString() == SelectedAnnotation.PointModel.AnnotationGuid);
+                    if (pointItem != null)
+                    {
+                        canvas.Children.Remove(pointItem);
+                    }
                 }
                 CurrentImageAnnotations.Remove(SelectedAnnotation);
                 SelectedAnnotation = null;
@@ -599,10 +622,15 @@ namespace AutoTrainer.ViewModels
         {
             try
             {
-                // TODO: 保存当前图像的标注到文件
-                ProgressState = "保存中...";
-                await Task.Delay(1000); // 模拟保存过程
-                ProgressState = "已保存";
+                //在图片目录创建Anotations.json文件 保存每一张图片的标注数据
+                if (CurrentImageIndex < 0 || CurrentImageIndex >= ImageList.Count)
+                {
+                    return;
+                }
+                var annotationPath = System.IO.Path.Combine(Imagefolder, "AnnotationConfig.json");
+                File.Create(annotationPath).Close();
+                var jsonStr = JsonConvert.SerializeObject(CurrentImageAnnotations, Formatting.Indented);
+                await File.WriteAllTextAsync(annotationPath,jsonStr);
             }
             catch (Exception ex)
             {
@@ -618,88 +646,26 @@ namespace AutoTrainer.ViewModels
         private void CreateTemplate()
         {
             IsCreatingTemplate = true;
-            CurrentMode = AnnotationMode.Template;
+            CurrentMode = AnnotationMethodEnum.Template;
             // TODO: 进入模板创建模式
         }
 
         [RelayCommand]
         private void SaveTemplate()
         {
-            if (CurrentImageAnnotations.Any())
-            {
-                var template = new TemplateConfig
-                {
-                    Name = $"模板_{DateTime.Now:yyyyMMdd_HHmmss}",
-                    Annotations = new List<AnnotationItem>(CurrentImageAnnotations),
-                    ImageSize = CurrentImageSize
-                };
-
-                TemplateConfigs.Add(template);
-                CurrentTemplate = template;
-                IsCreatingTemplate = false;
-            }
+            
         }
 
         [RelayCommand]
-        private void ApplyTemplate(TemplateConfig template)
+        private void ApplyTemplate()
         {
-            if (template != null)
-            {
-                SaveToUndoStack();
-                CurrentImageAnnotations.Clear();
-
-                foreach (var annotation in template.Annotations)
-                {
-                    CurrentImageAnnotations.Add(new AnnotationItem
-                    {
-                        ClassName = annotation.ClassName,
-                        X = annotation.X,
-                        Y = annotation.Y,
-                        Width = annotation.Width,
-                        Height = annotation.Height,
-                        ToolType = annotation.ToolType
-                    });
-                }
-
-                UpdateStatistics();
-            }
+            
         }
 
         [RelayCommand]
-        private async Task BatchApplyTemplate()
+        private void BatchApplyTemplate()
         {
-            if (CurrentTemplate == null || !ImageList.Any())
-                return;
-
-            try
-            {
-                IsLoading = true;
-                ProgressMax = ImageList.Count;
-                ProgressValue = 0;
-                ProgressState = "批量应用模板中...";
-
-                for (int i = 0; i < ImageList.Count; i++)
-                {
-                    CurrentImageIndex = i;
-                    await Task.Delay(100); // 给UI更新时间
-
-                    ApplyTemplate(CurrentTemplate);
-                    await SaveAnnotation();
-
-                    ProgressValue = i + 1;
-                    ProgressState = $"已处理 {ProgressValue}/{ProgressMax} 张图片";
-                }
-
-                ProgressState = "批量应用完成";
-            }
-            catch (Exception ex)
-            {
-                ProgressState = $"批量应用失败: {ex.Message}";
-            }
-            finally
-            {
-                IsLoading = false;
-            }
+            
         }
 
         #endregion

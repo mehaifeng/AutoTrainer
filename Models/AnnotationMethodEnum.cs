@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
-    public enum AnnotationTool
+    public enum AnnotationMethodEnum
     {
-        Rectangle,  // 矩形框
-        Polygon,    // 多边形
-        Point       // 点标注
+        Manual,     // 手动标注
+        Template,   // 模板标注
+        AIAssisted  // AI辅助标注
     }
 }

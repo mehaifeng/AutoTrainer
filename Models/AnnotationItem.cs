@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,66 +9,66 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
 namespace AutoTrainer.Models
 {
     public partial class AnnotationItem:ObservableObject
     {
-        public string AnnotataionItemGuid = Guid.NewGuid().ToString();
+        [JsonProperty(nameof(ImageName))]
+        public required string ImageName { get; set; }
+        [JsonProperty("RectangleAnnotation")]
+        public required RectangleModel RectangleModel { get; set; }
+        [JsonProperty("PoloygenAnnotation")]
+        public required PoloygenModel PoloygenModel { get; set; }
+        [JsonProperty("PointAnnotation")]
+        public required PointModel PointModel { get; set; }
         /// <summary>
-        /// 标注的类别名称。
+        /// 当前标注的类型
         /// </summary>
-        [ObservableProperty]
-        private string className = string.Empty;
+        [JsonIgnore]
+        public AnnotationToolEnum ToolType { get; set; }
+        [JsonIgnore]
+        public string ClassName
+        {
+            get => ToolType switch
+            {
+                AnnotationToolEnum.Rectangle => RectangleModel.ClassName,
+                AnnotationToolEnum.Polygon => PoloygenModel.ClassName,
+                AnnotationToolEnum.Point => PointModel.ClassName,
+                _ => string.Empty
+            };
+            set
+            {
+                if (ToolType == AnnotationToolEnum.Rectangle)
+                    RectangleModel.ClassName = value;
+                else if (ToolType == AnnotationToolEnum.Polygon)
+                    PoloygenModel.ClassName = value;
+                else if (ToolType == AnnotationToolEnum.Point)
+                    PointModel.ClassName = value;
+            }
+        }
 
-        // 对于矩形和点标注：表示其位置和尺寸。
-        // 对于多边形标注：表示其边界框的位置和尺寸。
+        #region 边界框
         [ObservableProperty]
-        private double x = 0;
-
+        [property:JsonIgnore]
+        private double x;
         [ObservableProperty]
-        private double y = 0;
-
+        [property: JsonIgnore]
+        private double y;
         [ObservableProperty]
-        private double width = 0;
-
+        [property: JsonIgnore]
+        private double width;
         [ObservableProperty]
-        private double height = 0;
-
-        /// <summary>
-        /// 多边形标注,存储多边形的顶点集合。
-        /// </summary>
-        [ObservableProperty]
-        private ObservableCollection<Avalonia.Point> points = new ObservableCollection<Avalonia.Point>();
-
-        /// <summary>
-        /// 标注的工具类型（矩形、多边形或点）。
-        /// </summary>
-        [ObservableProperty]
-        private AnnotationTool toolType = AnnotationTool.Rectangle;
-
-        /// <summary>
-        /// 标注是否可见
-        /// </summary>
-        [ObservableProperty]
-        private bool isVisible = true;
-
-        /// <summary>
-        /// 标注是否被选中
-        /// </summary>
-        [ObservableProperty]
-        private bool isSelected = false;
+        [property: JsonIgnore]
+        private double height;
+        #endregion
 
         /// <summary>
         /// 获取标注的边界信息
         /// </summary>
+        [JsonIgnore]
         public string BoundsInfo => $"({X:F0}, {Y:F0}) - {Width:F0}x{Height:F0}";
-
-
-        public AnnotationItem()
-        {
-            // 默认构造函数，可根据需要初始化属性
-        }
 
         /// <summary>
         /// 创建矩形标注。
@@ -79,12 +80,19 @@ namespace AutoTrainer.Models
         /// <param name="className">标注的类别名称。</param>
         public AnnotationItem(double x, double y, double width, double height, string className)
         {
-            ToolType = AnnotationTool.Rectangle;
+            RectangleModel = new RectangleModel()
+            {
+                ClassName = className,
+                X = x,
+                Y = y,
+                Width = width,
+                Height = height,
+            };
+            ToolType = AnnotationToolEnum.Rectangle;
             X = x;
             Y = y;
             Width = width;
             Height = height;
-            ClassName = className;
         }
 
         /// <summary>
@@ -95,12 +103,17 @@ namespace AutoTrainer.Models
         /// <param name="className">标注的类别名称。</param>
         public AnnotationItem(double x, double y, string className)
         {
-            ToolType = AnnotationTool.Point;
+            PointModel = new PointModel()
+            {
+                X = x,
+                Y = y,
+                ClassName = className,
+            };
+            ToolType = AnnotationToolEnum.Point;
             X = x;
             Y = y;
-            Width = 0; // 点通常没有宽度和高度，或者用一个固定的小尺寸表示
+            Width = 0;
             Height = 0;
-            ClassName = className;
         }
 
         /// <summary>
@@ -110,9 +123,12 @@ namespace AutoTrainer.Models
         /// <param name="className">标注的类别名称。</param>
         public AnnotationItem(IEnumerable<Avalonia.Point> polygonPoints, string className)
         {
-            ToolType = AnnotationTool.Polygon;
-            Points = new ObservableCollection<Avalonia.Point>(polygonPoints);
-            ClassName = className;
+            PoloygenModel = new PoloygenModel()
+            {
+                ClassName = className,
+                Points = [..polygonPoints]
+            };
+            ToolType = AnnotationToolEnum.Polygon;
             UpdateBoundingBox(); // 根据多边形顶点计算其边界框
         }
 
@@ -121,30 +137,39 @@ namespace AutoTrainer.Models
         /// </summary>
         public void UpdateBoundingBox()
         {
-            if (ToolType == AnnotationTool.Polygon && Points != null && Points.Any())
+            if (ToolType == AnnotationToolEnum.Polygon && PoloygenModel.Points != null && PoloygenModel.Points.Any())
             {
-                double minX = Points.Min(p => p.X);
-                double minY = Points.Min(p => p.Y);
-                double maxX = Points.Max(p => p.X);
-                double maxY = Points.Max(p => p.Y);
+                double minX = PoloygenModel.Points.Min(p => p.X);
+                double minY = PoloygenModel.Points.Min(p => p.Y);
+                double maxX = PoloygenModel.Points.Max(p => p.X);
+                double maxY = PoloygenModel.Points.Max(p => p.Y);
 
                 X = minX;
                 Y = minY;
                 Width = maxX - minX;
                 Height = maxY - minY;
             }
-            else if (ToolType == AnnotationTool.Point)
+            else if (ToolType == AnnotationToolEnum.Point)
             {
                 Width = 0;
                 Height = 0;
             }
-            // 对于矩形，X, Y, Width, Height 是直接设置的。
         }
 
-        /// <summary>
-        /// 关联的UI元素
-        /// </summary>
-        [JsonIgnore] // 如果你使用JSON序列化的话
-        public Control? UIElement { get; set; }
+        #region Json控制
+        public bool ShouldSerializeRectangleModel()
+        {
+            return ToolType == AnnotationToolEnum.Rectangle && RectangleModel != null && PoloygenModel == null && PointModel == null;
+        }
+        public bool ShouldSerializePolygonModel()
+        {
+            return ToolType == AnnotationToolEnum.Polygon && PoloygenModel != null && RectangleModel == null && PointModel == null;
+        }
+        public bool ShouldSerializePointModel()
+        {
+            return ToolType == AnnotationToolEnum.Point && PointModel != null && RectangleModel == null && PoloygenModel == null;
+        }
+        #endregion
+
     }
 }

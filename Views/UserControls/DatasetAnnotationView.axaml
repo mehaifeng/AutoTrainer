@@ -84,13 +84,6 @@
                                 Content="清除该图全部标注"
                                 ToolTip.Tip="清除当前图片所有标注" />
                             <!--  Command="{Binding ClearAnnotationsCommand}"  -->
-
-                            <Button
-                                Classes="light"
-                                Command="{Binding CopyAnnotationsCommand}"
-                                Content="复制标注至下一张"
-                                ToolTip.Tip="复制到下一张图片" />
-                            <!--  Command="{Binding CopyAnnotationsCommand}"  -->
                         </StackPanel>
                     </Expander>
 
@@ -143,11 +136,6 @@
                                 Command="{Binding ImportImageFolderCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}"
                                 Content="导入目录" />
-                            <Button
-                                Classes="light"
-                                Command="{Binding ImportImagesCommand}"
-                                CommandParameter="{Binding ElementName=DataAnnotationView}"
-                                Content="导入图片" />
                             <Button
                                 Classes="light"
                                 Command="{Binding ImportAnnotationsCommand}"
@@ -296,7 +284,6 @@
                             Classes="light"
                             Command="{Binding SaveAnnotationCommand}"
                             ToolTip.Tip="保存标注">
-                            <!--  Command="{Binding SaveAnnotationCommand}"  -->
                             <avalonia:MaterialIcon
                                 Width="20"
                                 Height="20"
@@ -586,7 +573,7 @@
 								IsEnabled="False"
                                 Command="{Binding GenerateDataSetCommand}">
 								<Grid>
-								    <avalonia:MaterialIcon Kind="Loading">
+								    <avalonia:MaterialIcon Kind="Loading" IsVisible="False">
 										<avalonia:MaterialIcon.Styles>
 											<Style Selector="avalonia|MaterialIcon">
 												<Style.Animations>
