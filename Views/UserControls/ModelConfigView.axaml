@@ -80,7 +80,7 @@
 							<Button.Content>
 								<Panel>
 									<!-- 默认文本 -->
-									<StackPanel Orientation="Horizontal">
+									<StackPanel Orientation="Horizontal" IsVisible="{Binding !IsScanningVenv}">
 										<avalonia:MaterialIcon Kind="FileSearch" IsVisible="{Binding !IsScanningVenv}"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
@@ -116,7 +116,7 @@
 							<Button.Content>
 								<Panel>
 									<!-- 默认文本 -->
-									<StackPanel Orientation="Horizontal">
+									<StackPanel Orientation="Horizontal" IsVisible="{Binding IsEnablePythonConfigView}">
 										<avalonia:MaterialIcon Kind="PlusCircle" IsVisible="{Binding IsEnablePythonConfigView}"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>

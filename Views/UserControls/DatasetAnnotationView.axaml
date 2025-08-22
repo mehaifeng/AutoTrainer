@@ -575,10 +575,32 @@
 
                             <Button Classes="light" Content="在文件管理器中显示" />
 
-                            <Button
+							<Button
                                 Classes="light"
-                                Command="{Binding GenerateDataSetCommand}"
-                                Content="生成数据集" />
+								IsEnabled="False"
+                                Command="{Binding GenerateDataSetCommand}">
+								<Grid>
+								    <avalonia:MaterialIcon Kind="Loading">
+										<avalonia:MaterialIcon.Styles>
+											<Style Selector="avalonia|MaterialIcon">
+												<Style.Animations>
+													<Animation Duration="0:0:1"
+															 IterationCount="INFINITE">
+														<KeyFrame Cue="0%">
+															<Setter Property="RotateTransform.Angle" Value="0.0"/>
+														</KeyFrame>
+														<KeyFrame Cue="100%">
+															<Setter Property="RotateTransform.Angle" Value="360.0"/>
+														</KeyFrame>
+													</Animation>
+												</Style.Animations>
+											</Style>
+										</avalonia:MaterialIcon.Styles>
+									</avalonia:MaterialIcon>
+								    <TextBlock Text="裁剪数据集"/>
+								</Grid>
+							</Button>
+                                
                         </StackPanel>
                     </Expander>
 
