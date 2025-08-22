@@ -315,6 +315,8 @@
                 BorderThickness="1">
                 <paz:ZoomBorder
                     x:Name="ImageZoomBorder"
+					ScrollViewer.HorizontalScrollBarVisibility="Auto"
+					ScrollViewer.VerticalScrollBarVisibility="Auto"
                     ClipToBounds="True"
                     Focusable="True"
                     Stretch="None"
@@ -360,7 +362,11 @@
                         Grid.Row="1"
                         HorizontalScrollBarVisibility="Auto"
                         VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl Margin="10,0,10,10" ItemsSource="{Binding ImageList}">
+                        <ListBox
+							Margin="10,0,10,10" 
+							ItemsSource="{Binding ImageList}"
+							SelectionMode="Single"
+							SelectedIndex="{Binding CurrentImageIndex}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="5" />
@@ -408,7 +414,7 @@
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        </ListBox>
                     </ScrollViewer>
                 </Grid>
             </Border>
