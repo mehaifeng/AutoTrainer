@@ -16,38 +16,24 @@ namespace AutoTrainer.Models
     public partial class AnnotationItem:ObservableObject
     {
         [JsonProperty(nameof(ImageName))]
-        public required string ImageName { get; set; }
+        public string? ImageName { get; set; }
         [JsonProperty("RectangleAnnotation")]
-        public required RectangleModel RectangleModel { get; set; }
+        public RectangleModel? RectangleModel { get; set; }
         [JsonProperty("PoloygenAnnotation")]
-        public required PoloygenModel PoloygenModel { get; set; }
+        public PoloygenModel? PoloygenModel { get; set; }
         [JsonProperty("PointAnnotation")]
-        public required PointModel PointModel { get; set; }
+        public PointModel? PointModel { get; set; }
         /// <summary>
         /// 当前标注的类型
         /// </summary>
         [JsonIgnore]
         public AnnotationToolEnum ToolType { get; set; }
-        [JsonIgnore]
-        public string ClassName
-        {
-            get => ToolType switch
-            {
-                AnnotationToolEnum.Rectangle => RectangleModel.ClassName,
-                AnnotationToolEnum.Polygon => PoloygenModel.ClassName,
-                AnnotationToolEnum.Point => PointModel.ClassName,
-                _ => string.Empty
-            };
-            set
-            {
-                if (ToolType == AnnotationToolEnum.Rectangle)
-                    RectangleModel.ClassName = value;
-                else if (ToolType == AnnotationToolEnum.Polygon)
-                    PoloygenModel.ClassName = value;
-                else if (ToolType == AnnotationToolEnum.Point)
-                    PointModel.ClassName = value;
-            }
-        }
+        /// <summary>
+        /// 类别名称
+        /// </summary>
+        [ObservableProperty]
+        [property: JsonIgnore]
+        private string? className;
 
         #region 边界框
         [ObservableProperty]
