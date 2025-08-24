@@ -213,6 +213,14 @@ public partial class DatasetAnnotationView : UserControl
         {
             // 添加到标注集合
             _viewmodel.CurrentImageAnnotations.Add(_viewmodel.CurrentDrawingItem);
+            if (_viewmodel.AllImageAnnotations.ContainsKey(_viewmodel.CurrentImageFileName))
+            {
+                _viewmodel.AllImageAnnotations[_viewmodel.CurrentImageFileName] = [.._viewmodel.CurrentImageAnnotations];
+            }
+            else
+            {
+                _viewmodel.AllImageAnnotations.Add(_viewmodel.CurrentImageFileName, [.._viewmodel.CurrentImageAnnotations]);
+            }
         }
         else
         {
@@ -303,6 +311,14 @@ public partial class DatasetAnnotationView : UserControl
 
             // 添加到标注集合
             _viewmodel.CurrentImageAnnotations.Add(_viewmodel.CurrentDrawingItem);
+            if (_viewmodel.AllImageAnnotations.ContainsKey(_viewmodel.CurrentImageFileName))
+            {
+                _viewmodel.AllImageAnnotations[_viewmodel.CurrentImageFileName] = [.._viewmodel.CurrentImageAnnotations];
+            }
+            else
+            {
+                _viewmodel.AllImageAnnotations.Add(_viewmodel.CurrentImageFileName, [.._viewmodel.CurrentImageAnnotations]);
+            }
 
             // 移除预览线
             RemovePolygonPreviewLine(_viewmodel.CurrentDrawingItem);
@@ -332,6 +348,14 @@ public partial class DatasetAnnotationView : UserControl
         CreatePointElement(pointAnnotation);
         // 直接添加到标注集合
         _viewmodel.CurrentImageAnnotations.Add(pointAnnotation);
+        if (_viewmodel.AllImageAnnotations.ContainsKey(_viewmodel.CurrentImageFileName))
+        {
+            _viewmodel.AllImageAnnotations[_viewmodel.CurrentImageFileName] = [.._viewmodel.CurrentImageAnnotations];
+        }
+        else
+        {
+            _viewmodel.AllImageAnnotations.Add(_viewmodel.CurrentImageFileName, [.._viewmodel.CurrentImageAnnotations]);
+        }
     }
     /// <summary>
     /// 创建矩形标注元素

@@ -43,6 +43,10 @@ namespace AutoTrainer.ViewModels
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
         //图片文件夹
         public string Imagefolder = string.Empty;
+        //标注文件名
+        public string AnnotationFileName = "AnnotationConfig.json";
+        //存储所有图片的标注数据
+        public Dictionary<string, List<AnnotationItem>> AllImageAnnotations = [];
 
         #region 可绑定字段属性
         // 标注模式
@@ -627,9 +631,9 @@ namespace AutoTrainer.ViewModels
                 {
                     return;
                 }
-                var annotationPath = System.IO.Path.Combine(Imagefolder, "AnnotationConfig.json");
+                var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
                 File.Create(annotationPath).Close();
-                var jsonStr = JsonConvert.SerializeObject(CurrentImageAnnotations, Formatting.Indented);
+                var jsonStr = JsonConvert.SerializeObject(AllImageAnnotations, Formatting.Indented);
                 await File.WriteAllTextAsync(annotationPath,jsonStr);
             }
             catch (Exception ex)
@@ -754,8 +758,41 @@ namespace AutoTrainer.ViewModels
 
         private async Task LoadAnnotationsForCurrentImage()
         {
-            // TODO: 从文件或数据库加载标注数据
             CurrentImageAnnotations.Clear();
+            if (AllImageAnnotations.TryGetValue(CurrentImageFileName, out var annotations))
+            {
+                foreach (var annotation in annotations)
+                {
+                    CurrentImageAnnotations.Add(annotation);
+                }
+            }
+            else
+            {
+                // 如果没有标注数据，再看看本地是否有保存的标注文件
+                var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
+                if (File.Exists(annotationPath))
+                {
+                    try
+                    {
+                        var jsonStr = await File.ReadAllTextAsync(annotationPath);
+                        var allAnnotations = JsonConvert.DeserializeObject<Dictionary<string, List<AnnotationItem>>>(jsonStr);
+                        if (allAnnotations != null && allAnnotations.TryGetValue(CurrentImageFileName, out var fileAnnotations))
+                        {
+                            foreach (var annotation in fileAnnotations)
+                            {
+                                CurrentImageAnnotations.Add(annotation);
+                            }
+                            // 更新全局字典
+                            AllImageAnnotations[CurrentImageFileName] = fileAnnotations;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"加载标注文件失败: {ex.Message}");
+                    }
+                }
+
+            }
             UpdateStatistics();
         }
 
