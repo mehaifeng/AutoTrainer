@@ -1,40 +1,44 @@
 ﻿using Avalonia.Controls;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
-    public class PointModel
+    public class PointModel:AnnotationItem
     {
-        public string AnnotationGuid { get; } = Guid.NewGuid().ToString();
-        /// <summary>
-        /// 点的X坐标
-        /// </summary>
         public double X { get; set; }
-        /// <summary>
-        /// 点的Y坐标
-        /// </summary>
         public double Y { get; set; }
-        /// <summary>
-        /// 点的类别名称
-        /// </summary>
-        public string ClassName { get; set; } = string.Empty;
-        /// <summary>
-        /// 是否可见
-        /// </summary>
-        public bool IsVisible { get; set; } = true;
-        /// <summary>
-        /// 是否被选中
-        /// </summary>
-        public bool IsSelected { get; set; } = false;
-        /// <summary>
-        /// 关联的UI元素
-        /// </summary>
-        [JsonIgnore]
-        public Control? UIElement { get; set; }
+
+        public PointModel() 
+        {
+
+        }
+
+        public PointModel(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public override (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox()
+        {
+            return (X, Y, X, Y);
+        }
+
+        public override bool Contains(double x, double y)
+        {
+            return (x - X) * (x - X) + (y - Y) * (y - Y) <= 5 * 5;
+        }
+
+        public override AnnotationItem Clone()
+        {
+            return new PointModel(X, Y)
+            {
+                ClassName = this.ClassName,
+                IsSelected = this.IsSelected,
+                IsVisible = this.IsVisible,
+                AnnotationType = this.AnnotationType
+            };
+        }
     }
 }

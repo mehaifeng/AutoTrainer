@@ -437,7 +437,7 @@
                     <Expander Header="当前标注" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
                             <!--  当前选中的标注框信息  -->
-                            <TextBlock FontStyle="Italic" Text="{Binding SelectedAnnotation.BoundsInfo}">
+                            <TextBlock FontStyle="Italic" Text="xxxx">
                                 <!--  Text="{Binding SelectedAnnotationInfo}"  -->
                             </TextBlock>
 
@@ -473,7 +473,7 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Value="4" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="0"
@@ -484,7 +484,7 @@
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Value="3" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -495,7 +495,7 @@
                                     Grid.Row="2"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Value="2" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -506,7 +506,7 @@
                                     Grid.Row="3"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Value="1"/>
                             </Grid>
 
                             <Button
@@ -541,7 +541,7 @@
                                             <TextBlock
                                                 FontSize="10"
                                                 Foreground="Gray"
-                                                Text="{Binding BoundsInfo}" />
+                                                Text="xxxx" />
                                         </StackPanel>
 
                                         <CheckBox

@@ -13,149 +13,59 @@ using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
 namespace AutoTrainer.Models
 {
-    public partial class AnnotationItem:ObservableObject
+    public abstract partial class AnnotationItem
     {
-        [JsonProperty(nameof(ImageName))]
-        public string? ImageName { get; set; }
-        [JsonProperty("RectangleAnnotation")]
-        public RectangleModel? RectangleModel { get; set; }
-        [JsonProperty("PoloygenAnnotation")]
-        public PoloygenModel? PoloygenModel { get; set; }
-        [JsonProperty("PointAnnotation")]
-        public PointModel? PointModel { get; set; }
-        /// <summary>
-        /// 当前标注的类型
-        /// </summary>
-        [JsonIgnore]
-        public AnnotationToolEnum ToolType { get; set; }
         /// <summary>
         /// 类别名称
         /// </summary>
-        [ObservableProperty]
-        [property: JsonIgnore]
-        private string? className;
-
-        #region 边界框
-        [ObservableProperty]
-        [property:JsonIgnore]
-        private double x;
-        [ObservableProperty]
-        [property: JsonIgnore]
-        private double y;
-        [ObservableProperty]
-        [property: JsonIgnore]
-        private double width;
-        [ObservableProperty]
-        [property: JsonIgnore]
-        private double height;
-        #endregion
+        public string? ClassName { get; set; }
 
         /// <summary>
-        /// 获取标注的边界信息
+        /// 是否被选中
+        /// </summary>
+        public bool IsSelected { get; set; }
+
+        /// <summary>
+        /// 是否可见
+        /// </summary>
+        public bool IsVisible { get; set; } = true;
+
+        /// <summary>
+        /// 类别唯一标识
+        /// </summary>
+        public AnnotationToolEnum AnnotationType { get; set; }
+
+        /// <summary>
+        /// 实例唯一标识
+        /// </summary>
+        public string InstanceGuid { get; } = Guid.NewGuid().ToString();
+
+        /// <summary>
+        /// 抽象方法：获取边界框
+        /// </summary>
+        public abstract (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox();
+
+        /// <summary>
+        /// 虚方法：判断某点是否在标注区域内
+        /// </summary>
+        /// <param name="x">点的X坐标</param>
+        /// <param name="y">点的Y坐标</param>
+        /// <returns>是否包含该点</returns>
+        public virtual bool Contains(double x, double y)
+        {
+            var (minX, minY, maxX, maxY) = GetBoundingBox();
+            return x >= minX && x <= maxX && y >= minY && y <= maxY;
+        }
+
+        /// <summary>
+        /// 克隆当前标注对象
+        /// </summary>
+        public abstract AnnotationItem Clone();
+
+        /// <summary>
+        /// 标注对象的UI元素
         /// </summary>
         [JsonIgnore]
-        public string BoundsInfo => $"({X:F0}, {Y:F0}) - {Width:F0}x{Height:F0}";
-
-        /// <summary>
-        /// 创建矩形标注。
-        /// </summary>
-        /// <param name="x">矩形左上角的X坐标。</param>
-        /// <param name="y">矩形左上角的Y坐标。</param>
-        /// <param name="width">矩形的宽度。</param>
-        /// <param name="height">矩形的高度。</param>
-        /// <param name="className">标注的类别名称。</param>
-        public AnnotationItem(double x, double y, double width, double height, string className)
-        {
-            RectangleModel = new RectangleModel()
-            {
-                ClassName = className,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-            };
-            ToolType = AnnotationToolEnum.Rectangle;
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
-        }
-
-        /// <summary>
-        /// 创建点标注。
-        /// </summary>
-        /// <param name="x">点的X坐标。</param>
-        /// <param name="y">点的Y坐标。</param>
-        /// <param name="className">标注的类别名称。</param>
-        public AnnotationItem(double x, double y, string className)
-        {
-            PointModel = new PointModel()
-            {
-                X = x,
-                Y = y,
-                ClassName = className,
-            };
-            ToolType = AnnotationToolEnum.Point;
-            X = x;
-            Y = y;
-            Width = 0;
-            Height = 0;
-        }
-
-        /// <summary>
-        /// 创建多边形标注。
-        /// </summary>
-        /// <param name="polygonPoints">多边形的顶点集合。</param>
-        /// <param name="className">标注的类别名称。</param>
-        public AnnotationItem(IEnumerable<Avalonia.Point> polygonPoints, string className)
-        {
-            PoloygenModel = new PoloygenModel()
-            {
-                ClassName = className,
-                Points = [..polygonPoints]
-            };
-            ToolType = AnnotationToolEnum.Polygon;
-            UpdateBoundingBox(); // 根据多边形顶点计算其边界框
-        }
-
-        /// <summary>
-        /// 根据多边形的顶点更新其边界框
-        /// </summary>
-        public void UpdateBoundingBox()
-        {
-            if (ToolType == AnnotationToolEnum.Polygon && PoloygenModel.Points != null && PoloygenModel.Points.Any())
-            {
-                double minX = PoloygenModel.Points.Min(p => p.X);
-                double minY = PoloygenModel.Points.Min(p => p.Y);
-                double maxX = PoloygenModel.Points.Max(p => p.X);
-                double maxY = PoloygenModel.Points.Max(p => p.Y);
-
-                X = minX;
-                Y = minY;
-                Width = maxX - minX;
-                Height = maxY - minY;
-            }
-            else if (ToolType == AnnotationToolEnum.Point)
-            {
-                Width = 0;
-                Height = 0;
-            }
-        }
-
-        #region Json控制
-        public bool ShouldSerializeRectangleModel()
-        {
-            return ToolType == AnnotationToolEnum.Rectangle && RectangleModel != null && PoloygenModel == null && PointModel == null;
-        }
-        public bool ShouldSerializePolygonModel()
-        {
-            return ToolType == AnnotationToolEnum.Polygon && PoloygenModel != null && RectangleModel == null && PointModel == null;
-        }
-        public bool ShouldSerializePointModel()
-        {
-            return ToolType == AnnotationToolEnum.Point && PointModel != null && RectangleModel == null && PoloygenModel == null;
-        }
-        #endregion
-
+        public Control? UIElement { get; set; }
     }
 }

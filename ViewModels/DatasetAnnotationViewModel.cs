@@ -32,7 +32,7 @@ namespace AutoTrainer.ViewModels
 {
     public partial class DatasetAnnotationViewModel : ViewModelBase
     {
-
+        public Canvas ImageCanvas;
         // 操作历史（撤销重做）
         private Stack<List<AnnotationItem>> undoStack = new();
         private Stack<List<AnnotationItem>> redoStack = new();
@@ -41,11 +41,11 @@ namespace AutoTrainer.ViewModels
         public bool CanGoNext => CurrentImageIndex < ImageList.Count - 1;
         // 是否有选中的标注
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
-        //图片文件夹
+        // 图片文件夹
         public string Imagefolder = string.Empty;
-        //标注文件名
+        // 标注文件名
         public string AnnotationFileName = "AnnotationConfig.json";
-        //存储所有图片的标注数据
+        // 存储所有图片的标注数据
         public Dictionary<string, List<AnnotationItem>> AllImageAnnotations = [];
 
         #region 可绑定字段属性
@@ -153,8 +153,9 @@ namespace AutoTrainer.ViewModels
 
         #region 构造函数
 
-        public DatasetAnnotationViewModel()
+        public DatasetAnnotationViewModel(Canvas canvas)
         {
+            ImageCanvas = canvas;
             // 初始化默认类别
             ClassNames.Add("默认类别");
             SelectedClassName = ClassNames.FirstOrDefault() ?? string.Empty;
@@ -378,44 +379,6 @@ namespace AutoTrainer.ViewModels
                 return null;
             }
         }
-        /// <summary>
-        /// 加载一张图片
-        /// </summary>
-        /// <param name="operateType">0：不在ImageList中，且bitmapImage不为null；1：左；2：右</param>
-        /// <param name="bitmapImage"></param>
-        /// <returns></returns>
-        private void LoadAPicture(int operateType, Bitmap bitmapImage)
-        {
-            switch (operateType)
-            {
-                case 0:
-                    {
-                        if (bitmapImage != null)
-                        {
-                            CurrentImage = bitmapImage;
-                        }
-                    }
-                    break;
-                case 1:
-                    {
-                        if (CurrentImageIndex > 0)
-                        {
-                            CurrentImage = new Bitmap(ImageList[CurrentImageIndex-1].FilePath);
-                            CurrentImageIndex--;
-                        }
-                    }
-                    break;
-                case 2:
-                    {
-                        if(CurrentImageIndex < ImageList.Count)
-                        {
-                            CurrentImage = new Bitmap(ImageList[CurrentImageIndex + 1].FilePath);
-                            CurrentImageIndex++;
-                        }
-                    }
-                    break;
-            }
-        }
 
         /// <summary>
         /// 导入选择的图片
@@ -457,6 +420,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 切换到上一张图像
+        /// </summary>
         [RelayCommand]
         private void PreviousImage()
         {
@@ -466,6 +432,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 切换到下一张图像
+        /// </summary>
         [RelayCommand]
         private void NextImage()
         {
@@ -478,7 +447,9 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 类别管理命令
-
+        /// <summary>
+        /// 添加类别
+        /// </summary>
         [RelayCommand]
         private void AddClass()
         {
@@ -489,6 +460,10 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 移除类别
+        /// </summary>
+        /// <param name="className"></param>
         [RelayCommand]
         private void RemoveClass(string className)
         {
@@ -513,7 +488,10 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 标注操作命令
-
+        /// <summary>
+        /// 清除所有标注
+        /// </summary>
+        /// <param name="canvas"></param>
         [RelayCommand]
         private void ClearAllAnnotations(Canvas canvas)
         {
@@ -526,51 +504,59 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 复制标注
+        /// </summary>
         [RelayCommand]
         private void CopyAnnotations()
         {
             // TODO: 实现复制当前图像的标注到剪贴板或下一张图像
         }
 
+        /// <summary>
+        /// 删除选中的标注
+        /// </summary>
+        /// <param name="canvas"></param>
         [RelayCommand]
-        private void DeleteSelectedAnnotation(Canvas canvas)
+        private void DeleteSelectedAnnotation()
         {
             if (SelectedAnnotation != null)
             {
                 SaveToUndoStack();
-                if(SelectedAnnotation.ToolType == AnnotationToolEnum.Rectangle)
+                if(SelectedAnnotation.AnnotationType == AnnotationToolEnum.Rectangle)
                 {
                     // 删除矩形标注
-                    var rectangle = SelectedAnnotation.RectangleModel;
+                    var rectangle = (RectangleModel)SelectedAnnotation;
                     if (rectangle != null)
                     {
-                        var rectItem = canvas.Children.FirstOrDefault(t => t is Rectangle rect && rect.Tag?.ToString() == SelectedAnnotation.RectangleModel.AnnotationGuid);
+                        var rectItem = ImageCanvas.Children.FirstOrDefault(t => t is Rectangle rect && rect.Tag?.ToString() == rectangle.InstanceGuid);
                         if (rectItem != null)
                         {
-                            canvas.Children.Remove(rectItem);
+                            ImageCanvas.Children.Remove(rectItem);
                         }
                     }
                 }
-                else if (SelectedAnnotation.ToolType == AnnotationToolEnum.Polygon)
+                else if (SelectedAnnotation.AnnotationType == AnnotationToolEnum.Polygon)
                 {
                     // 删除多边形标注
-                    var polygon = SelectedAnnotation.PoloygenModel;
+                    var polygon = (PolygonModel)SelectedAnnotation;
                     if (polygon != null)
                     {
-                        var polyItem = canvas.Children.FirstOrDefault(t => t is Polygon poly && poly.Tag?.ToString() == SelectedAnnotation.PoloygenModel.AnnotationGuid);
+                        var polyItem = ImageCanvas.Children.FirstOrDefault(t => t is Polygon poly && poly.Tag?.ToString() == polygon.InstanceGuid);
                         if (polyItem != null)
                         {
-                            canvas.Children.Remove(polyItem);
+                            ImageCanvas.Children.Remove(polyItem);
                         }
                     }
                 }
-                else if (SelectedAnnotation.ToolType == AnnotationToolEnum.Point)
+                else if (SelectedAnnotation.AnnotationType == AnnotationToolEnum.Point)
                 {
+                    var pointModel = (PointModel)SelectedAnnotation;
                     // 删除点标注
-                    var pointItem = canvas.Children.FirstOrDefault(t => t is Ellipse ellipse && ellipse.Tag?.ToString() == SelectedAnnotation.PointModel.AnnotationGuid);
+                    var pointItem = ImageCanvas.Children.FirstOrDefault(t => t is Ellipse ellipse && ellipse.Tag?.ToString() == pointModel.InstanceGuid);
                     if (pointItem != null)
                     {
-                        canvas.Children.Remove(pointItem);
+                        ImageCanvas.Children.Remove(pointItem);
                     }
                 }
                 CurrentImageAnnotations.Remove(SelectedAnnotation);
@@ -579,6 +565,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 撤销
+        /// </summary>
         [RelayCommand]
         private void Undo()
         {
@@ -600,6 +589,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 重做
+        /// </summary>
         [RelayCommand]
         private void Redo()
         {
@@ -621,6 +613,10 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 保存标注数据到本地文件
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task SaveAnnotation()
         {
@@ -725,6 +721,60 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 私有方法
+        private void UpdateUI(AnnotationItem annotationItem)
+        {
+            switch (annotationItem.AnnotationType)
+            {
+                case AnnotationToolEnum.Rectangle:
+                    if (annotationItem is RectangleModel rectModel)
+                    {
+                        var rect = new Rectangle
+                        {
+                            Tag = rectModel.InstanceGuid,
+                            Stroke = Brushes.Red,
+                            StrokeThickness = 2,
+                            Width = rectModel.Width,
+                            Height = rectModel.Height
+                        };
+                        Canvas.SetLeft(rect, rectModel.X);
+                        Canvas.SetTop(rect, rectModel.Y);
+                        rectModel.UIElement = rect;
+                        ImageCanvas.Children.Add(rect);
+                    }
+                    break;
+                case AnnotationToolEnum.Polygon:
+                    if (annotationItem is PolygonModel polygonModel)
+                    {
+                        var poloygen = new Polygon
+                        {
+                            Tag = polygonModel.InstanceGuid,
+                            StrokeThickness = 1,
+                            Stroke = Brushes.Blue,
+                            Points = polygonModel.Points
+                        };
+                        polygonModel.UIElement = poloygen;
+                        ImageCanvas.Children.Add(poloygen);
+                    }
+                    break;
+                case AnnotationToolEnum.Point:
+                    if (annotationItem is PointModel pointModel)
+                    {
+                        var point = new Ellipse
+                        {
+                            Tag = pointModel.InstanceGuid,
+                            Width = 4,
+                            Height = 4,
+                            Stroke = Brushes.DarkGreen,
+                            StrokeThickness = 2,
+                        };
+                        Canvas.SetLeft(point, pointModel.X - 4);
+                        Canvas.SetTop(point, pointModel.Y - 4);
+                        pointModel.UIElement = point;
+                        ImageCanvas.Children.Add(point);
+                    }
+                    break;
+            }
+        }
         private async void LoadCurrentImage()
         {
             if (CurrentImageIndex >= 0 && CurrentImageIndex < ImageList.Count)
@@ -732,12 +782,11 @@ namespace AutoTrainer.ViewModels
                 var imageItem = ImageList[CurrentImageIndex];
                 CurrentImagePath = imageItem.FilePath;
                 CurrentImageFileName = System.IO.Path.GetFileName(imageItem.FilePath);
-
                 try
                 {
                     CurrentImage = new Bitmap(imageItem.FilePath);
                     CurrentImageSize = $"{CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height}";
-
+                    
                     // 加载该图像的标注数据
                     await LoadAnnotationsForCurrentImage();
                 }
@@ -747,6 +796,7 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
+
         /// <summary>
         /// 图像中选择的标注项发生变化调用
         /// </summary>
@@ -756,14 +806,20 @@ namespace AutoTrainer.ViewModels
             SelectedAnnotation = annotation;
         }
 
+        /// <summary>
+        /// 从全局字典或本地文件加载当前图像的标注数据
+        /// </summary>
+        /// <returns></returns>
         private async Task LoadAnnotationsForCurrentImage()
         {
             CurrentImageAnnotations.Clear();
+            ImageCanvas.Children.Clear();
             if (AllImageAnnotations.TryGetValue(CurrentImageFileName, out var annotations))
             {
                 foreach (var annotation in annotations)
                 {
                     CurrentImageAnnotations.Add(annotation);
+                    UpdateUI(annotation);
                 }
             }
             else
@@ -781,9 +837,12 @@ namespace AutoTrainer.ViewModels
                             foreach (var annotation in fileAnnotations)
                             {
                                 CurrentImageAnnotations.Add(annotation);
+                                UpdateUI(annotation);
                             }
                             // 更新全局字典
                             AllImageAnnotations[CurrentImageFileName] = fileAnnotations;
+                            // 标注添加到图像控件上
+
                         }
                     }
                     catch (Exception ex)
@@ -796,6 +855,9 @@ namespace AutoTrainer.ViewModels
             UpdateStatistics();
         }
 
+        /// <summary>
+        /// 保存当前标注状态到撤销栈
+        /// </summary>
         private void SaveToUndoStack()
         {
             undoStack.Push(new List<AnnotationItem>(CurrentImageAnnotations));
@@ -803,12 +865,18 @@ namespace AutoTrainer.ViewModels
             UpdateStackStates();
         }
 
+        /// <summary>
+        /// 更新撤销重做状态
+        /// </summary>
         private void UpdateStackStates()
         {
             CanUndo = undoStack.Count > 0;
             CanRedo = redoStack.Count > 0;
         }
 
+        /// <summary>
+        /// 更新统计信息
+        /// </summary>
         private void UpdateStatistics()
         {
             TotalImageCount = ImageList.Count;
