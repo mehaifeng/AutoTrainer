@@ -1,4 +1,5 @@
 ﻿using AutoTrainer.ControlHelper;
+using AutoTrainer.Extension;
 using AutoTrainer.Helpers;
 using AutoTrainer.Models;
 using AutoTrainer.Views;
@@ -523,7 +524,7 @@ namespace AutoTrainer.ViewModels
             if (SelectedAnnotation != null)
             {
                 SaveToUndoStack();
-                if(SelectedAnnotation.AnnotationType == AnnotationToolEnum.Rectangle)
+                if(SelectedAnnotation.GetType() == typeof(RectangleModel))
                 {
                     // 删除矩形标注
                     var rectangle = (RectangleModel)SelectedAnnotation;
@@ -536,7 +537,7 @@ namespace AutoTrainer.ViewModels
                         }
                     }
                 }
-                else if (SelectedAnnotation.AnnotationType == AnnotationToolEnum.Polygon)
+                else if (SelectedAnnotation.GetType() == typeof(PolygonModel))
                 {
                     // 删除多边形标注
                     var polygon = (PolygonModel)SelectedAnnotation;
@@ -549,7 +550,7 @@ namespace AutoTrainer.ViewModels
                         }
                     }
                 }
-                else if (SelectedAnnotation.AnnotationType == AnnotationToolEnum.Point)
+                else if (SelectedAnnotation.GetType() == typeof(PointModel))
                 {
                     var pointModel = (PointModel)SelectedAnnotation;
                     // 删除点标注
@@ -618,7 +619,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         /// <returns></returns>
         [RelayCommand]
-        private async Task SaveAnnotation()
+        private void SaveAnnotation()
         {
             try
             {
@@ -628,9 +629,7 @@ namespace AutoTrainer.ViewModels
                     return;
                 }
                 var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
-                File.Create(annotationPath).Close();
-                var jsonStr = JsonConvert.SerializeObject(AllImageAnnotations, Formatting.Indented);
-                await File.WriteAllTextAsync(annotationPath,jsonStr);
+                AllImageAnnotations.SaveToFile(annotationPath);
             }
             catch (Exception ex)
             {
@@ -723,10 +722,9 @@ namespace AutoTrainer.ViewModels
         #region 私有方法
         private void UpdateUI(AnnotationItem annotationItem)
         {
-            switch (annotationItem.AnnotationType)
+            switch (annotationItem)
             {
-                case AnnotationToolEnum.Rectangle:
-                    if (annotationItem is RectangleModel rectModel)
+                case RectangleModel rectModel:
                     {
                         var rect = new Rectangle
                         {
@@ -742,8 +740,7 @@ namespace AutoTrainer.ViewModels
                         ImageCanvas.Children.Add(rect);
                     }
                     break;
-                case AnnotationToolEnum.Polygon:
-                    if (annotationItem is PolygonModel polygonModel)
+                case PolygonModel polygonModel:
                     {
                         var poloygen = new Polygon
                         {
@@ -756,8 +753,7 @@ namespace AutoTrainer.ViewModels
                         ImageCanvas.Children.Add(poloygen);
                     }
                     break;
-                case AnnotationToolEnum.Point:
-                    if (annotationItem is PointModel pointModel)
+                case PointModel pointModel:
                     {
                         var point = new Ellipse
                         {
@@ -775,7 +771,7 @@ namespace AutoTrainer.ViewModels
                     break;
             }
         }
-        private async void LoadCurrentImage()
+        private void LoadCurrentImage()
         {
             if (CurrentImageIndex >= 0 && CurrentImageIndex < ImageList.Count)
             {
@@ -788,7 +784,7 @@ namespace AutoTrainer.ViewModels
                     CurrentImageSize = $"{CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height}";
                     
                     // 加载该图像的标注数据
-                    await LoadAnnotationsForCurrentImage();
+                    LoadAnnotationsForCurrentImage();
                 }
                 catch (Exception ex)
                 {
@@ -810,7 +806,7 @@ namespace AutoTrainer.ViewModels
         /// 从全局字典或本地文件加载当前图像的标注数据
         /// </summary>
         /// <returns></returns>
-        private async Task LoadAnnotationsForCurrentImage()
+        private void LoadAnnotationsForCurrentImage()
         {
             CurrentImageAnnotations.Clear();
             ImageCanvas.Children.Clear();
@@ -830,19 +826,18 @@ namespace AutoTrainer.ViewModels
                 {
                     try
                     {
-                        var jsonStr = await File.ReadAllTextAsync(annotationPath);
-                        var allAnnotations = JsonConvert.DeserializeObject<Dictionary<string, List<AnnotationItem>>>(jsonStr);
+                        //var jsonStr = await File.ReadAllTextAsync(annotationPath);
+                        //var allAnnotations = JsonConvert.DeserializeObject<Dictionary<string, List<AnnotationItem>>>(jsonStr);
+                        var allAnnotations = AnnotationFactory.LoadFromFile(annotationPath);
                         if (allAnnotations != null && allAnnotations.TryGetValue(CurrentImageFileName, out var fileAnnotations))
                         {
+                            AllImageAnnotations = allAnnotations;
                             foreach (var annotation in fileAnnotations)
                             {
                                 CurrentImageAnnotations.Add(annotation);
                                 UpdateUI(annotation);
                             }
                             // 更新全局字典
-                            AllImageAnnotations[CurrentImageFileName] = fileAnnotations;
-                            // 标注添加到图像控件上
-
                         }
                     }
                     catch (Exception ex)

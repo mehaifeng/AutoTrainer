@@ -25,9 +25,15 @@ namespace AutoTrainer.Models
             Height = height;
         }
 
-        public override (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox()
+        public override BoundingBoxModel GetBoundingBox()
         {
-            return (X, Y, X + Width, Y + Height);
+            return new BoundingBoxModel
+            {
+                MinX = X,
+                MinY = Y,
+                MaxX = X + Width,
+                MaxY = Y + Height
+            };
         }
 
         public override bool Contains(double x, double y)
@@ -42,7 +48,6 @@ namespace AutoTrainer.Models
                 ClassName = this.ClassName,
                 IsSelected = this.IsSelected,
                 IsVisible = this.IsVisible,
-                AnnotationType = this.AnnotationType
             };
         }
     }

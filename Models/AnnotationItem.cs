@@ -13,7 +13,7 @@ using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
 namespace AutoTrainer.Models
 {
-    public abstract partial class AnnotationItem
+    public abstract partial class AnnotationItem : ObservableObject
     {
         /// <summary>
         /// 类别名称
@@ -23,15 +23,17 @@ namespace AutoTrainer.Models
         /// <summary>
         /// 是否被选中
         /// </summary>
+        [JsonIgnore]
         public bool IsSelected { get; set; }
 
         /// <summary>
         /// 是否可见
         /// </summary>
+        [JsonIgnore]
         public bool IsVisible { get; set; } = true;
 
         /// <summary>
-        /// 类别唯一标识
+        /// 标注框类型
         /// </summary>
         public AnnotationToolEnum AnnotationType { get; set; }
 
@@ -43,7 +45,16 @@ namespace AutoTrainer.Models
         /// <summary>
         /// 抽象方法：获取边界框
         /// </summary>
-        public abstract (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox();
+        public abstract BoundingBoxModel GetBoundingBox();
+
+        [ObservableProperty]
+        [property:JsonIgnore]
+        public BoundingBoxModel? boundingBoxInfo;
+
+        public void UpdateBoundingBoxInfo()
+        {
+            BoundingBoxInfo = GetBoundingBox();
+        }
 
         /// <summary>
         /// 虚方法：判断某点是否在标注区域内
@@ -53,8 +64,8 @@ namespace AutoTrainer.Models
         /// <returns>是否包含该点</returns>
         public virtual bool Contains(double x, double y)
         {
-            var (minX, minY, maxX, maxY) = GetBoundingBox();
-            return x >= minX && x <= maxX && y >= minY && y <= maxY;
+            var boundingBox = GetBoundingBox();
+            return x >= boundingBox.MinX && x <= boundingBox.MaxX && y >= boundingBox.MinY && y <= boundingBox.MaxY;
         }
 
         /// <summary>

@@ -8,17 +8,23 @@ namespace AutoTrainer.Models
     {
         public List<Point> Points { get; set; } = new List<Point>();
 
-        public override (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox()
+        public override BoundingBoxModel GetBoundingBox()
         {
             if (Points == null || Points.Count == 0)
-                return (0, 0, 0, 0);
+                return new BoundingBoxModel();
 
             double minX = Points.Min(p => p.X);
             double minY = Points.Min(p => p.Y);
             double maxX = Points.Max(p => p.X);
             double maxY = Points.Max(p => p.Y);
 
-            return (minX, minY, maxX, maxY);
+            return new BoundingBoxModel
+            {
+                MinX = minX,
+                MinY = minY,
+                MaxX = maxX,
+                MaxY = maxY
+            };
         }
 
         // 简单实现：使用射线法判断点是否在多边形内（适用于闭合多边形）
@@ -46,7 +52,6 @@ namespace AutoTrainer.Models
                 ClassName = this.ClassName,
                 IsSelected = this.IsSelected,
                 IsVisible = this.IsVisible,
-                AnnotationType = this.AnnotationType
             };
             clone.Points.AddRange(this.Points.Select(p => new Point(p.X, p.Y)));
             return clone;

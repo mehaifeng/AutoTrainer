@@ -20,9 +20,15 @@ namespace AutoTrainer.Models
             Y = y;
         }
 
-        public override (double MinX, double MinY, double MaxX, double MaxY) GetBoundingBox()
+        public override BoundingBoxModel GetBoundingBox()
         {
-            return (X, Y, X, Y);
+            return new BoundingBoxModel
+            {
+                MinX = X,
+                MinY = Y,
+                MaxX = X,
+                MaxY = Y
+            };
         }
 
         public override bool Contains(double x, double y)
@@ -37,7 +43,6 @@ namespace AutoTrainer.Models
                 ClassName = this.ClassName,
                 IsSelected = this.IsSelected,
                 IsVisible = this.IsVisible,
-                AnnotationType = this.AnnotationType
             };
         }
     }

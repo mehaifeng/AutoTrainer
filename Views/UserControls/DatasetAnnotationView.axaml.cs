@@ -269,8 +269,8 @@ public partial class DatasetAnnotationView : UserControl
         var points = new List<Point> { startPoint };
         _viewmodel.CurrentDrawingItem = new PolygonModel
         {
-            Points = points,
             AnnotationType = AnnotationToolEnum.Polygon,
+            Points = points,
             ClassName = _viewmodel.CurrentClassName
         };
         var polygon = (PolygonModel)_viewmodel.CurrentDrawingItem;
@@ -462,7 +462,7 @@ public partial class DatasetAnnotationView : UserControl
         }
     }
 
-    private void UpdatePolygonPoints(Polygon polygon, List<Avalonia.Point> points)
+    private void UpdatePolygonPoints(Polygon polygon, List<Point> points)
     {
         polygon.Points.Clear();
         foreach (var point in points)
@@ -627,22 +627,19 @@ public partial class DatasetAnnotationView : UserControl
         // 记录元素的初始位置
 
 
-        switch (item.AnnotationType)
+        switch (item)
         {
-            case AnnotationToolEnum.Rectangle:
-                if (item is RectangleModel rect)
+            case RectangleModel rect:
                 {
                     _elementStartPosition = new Point(rect.X, rect.Y);
                 }
                 break;
-            case AnnotationToolEnum.Point:
-                if (item is PointModel pointModel)
+            case PointModel pointModel:
                 {
                     _elementStartPosition = new Point(pointModel.X, pointModel.Y);
                 }
                 break;
-            case AnnotationToolEnum.Polygon:
-                if (item is PolygonModel polygon)
+            case PolygonModel polygon:
                 {
                     // 对于多边形，保存所有原始点的位置
                     _originalPolygonPoints = [];
@@ -670,10 +667,9 @@ public partial class DatasetAnnotationView : UserControl
         var deltaX = currentPosition.X - _dragStartPoint.X;
         var deltaY = currentPosition.Y - _dragStartPoint.Y;
 
-        switch (_draggingItem.AnnotationType)
+        switch (_draggingItem)
         {
-            case AnnotationToolEnum.Rectangle:
-                if (_draggingItem is RectangleModel rect)
+            case RectangleModel rect:
                 {
                     // 更新矩形位置
                     rect.X = _elementStartPosition.X + deltaX;
@@ -682,8 +678,7 @@ public partial class DatasetAnnotationView : UserControl
                 }
                 break;
 
-            case AnnotationToolEnum.Point:
-                if(_draggingItem is PointModel point)
+            case PointModel point:
                 {
                     // 更新点位置
                     point.X = _elementStartPosition.X + deltaX;
@@ -692,7 +687,7 @@ public partial class DatasetAnnotationView : UserControl
                 }
                 break;
 
-            case AnnotationToolEnum.Polygon:
+            case PolygonModel:
                 // 更新多边形所有顶点位置
                 UpdatePolygonPosition(_draggingItem, deltaX, deltaY);
                 UpdatePolygonElement(_draggingItem);
@@ -727,7 +722,7 @@ public partial class DatasetAnnotationView : UserControl
         }
 
         // 更新边界框
-        //polygon.GetBoundingBox();
+        polygon.GetBoundingBox();
     }
 
     /// <summary>

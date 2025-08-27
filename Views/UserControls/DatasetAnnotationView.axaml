@@ -436,11 +436,6 @@
                     <!--  当前标注信息  -->
                     <Expander Header="当前标注" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
-                            <!--  当前选中的标注框信息  -->
-                            <TextBlock FontStyle="Italic" Text="xxxx">
-                                <!--  Text="{Binding SelectedAnnotationInfo}"  -->
-                            </TextBlock>
-
                             <!--  类别选择  -->
 							<ComboBox
 								Theme="{StaticResource MaterialOutlineComboBox}"
@@ -449,7 +444,7 @@
                                 IsEnabled="{Binding HasSelectedAnnotation}"
                                 ItemsSource="{Binding ClassNames}"
                                 SelectedItem="{Binding SelectedAnnotation.ClassName}" />
-
+							<TextBlock Text="边界框" Margin="0,10,0,10"/>
                             <!--  坐标信息  -->
                             <Grid IsEnabled="{Binding HasSelectedAnnotation}">
                                 <Grid.ColumnDefinitions>
@@ -473,7 +468,7 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="4" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MinX, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="0"
@@ -484,7 +479,7 @@
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="3" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MinY}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -495,7 +490,7 @@
                                     Grid.Row="2"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="2" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MaxX}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -506,7 +501,7 @@
                                     Grid.Row="3"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="1"/>
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MaxY}"/>
                             </Grid>
 
                             <Button
