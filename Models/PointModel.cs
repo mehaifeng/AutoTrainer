@@ -24,10 +24,10 @@ namespace AutoTrainer.Models
         {
             return new BoundingBoxModel
             {
-                MinX = X,
-                MinY = Y,
-                MaxX = 0,
-                MaxY = 0
+                X = X,
+                Y = Y,
+                Width = 0,
+                Height = 0
             };
         }
 

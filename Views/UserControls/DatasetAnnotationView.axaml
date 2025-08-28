@@ -348,7 +348,7 @@
                     <ScrollViewer
                         Grid.Row="1"
                         HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Disabled">
+                        VerticalScrollBarVisibility="Auto">
                         <ListBox
 							Margin="10,0,10,10" 
 							ItemsSource="{Binding ImageList}"
@@ -468,7 +468,7 @@
                                     Grid.Row="0"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MinX, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.X, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
                                 <TextBlock
                                     Grid.Row="1"
                                     Grid.Column="0"
@@ -479,7 +479,7 @@
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     Minimum="0"
-                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MinY}" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Y}" />
                                 <TextBlock
                                     Grid.Row="2"
                                     Grid.Column="0"
@@ -490,7 +490,7 @@
                                     Grid.Row="2"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MaxX}" />
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Width}" />
                                 <TextBlock
                                     Grid.Row="3"
                                     Grid.Column="0"
@@ -501,7 +501,7 @@
                                     Grid.Row="3"
                                     Grid.Column="1"
                                     Minimum="1"
-                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.MaxY}"/>
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Height}"/>
                             </Grid>
 
                             <Button
@@ -568,7 +568,7 @@
 								IsEnabled="{Binding IsApplyAsTemplate}"
                                 Command="{Binding CroppingImgAsDataSetCommand}">
 								<Grid>
-								    <avalonia:MaterialIcon Kind="Loading" IsVisible="False">
+								    <avalonia:MaterialIcon Kind="Loading" IsVisible="{Binding IsCroppingInProgress}">
 										<avalonia:MaterialIcon.Styles>
 											<Style Selector="avalonia|MaterialIcon">
 												<Style.Animations>
@@ -585,7 +585,7 @@
 											</Style>
 										</avalonia:MaterialIcon.Styles>
 									</avalonia:MaterialIcon>
-								    <TextBlock Text="裁剪数据集"/>
+								    <TextBlock IsVisible="{Binding IsShowCroppingText}" Text="裁剪数据集"/>
 								</Grid>
 							</Button>
                                 

@@ -19,6 +19,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
 using Newtonsoft.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -111,7 +113,7 @@ namespace AutoTrainer.ViewModels
         private bool isDrawingPolygon = false;
 
         // 存储绘制的起始点
-        public Point? drawingStartPoint = null;
+        public Avalonia.Point? drawingStartPoint = null;
 
         [ObservableProperty]
         private bool isCreatingTemplate = false;
@@ -148,6 +150,12 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private bool isApplyAsTemplate = false;
+
+        [ObservableProperty]
+        private bool isCroppingInProgress = false;
+
+        [ObservableProperty]
+        private bool isShowCroppingText = true;
         #endregion
 
         #region 事件和委托
@@ -541,7 +549,7 @@ namespace AutoTrainer.ViewModels
                     var rectangle = (RectangleModel)SelectedAnnotation;
                     if (rectangle != null)
                     {
-                        var rectItem = ImageCanvas.Children.FirstOrDefault(t => t is Rectangle rect && rect.Tag?.ToString() == rectangle.InstanceGuid);
+                        var rectItem = ImageCanvas.Children.FirstOrDefault(t => t is Avalonia.Controls.Shapes.Rectangle rect && rect.Tag?.ToString() == rectangle.InstanceGuid);
                         if (rectItem != null)
                         {
                             ImageCanvas.Children.Remove(rectItem);
@@ -719,22 +727,76 @@ namespace AutoTrainer.ViewModels
 
         #region 生成数据集
 
-        /// <summary>
-        /// 将裁剪图像作为数据集
-        /// </summary>
         [RelayCommand]
-        private void CroppingImgAsDataSet()
+        private async Task CroppingImgAsDataSet()
         {
-            if (IsApplyAsTemplate)
+            if (!IsApplyAsTemplate)
+                return;
+
+            if (CurrentImageAnnotations.Count == 0)
             {
-               if(CurrentImageAnnotations.Count > 0)
-                {
+                // 可选：提示用户没有标注
+                return;
+            }
 
-                }
-                else
+            string baseOutputPath = System.IO.Path.Combine(Environment.CurrentDirectory, "CroppedImages");
+            Directory.CreateDirectory(baseOutputPath);
+            IsCroppingInProgress = true;
+            IsShowCroppingText = false;
+            try
+            {
+                foreach (var imageItem in ImageList)
                 {
+                    if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
+                        continue;
 
+                    try
+                    {
+                        using var originalImage = SixLabors.ImageSharp.Image.Load(imageItem.FilePath);
+
+                        foreach (var annotation in CurrentImageAnnotations)
+                        {
+                            var className = annotation.ClassName ?? "Unknown";
+                            var outputPath = System.IO.Path.Combine(baseOutputPath, className);
+                            Directory.CreateDirectory(outputPath);
+
+                            var boundingBox = annotation.GetBoundingBox();
+                            var cropRectangle = new SixLabors.ImageSharp.Rectangle(
+                                (int)boundingBox.X,
+                                (int)boundingBox.Y,
+                                (int)boundingBox.Width,
+                                (int)boundingBox.Height
+                            );
+
+                            // 防止越界裁剪
+                            cropRectangle = SixLabors.ImageSharp.Rectangle.Intersect(cropRectangle, originalImage.Bounds);
+
+                            if (cropRectangle.Width <= 0 || cropRectangle.Height <= 0)
+                                continue;
+
+                            using var croppedImage = originalImage.Clone(ctx => ctx.Crop(cropRectangle));
+                            var fileName = System.IO.Path.GetFileNameWithoutExtension(imageItem.FilePath);
+                            var croppedFileName = $"{fileName}_{annotation.InstanceGuid}.png";
+                            var savePath = System.IO.Path.Combine(outputPath, croppedFileName);
+
+                            await croppedImage.SaveAsPngAsync(savePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 可选：记录日志或提示错误
+                        Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                
+            }
+            finally
+            {
+                IsCroppingInProgress = false;
+                IsShowCroppingText = true;
             }
         }
         #endregion
@@ -750,7 +812,7 @@ namespace AutoTrainer.ViewModels
             {
                 case RectangleModel rectModel:
                     {
-                        var rect = new Rectangle
+                        var rect = new Avalonia.Controls.Shapes.Rectangle
                         {
                             Tag = rectModel.InstanceGuid,
                             Stroke = Brushes.Red,

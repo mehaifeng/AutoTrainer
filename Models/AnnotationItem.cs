@@ -66,7 +66,7 @@ namespace AutoTrainer.Models
         public virtual bool Contains(double x, double y)
         {
             var boundingBox = GetBoundingBox();
-            return x >= boundingBox.MinX && x <= boundingBox.MaxX && y >= boundingBox.MinY && y <= boundingBox.MaxY;
+            return x >= boundingBox.X && x <= boundingBox.X + boundingBox.Width && y >= boundingBox.Y && y <= boundingBox.Y + boundingBox.Height;
         }
 
         /// <summary>
