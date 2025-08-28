@@ -410,6 +410,7 @@ public partial class DatasetAnnotationView : UserControl
                 point.X = Canvas.GetLeft(ellipse);
                 point.Y = Canvas.GetTop(ellipse);
             }
+            item.UpdateBoundingBoxInfo();
         }
     }
 
@@ -425,6 +426,7 @@ public partial class DatasetAnnotationView : UserControl
                 rectangle.Width = Math.Max(0, rect.Width);
                 rectangle.Height = Math.Max(0, rect.Height);
             }
+            item.UpdateBoundingBoxInfo();
         }
     }
     /// <summary>
@@ -443,7 +445,7 @@ public partial class DatasetAnnotationView : UserControl
         };
 
         // 设置多边形顶点
-        UpdatePolygonPoints(polygon, item.Points);
+        polygon.Points = [.. item.Points];
 
         AnnotationCanvas.Children.Add(polygon);
         item.UIElement = polygon;
@@ -454,20 +456,13 @@ public partial class DatasetAnnotationView : UserControl
         if (item != null)
         {
             var polygon = (PolygonModel)item;
+            //RecreatePolygonElement(polygon);
             if (polygon.UIElement is Polygon thisPolygon)
             {
                 var points = new List<Point>(polygon.Points);
-                UpdatePolygonPoints(thisPolygon, points);
+                thisPolygon.Points = [.. points];
             }
-        }
-    }
-
-    private void UpdatePolygonPoints(Polygon polygon, List<Point> points)
-    {
-        polygon.Points.Clear();
-        foreach (var point in points)
-        {
-            polygon.Points.Add(point);
+            item.UpdateBoundingBoxInfo();
         }
     }
 
@@ -645,7 +640,7 @@ public partial class DatasetAnnotationView : UserControl
                     _originalPolygonPoints = [];
                     foreach (var point in polygon.Points)
                     {
-                        _originalPolygonPoints.Add(new Avalonia.Point(point.X, point.Y));
+                        _originalPolygonPoints.Add(new Point(point.X, point.Y));
                     }
                 }
                 break;
@@ -688,8 +683,9 @@ public partial class DatasetAnnotationView : UserControl
                 break;
 
             case PolygonModel:
-                // 更新多边形所有顶点位置
+                // 更新多边形数据模型模型所有位置
                 UpdatePolygonPosition(_draggingItem, deltaX, deltaY);
+                // 更新UI元素位置
                 UpdatePolygonElement(_draggingItem);
                 break;
         }
@@ -752,8 +748,7 @@ public partial class DatasetAnnotationView : UserControl
 
         if (item.UIElement != null)
         {
-            var ploygon = item.UIElement as Polygon;
-            if (ploygon != null)
+            if (item.UIElement is Polygon ploygon)
             {
                 ploygon.Opacity = opacity;
                 ploygon.StrokeThickness = isDragging ? 3 : 2;

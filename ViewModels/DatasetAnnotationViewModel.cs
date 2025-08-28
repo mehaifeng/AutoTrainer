@@ -33,6 +33,7 @@ namespace AutoTrainer.ViewModels
 {
     public partial class DatasetAnnotationViewModel : ViewModelBase
     {
+        #region 全局属性
         public Canvas ImageCanvas;
         // 操作历史（撤销重做）
         private Stack<List<AnnotationItem>> undoStack = new();
@@ -48,6 +49,7 @@ namespace AutoTrainer.ViewModels
         public string AnnotationFileName = "AnnotationConfig.json";
         // 存储所有图片的标注数据
         public Dictionary<string, List<AnnotationItem>> AllImageAnnotations = [];
+        #endregion
 
         #region 可绑定字段属性
         // 标注模式
@@ -444,6 +446,15 @@ namespace AutoTrainer.ViewModels
                 CurrentImageIndex++;
             }
         }
+        partial void OnIsApplyAsTemplateChanged(bool value)
+        {
+            ImageList[CurrentImageIndex].AsCroppingTemplate = value;
+        }
+
+        partial void OnCurrentImageIndexChanged(int value)
+        {
+            IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
+        }
 
         #endregion
 
@@ -560,6 +571,11 @@ namespace AutoTrainer.ViewModels
                         ImageCanvas.Children.Remove(pointItem);
                     }
                 }
+
+                if (AllImageAnnotations.TryGetValue(CurrentImageFileName, out var annotationItems))
+                {
+                    annotationItems.Remove(SelectedAnnotation);
+                }
                 CurrentImageAnnotations.Remove(SelectedAnnotation);
                 SelectedAnnotation = null;
                 UpdateStatistics();
@@ -623,7 +639,7 @@ namespace AutoTrainer.ViewModels
         {
             try
             {
-                //在图片目录创建Anotations.json文件 保存每一张图片的标注数据
+                //在图片目录创建AnnotationConfig.json文件 保存每一张图片的标注数据
                 if (CurrentImageIndex < 0 || CurrentImageIndex >= ImageList.Count)
                 {
                     return;
@@ -672,7 +688,7 @@ namespace AutoTrainer.ViewModels
         #region 导入导出命令
 
         [RelayCommand]
-        private async Task ImportAnnotations()
+        private void ImportAnnotations()
         {
             try
             {
@@ -702,8 +718,12 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 生成数据集
+
+        /// <summary>
+        /// 将裁剪图像作为数据集
+        /// </summary>
         [RelayCommand]
-        private void GenerateDataSet()
+        private void CroppingImgAsDataSet()
         {
             if (IsApplyAsTemplate)
             {
@@ -720,6 +740,10 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 私有方法
+        /// <summary>
+        /// 更新UI(动态加载标注)
+        /// </summary>
+        /// <param name="annotationItem"></param>
         private void UpdateUI(AnnotationItem annotationItem)
         {
             switch (annotationItem)
@@ -771,6 +795,10 @@ namespace AutoTrainer.ViewModels
                     break;
             }
         }
+
+        /// <summary>
+        /// 加载当前图片
+        /// </summary>
         private void LoadCurrentImage()
         {
             if (CurrentImageIndex >= 0 && CurrentImageIndex < ImageList.Count)
@@ -799,7 +827,11 @@ namespace AutoTrainer.ViewModels
         /// <param name="annotation"></param>
         private void SelectedAnnvationChanged(AnnotationItem? annotation)
         {
-            SelectedAnnotation = annotation;
+            if (annotation != null)
+            {
+                annotation.UpdateBoundingBoxInfo();
+                SelectedAnnotation = annotation;
+            }
         }
 
         /// <summary>

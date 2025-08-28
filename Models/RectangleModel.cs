@@ -31,8 +31,8 @@ namespace AutoTrainer.Models
             {
                 MinX = X,
                 MinY = Y,
-                MaxX = X + Width,
-                MaxY = Y + Height
+                MaxX = Width,
+                MaxY = Height
             };
         }
 

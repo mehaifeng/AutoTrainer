@@ -25,5 +25,8 @@ namespace AutoTrainer.Models
         [ObservableProperty]
         private int annotationCount = 0;
 
+        [ObservableProperty]
+        private bool asCroppingTemplate = false;
+
     }
 }

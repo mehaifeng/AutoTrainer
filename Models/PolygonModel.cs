@@ -22,8 +22,8 @@ namespace AutoTrainer.Models
             {
                 MinX = minX,
                 MinY = minY,
-                MaxX = maxX,
-                MaxY = maxY
+                MaxX = maxX - minX,
+                MaxY = maxY - minY,
             };
         }
 

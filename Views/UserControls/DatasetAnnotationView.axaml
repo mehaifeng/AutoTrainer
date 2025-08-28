@@ -443,7 +443,7 @@
 								p1:ComboBoxAssist.Label = "选择类别"
                                 IsEnabled="{Binding HasSelectedAnnotation}"
                                 ItemsSource="{Binding ClassNames}"
-                                SelectedItem="{Binding SelectedAnnotation.ClassName}" />
+                                SelectedItem="{Binding SelectedAnnotation.ClassName,UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}" />
 							<TextBlock Text="边界框" Margin="0,10,0,10"/>
                             <!--  坐标信息  -->
                             <Grid IsEnabled="{Binding HasSelectedAnnotation}">
@@ -565,8 +565,8 @@
 
 							<Button
                                 Classes="light"
-								IsEnabled="False"
-                                Command="{Binding GenerateDataSetCommand}">
+								IsEnabled="{Binding IsApplyAsTemplate}"
+                                Command="{Binding CroppingImgAsDataSetCommand}">
 								<Grid>
 								    <avalonia:MaterialIcon Kind="Loading" IsVisible="False">
 										<avalonia:MaterialIcon.Styles>

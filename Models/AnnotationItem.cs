@@ -18,7 +18,8 @@ namespace AutoTrainer.Models
         /// <summary>
         /// 类别名称
         /// </summary>
-        public string? ClassName { get; set; }
+        [ObservableProperty]
+        private string? className;
 
         /// <summary>
         /// 是否被选中
@@ -49,7 +50,7 @@ namespace AutoTrainer.Models
 
         [ObservableProperty]
         [property:JsonIgnore]
-        public BoundingBoxModel? boundingBoxInfo;
+        private BoundingBoxModel? boundingBoxInfo;
 
         public void UpdateBoundingBoxInfo()
         {
