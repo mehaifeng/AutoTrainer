@@ -11,6 +11,9 @@ namespace AutoTrainer.Models
     public partial class ImageItem:ObservableObject
     {
         [ObservableProperty]
+        private string fileName = string.Empty;
+
+        [ObservableProperty]
         private string filePath = string.Empty;
 
         [ObservableProperty]

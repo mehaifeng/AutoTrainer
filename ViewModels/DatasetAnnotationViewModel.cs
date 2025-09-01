@@ -20,6 +20,7 @@ using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
@@ -156,6 +157,9 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private bool isShowCroppingText = true;
+
+        [ObservableProperty]
+        private int finishedCroppingCount = 0;
         #endregion
 
         #region 事件和委托
@@ -346,6 +350,7 @@ namespace AutoTrainer.ViewModels
             {
                 var imageItem = new ImageItem
                 {
+                    FileName = file.Name,
                     FilePath = file.Path.LocalPath
                 };
 
@@ -730,74 +735,121 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task CroppingImgAsDataSet()
         {
-            if (!IsApplyAsTemplate)
-                return;
-
-            if (CurrentImageAnnotations.Count == 0)
-            {
-                // 可选：提示用户没有标注
-                return;
-            }
-
             string baseOutputPath = System.IO.Path.Combine(Environment.CurrentDirectory, "CroppedImages");
             Directory.CreateDirectory(baseOutputPath);
             IsCroppingInProgress = true;
             IsShowCroppingText = false;
-            try
+            await Task.Run(async () =>
             {
-                foreach (var imageItem in ImageList)
+                try
                 {
-                    if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
-                        continue;
-
-                    try
+                    foreach (var imageItem in ImageList)
                     {
-                        using var originalImage = SixLabors.ImageSharp.Image.Load(imageItem.FilePath);
+                        if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
+                            continue;
+                        // 获取当前图片的标注数据
+                        var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                        List<AnnotationItem> annotations = IsApplyAsTemplate
+                            ? [.. CurrentImageAnnotations]
+                            : AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
+                                ? imageAnnotations
+                                : [];
 
-                        foreach (var annotation in CurrentImageAnnotations)
+                        if (annotations.Count == 0)
                         {
-                            var className = annotation.ClassName ?? "Unknown";
-                            var outputPath = System.IO.Path.Combine(baseOutputPath, className);
-                            Directory.CreateDirectory(outputPath);
+                            // Todo：提示用户没有标注
+                            Console.WriteLine($"No annotations found for image {fileName}");
+                            continue;
+                        }
 
-                            var boundingBox = annotation.GetBoundingBox();
-                            var cropRectangle = new SixLabors.ImageSharp.Rectangle(
-                                (int)boundingBox.X,
-                                (int)boundingBox.Y,
-                                (int)boundingBox.Width,
-                                (int)boundingBox.Height
-                            );
+                        try
+                        {
+                            using var originalImage = SixLabors.ImageSharp.Image.Load(imageItem.FilePath);
 
-                            // 防止越界裁剪
-                            cropRectangle = SixLabors.ImageSharp.Rectangle.Intersect(cropRectangle, originalImage.Bounds);
+                            foreach (var annotation in annotations)
+                            {
+                                // 忽略点标注
+                                if (annotation is PointModel) // 假设点标注类名为 PointModel，根据实际情况调整
+                                    continue;
 
-                            if (cropRectangle.Width <= 0 || cropRectangle.Height <= 0)
-                                continue;
+                                var boundingBox = annotation.GetBoundingBox();
+                                if (boundingBox.Width <= 0 || boundingBox.Height <= 0)
+                                    continue;
 
-                            using var croppedImage = originalImage.Clone(ctx => ctx.Crop(cropRectangle));
-                            var fileName = System.IO.Path.GetFileNameWithoutExtension(imageItem.FilePath);
-                            var croppedFileName = $"{fileName}_{annotation.InstanceGuid}.png";
-                            var savePath = System.IO.Path.Combine(outputPath, croppedFileName);
+                                var className = annotation.ClassName ?? "Unknown";
+                                var outputPath = System.IO.Path.Combine(baseOutputPath, className);
+                                Directory.CreateDirectory(outputPath);
 
-                            await croppedImage.SaveAsPngAsync(savePath);
+                                var cropRectangle = new SixLabors.ImageSharp.Rectangle(
+                                    (int)boundingBox.X,
+                                    (int)boundingBox.Y,
+                                    (int)boundingBox.Width,
+                                    (int)boundingBox.Height
+                                );
+
+                                // 防止越界裁剪
+                                cropRectangle = SixLabors.ImageSharp.Rectangle.Intersect(cropRectangle, originalImage.Bounds);
+
+                                if (cropRectangle.Width <= 0 || cropRectangle.Height <= 0)
+                                    continue;
+
+                                using var croppedImage = originalImage.Clone(ctx => ctx.Crop(cropRectangle));
+
+                                SixLabors.ImageSharp.Image finalImage = croppedImage; // 默认使用矩形裁剪结果
+
+                                if (annotation is PolygonModel polygon)
+                                {
+                                    // 对于多边形，使用掩码裁剪实际多边形区域
+                                    var minX = boundingBox.X;
+                                    var minY = boundingBox.Y;
+                                    var translatedPoints = polygon.Points
+                                        .Select(p => new SixLabors.ImageSharp.PointF((float)(p.X - minX), (float)(p.Y - minY)))
+                                        .ToArray();
+
+                                    var polyShape = new SixLabors.ImageSharp.Drawing.Polygon(
+                                        new SixLabors.ImageSharp.Drawing.LinearLineSegment(translatedPoints)
+                                    );
+
+                                    var maskedImage = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(
+                                        cropRectangle.Width, cropRectangle.Height
+                                    );
+
+                                    var imageBrush = new SixLabors.ImageSharp.Drawing.Processing.ImageBrush(croppedImage);
+                                    maskedImage.Mutate(ctx => ctx.Fill(imageBrush, polyShape));
+
+                                    finalImage = maskedImage;
+                                }
+
+                                var croppedFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}_{annotation.InstanceGuid}.png";
+                                var savePath = System.IO.Path.Combine(outputPath, croppedFileName);
+
+                                await finalImage.SaveAsPngAsync(savePath);
+
+                                // 如果是多边形，释放 maskedImage
+                                if (annotation is PolygonModel)
+                                {
+                                    finalImage.Dispose();
+                                }
+                            }
+                            FinishedCroppingCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            // 可选：记录日志或提示错误
+                            Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        // 可选：记录日志或提示错误
-                        Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
-                    }
                 }
-            }
-            catch(Exception ex)
-            {
-                
-            }
-            finally
-            {
-                IsCroppingInProgress = false;
-                IsShowCroppingText = true;
-            }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Unexpected error during cropping: {ex.Message}");
+                }
+                finally
+                {
+                    IsCroppingInProgress = false;
+                    IsShowCroppingText = true;
+                }
+            });
         }
         #endregion
 
@@ -815,7 +867,7 @@ namespace AutoTrainer.ViewModels
                         var rect = new Avalonia.Controls.Shapes.Rectangle
                         {
                             Tag = rectModel.InstanceGuid,
-                            Stroke = Brushes.Red,
+                            Stroke = Avalonia.Media.Brushes.Red,
                             StrokeThickness = 2,
                             Width = rectModel.Width,
                             Height = rectModel.Height
@@ -832,7 +884,7 @@ namespace AutoTrainer.ViewModels
                         {
                             Tag = polygonModel.InstanceGuid,
                             StrokeThickness = 1,
-                            Stroke = Brushes.Blue,
+                            Stroke = Avalonia.Media.Brushes.Blue,
                             Points = polygonModel.Points
                         };
                         polygonModel.UIElement = poloygen;
@@ -846,7 +898,7 @@ namespace AutoTrainer.ViewModels
                             Tag = pointModel.InstanceGuid,
                             Width = 4,
                             Height = 4,
-                            Stroke = Brushes.DarkGreen,
+                            Stroke = Avalonia.Media.Brushes.DarkGreen,
                             StrokeThickness = 2,
                         };
                         Canvas.SetLeft(point, pointModel.X - 4);

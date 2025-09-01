@@ -339,16 +339,39 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock
-                        Grid.Row="0"
-                        Margin="10,5"
-                        FontWeight="Bold"
-                        Text="图片导航" />
+					<Grid Grid.Row="0">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<TextBlock
+							Grid.Column="0"
+	                        Margin="10,5"
+	                        HorizontalAlignment="Left"
+	                        FontWeight="Bold"
+	                        Text="图片导航" />
+						<ProgressBar
+							Grid.Column="1"
+							Value="{Binding FinishedCroppingCount}"
+							Maximum="{Binding ImageList.Count}"
+							Margin="0,5,10,0"/>
+						<TextBlock
+							Grid.Column="2"
+							Margin="10,5,10,0"
+							Text="{Binding FinishedCroppingCount, StringFormat=已完成:{}{0}}"/>
+						<TextBlock
+							Grid.Column="3"
+							Margin="5,0"
+							Text="{Binding ImageList.Count,StringFormat=总计{}{0}张}"/>
+					</Grid>
 
-                    <ScrollViewer
+					<ScrollViewer
+						x:Name="ImageScrollViewer"
                         Grid.Row="1"
                         HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Auto">
+                        VerticalScrollBarVisibility="Disabled">
                         <ListBox
 							Margin="10,0,10,10" 
 							ItemsSource="{Binding ImageList}"
@@ -565,7 +588,6 @@
 
 							<Button
                                 Classes="light"
-								IsEnabled="{Binding IsApplyAsTemplate}"
                                 Command="{Binding CroppingImgAsDataSetCommand}">
 								<Grid>
 								    <avalonia:MaterialIcon Kind="Loading" IsVisible="{Binding IsCroppingInProgress}">

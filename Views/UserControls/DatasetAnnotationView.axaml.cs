@@ -39,6 +39,30 @@ public partial class DatasetAnnotationView : UserControl
         // 添加键盘事件处理（用于完成多边形绘制等）
         this.KeyDown += OnViewKeyDown;
         this.Focusable = true; // 确保能接收键盘事件
+
+        // 订阅 PointerWheelChanged 事件
+        ImageScrollViewer.PointerWheelChanged += ScrollViewer_PointerWheelChanged;
+    }
+    /// <summary>
+    /// 用于处理滚轮水平滚动
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void ScrollViewer_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (sender is ScrollViewer scrollViewer)
+        {
+            // 获取滚轮变化量（Delta.Y 正值为向上滚动，负值为向下滚动）
+            var delta = e.Delta.Y;
+            // 设置水平滚动的步长（可以根据需要调整）
+            var scrollStep = 50.0; // 每次滚动的像素距离
+            // 计算新的水平偏移量
+            var newOffset = scrollViewer.Offset.X - delta * scrollStep;
+            // 应用新的偏移量
+            scrollViewer.Offset = new Avalonia.Vector(newOffset, scrollViewer.Offset.Y);
+            // 标记事件已处理，阻止默认行为
+            e.Handled = true;
+        }
     }
 
 

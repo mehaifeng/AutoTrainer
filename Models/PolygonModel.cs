@@ -6,7 +6,7 @@ namespace AutoTrainer.Models
 {
     public class PolygonModel:AnnotationItem
     {
-        public List<Point> Points { get; set; } = new List<Point>();
+        public List<Avalonia.Point> Points { get; set; } = new List<Point>();
 
         public override BoundingBoxModel GetBoundingBox()
         {
