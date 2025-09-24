@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Logging;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -84,10 +85,23 @@ namespace AutoTrainer.ViewModels
             {
                 IsSpinning = true;
                 IsLoadingMutationData = true;
-                await Task.Run(LoadMutationData);
+                await Task.Delay(1);
+                //await Task.Run(LoadMutationData);
                 IsLoadingMutationData = false;
                 IsSpinning = false;
             }
+        }
+        [RelayCommand]
+        public async Task SelectedExistVarifyDatas(UserControl userControl)
+        {
+            var topLevel = TopLevel.GetTopLevel(userControl);
+            if (topLevel == null) return;
+
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
+            {
+                AllowMultiple = false,
+                Title = "选择验证集目录"
+            });
         }
         /// <summary>
         /// 分类

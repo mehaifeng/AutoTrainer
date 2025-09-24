@@ -1131,9 +1131,11 @@ namespace AutoTrainer.ViewModels
                 });
 
                 App.TrainModel.TrainDataPath = baseOutputPath;
+                App.TrainModel.NumClasses = Directory.GetDirectories(baseOutputPath).Length;
                 NotifyManager.CreateMessage()
                     .HasMessage($"批量生成成功！数据集已设置为训练路径。")
                     .Dismiss().WithButton("打开目录", button => FileDirectoryHelper.OpenInExplorer(baseOutputPath, false))
+                    .Dismiss().WithDelay(6000, B => { })
                     .Queue();
             }
             catch (Exception ex)

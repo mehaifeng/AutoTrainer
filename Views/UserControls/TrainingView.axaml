@@ -134,9 +134,9 @@
 					<Button
 						Height="35"
 						Margin="10,0,0,0"
-						Content="暂停(不可用)">
+						Content="暂停">
 					</Button>
-					<Button Height="35" Margin="10,0,0,0" Content="停止(不可用)"/>
+					<Button Height="35" Margin="10,0,0,0" Content="停止"/>
 				</StackPanel>
 			</Grid>
 		</Grid>

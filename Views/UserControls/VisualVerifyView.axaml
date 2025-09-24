@@ -1,397 +1,425 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
-			 xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
-			 xmlns:model="using:AutoTrainer.Models"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
-             mc:Ignorable="d" 
-			 d:DesignWidth="1200" 
-			 d:DesignHeight="820"
-			 Padding="10"
-			 x:Name="VerifyTabItem"
-			 x:DataType="vm:VisualVerifyViewModel"
-             x:Class="AutoTrainer.VisualVerifyView">
-	<i:Interaction.Behaviors>
-		<ia:EventTriggerBehavior EventName="Loaded">
-			<InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=VerifyTabItem}"/>
-		</ia:EventTriggerBehavior>
-	</i:Interaction.Behaviors>
-	<UserControl.Resources>
-		<ControlTheme x:Key="RightBtn" TargetType="Button">
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="Padding" Value="8"/>
-			<Setter Property="Template">
-				<ControlTemplate>
-					<Viewbox
-						Stretch="None"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center">
-						<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
-					</Viewbox>
-				</ControlTemplate>
-			</Setter>
-		</ControlTheme>
-		<ControlTheme x:Key="LeftBtn" TargetType="Button">
-			<Setter Property="Cursor" Value="Hand"/>
-			<Setter Property="Padding" Value="8"/>
-			<Setter Property="Template">
-				<ControlTemplate>
-					<Viewbox
-						Stretch="None"
-						HorizontalAlignment="Left"
-						VerticalAlignment="Center">
-						<avalonia:MaterialIcon Kind="ChevronLeft" Width="24" Height="24" />
-					</Viewbox>
-				</ControlTemplate>
-			</Setter>
-		</ControlTheme>
-	</UserControl.Resources>
-	<Grid ColumnDefinitions=".4*,.2*,.4*">
-		<Grid 
-			Grid.Column="0"
-			RowDefinitions="40,60,*">
-			<StackPanel
-				Grid.Row="0"
-				Orientation="Horizontal"
-				VerticalAlignment="Center"
-				HorizontalAlignment="Center">
-				<RadioButton 
-					Content="数据集变异验证"
-					IsChecked="true"/>
-				<RadioButton 
-					Content="选择数据集验证"
-					Margin="20,0,0,0"/>
-			</StackPanel>
-			<StackPanel
-				Grid.Row="1"
-				Orientation="Horizontal"
-				VerticalAlignment="Center"
-				HorizontalAlignment="Center">
-				<TextBox 
-					Width="300"
-					Height="35"
-					IsReadOnly="True"
-					BorderThickness="2"
-					CornerRadius="5"
-					BorderBrush="LightGray"/>
-				<Button
-					Classes="light" 
-					Height="35"
-					Margin="10,0,0,0"
-					Content="选择路径（不可用）"/>
-			</StackPanel>
-			<TabControl
-				Grid.Row="2"
-				x:Name="MutationGrid"
-				Theme="{StaticResource ScrollableTabControl}"
-				BorderThickness="2"
-				BorderBrush="LightGray"
-				CornerRadius="5">
-				<TabItem Header="验证数据集">
-					<Grid RowDefinitions="50,*">
-						<Grid
-							ColumnDefinitions="*,80,60"
-							VerticalAlignment="Center"
-							Margin="10">
-							<!--验证数据集比例拖动条-->
-							<Slider 
-								x:Name="DateRate_Slider"
-								Grid.Column="0"
-								IsSnapToTickEnabled="True"
-								Classes="Accent"
-								Value="{Binding ValidationImageRate}"
-								TickFrequency="5"/>
-							<!--验证数据集比例文本-->
-							<TextBlock
-								Grid.Column="1"
-								HorizontalAlignment="Center"
-								VerticalAlignment="Center"
-								Text="{Binding ElementName=DateRate_Slider,Path=Value,UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}%}"/>
-							<!--刷新按钮-->
-							<Button
-								Grid.Column="2"
-								Classes="light"
-								Command="{Binding RefreshMutationCommand}">
-								<Button.Content>
-									<avalonia:MaterialIcon 
-										Kind="Refresh"
-										Width="26"
-										Height="26"
-										Classes.spinning="{Binding IsSpinning}">
-										<avalonia:MaterialIcon.Styles>
-											<Style Selector="avalonia|MaterialIcon.spinning">
-												<Style.Animations>
-													<Animation
-														Duration="0:0:1"
-														IterationCount="INFINITE"
-														SpeedRatio="2">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-														<KeyFrame Cue="100%">
-															<Setter Property="RotateTransform.Angle" Value="360.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
+<UserControl
+    x:Class="AutoTrainer.VisualVerifyView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+    xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+    xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:AutoTrainer.Models"
+    xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+    xmlns:vm="using:AutoTrainer.ViewModels"
+    x:Name="VerifyTabItem"
+    Padding="10"
+    d:DesignHeight="820"
+    d:DesignWidth="1200"
+    x:DataType="vm:VisualVerifyViewModel"
+    mc:Ignorable="d">
+    <i:Interaction.Behaviors>
+        <ia:EventTriggerBehavior EventName="Loaded">
+            <InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=VerifyTabItem}" />
+        </ia:EventTriggerBehavior>
+    </i:Interaction.Behaviors>
+    <UserControl.Resources>
+        <ControlTheme x:Key="RightBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Viewbox
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Stretch="None">
+                        <avalonia:MaterialIcon
+                            Width="24"
+                            Height="24"
+                            Kind="ChevronRight" />
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+        <ControlTheme x:Key="LeftBtn" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Viewbox
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Stretch="None">
+                        <avalonia:MaterialIcon
+                            Width="24"
+                            Height="24"
+                            Kind="ChevronLeft" />
+                    </Viewbox>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </UserControl.Resources>
+    <Grid ColumnDefinitions=".4*,.2*,.4*">
+        <!--  左侧验证数据集及模型质量  -->
+        <Grid Grid.Column="0" RowDefinitions="40,60,*">
+            <StackPanel
+                Grid.Row="0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <RadioButton
+                    x:Name="Rad_VarifyWithCreateDatas"
+                    Content="数据集变异验证"
+                    GroupName="ExistOrCreat"
+                    IsChecked="true" />
+                <RadioButton
+                    x:Name="Rad_VarifyWithExistDatas"
+                    Margin="20,0,0,0"
+                    Content="选择数据集验证"
+                    GroupName="ExistOrCreat" />
+            </StackPanel>
+            <StackPanel
+                Grid.Row="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <TextBox
+                    Width="300"
+                    Height="35"
+                    BorderBrush="LightGray"
+                    BorderThickness="2"
+                    CornerRadius="5"
+                    IsReadOnly="True" />
+                <Button
+                    Height="35"
+                    Margin="10,0,0,0"
+                    Classes="light"
+                    Command="{Binding SelectedExistVarifyDatasCommand}"
+                    CommandParameter="{Binding ElementName=VerifyTabItem}"
+                    Content="选择路径"
+                    IsEnabled="{Binding ElementName=Rad_VarifyWithExistDatas, Path=IsChecked}" />
+            </StackPanel>
+            <TabControl
+                x:Name="MutationGrid"
+                Grid.Row="2"
+                BorderBrush="LightGray"
+                BorderThickness="2"
+                CornerRadius="5"
+                Theme="{StaticResource ScrollableTabControl}">
+                <TabItem Header="验证数据集">
+                    <Grid RowDefinitions="50,*">
+                        <Grid
+                            Margin="10"
+                            VerticalAlignment="Center"
+                            ColumnDefinitions="*,80,60">
+                            <!--  验证数据集比例拖动条  -->
+                            <Slider
+                                x:Name="DateRate_Slider"
+                                Grid.Column="0"
+                                Classes="Accent"
+                                IsSnapToTickEnabled="True"
+                                TickFrequency="5"
+                                Value="{Binding ValidationImageRate}" />
+                            <!--  验证数据集比例文本  -->
+                            <TextBlock
+                                Grid.Column="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Text="{Binding ElementName=DateRate_Slider, Path=Value, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}%}" />
+                            <!--  刷新按钮  -->
+                            <Button
+                                Grid.Column="2"
+                                Classes="light"
+                                Command="{Binding RefreshMutationCommand}">
+                                <Button.Content>
+                                    <avalonia:MaterialIcon
+                                        Width="26"
+                                        Height="26"
+                                        Classes.spinning="{Binding IsSpinning}"
+                                        Kind="Refresh">
+                                        <avalonia:MaterialIcon.Styles>
+                                            <Style Selector="avalonia|MaterialIcon.spinning">
+                                                <Style.Animations>
+                                                    <Animation
+                                                        IterationCount="INFINITE"
+                                                        SpeedRatio="2"
+                                                        Duration="0:0:1">
+                                                        <KeyFrame Cue="0%">
+                                                            <Setter Property="RotateTransform.Angle" Value="0.0" />
+                                                        </KeyFrame>
+                                                        <KeyFrame Cue="100%">
+                                                            <Setter Property="RotateTransform.Angle" Value="360.0" />
+                                                        </KeyFrame>
+                                                    </Animation>
+                                                </Style.Animations>
+                                            </Style>
 
-											<Style Selector="avalonia|MaterialIcon:not(.spinning)">
-												<Style.Animations>
-													<Animation
-														Duration="0:0:1"
-														IterationCount="0"
-														SpeedRatio="2">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
-										</avalonia:MaterialIcon.Styles>
-									</avalonia:MaterialIcon>
-								</Button.Content>
-							</Button>
-						</Grid>
-						<Border 
-							Grid.Row="1"
-							BorderBrush="LightGray">
-							<ScrollViewer Classes="no-auto-hide">
-								<ItemsControl ItemsSource="{Binding MutationImages}">
-									<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<WrapPanel/>
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Image Source="{Binding Thumbnail}"
-												   Width="64"
-												   Height="64"
-												   Margin="5">
-											</Image>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</ScrollViewer>
-						</Border>
-						<ProgressBar
-							Grid.Row="1"
-							IsVisible="False"
-							IsIndeterminate="True"
-							HorizontalAlignment="Center"
-							VerticalAlignment="Center"
-							Classes="circular"
-							Margin="4"/>
-						</Grid>
-					</TabItem>
-				<TabItem Header="验证汇总">
-					<ScrollViewer>
-						<StackPanel
-							Orientation="Vertical"
-							Margin="10"
-							Grid.Row="2">
-							<TextBlock Text="单个类别指标">
-								<ToolTip.Tip>
-									<StackPanel>
-										<TextBlock>精确率 = 预测为该类别且正确的样本数/预测为该类别的样本总数</TextBlock>
-										<TextBlock>召回率 = 预测为该类别且正确的样本数/该类别的实际样本总数</TextBlock>
-										<TextBlock>F1分数 = 精确率和召回率的调和平均值</TextBlock>
-									</StackPanel>
-								</ToolTip.Tip>
-							</TextBlock>
-							<DataGrid
-								Margin="0,5,0,10"
-								FontSize="14"
-								ColumnWidth="*"
-								AutoGenerateColumns="False"
-								BorderBrush="LightGray"
-								ItemsSource="{Binding ModelSingleQualityTable}">
-								<DataGrid.Columns>
-									<DataGridTextColumn Header="类别" Binding="{Binding ClassName}"/>
-									<DataGridTextColumn Header="精确率" Binding="{Binding Precision}"/>
-									<DataGridTextColumn Header="召回率" Binding="{Binding Recall}"/>
-									<DataGridTextColumn Header="F1分数" Binding="{Binding F1_score}"/>
-								</DataGrid.Columns>
-							</DataGrid>
-							<TextBlock Text="整体指标"/>
-							<DataGrid
-								Margin="0,5,0,10"
-								FontSize="14"
-								ColumnWidth="*"
-								AutoGenerateColumns="False"
-								BorderBrush="LightGray"
-								ItemsSource="{Binding ModelMacroQualityTable}">
-								<DataGrid.Columns>
-									<DataGridTextColumn Header="准确率" Binding="{Binding Accuracy}"/>
-									<DataGridTextColumn Header="宏精确率" Binding="{Binding MacroPrecision}"/>
-									<DataGridTextColumn Header="宏召回率" Binding="{Binding MacroRecall}"/>
-									<DataGridTextColumn Header="宏F1分数" Binding="{Binding MacroF1}"/> 
-								</DataGrid.Columns>
-							</DataGrid>
-							<TextBlock Text="混淆矩阵"/>
-							<Grid x:Name="MakeMatrixGrid" Margin="0,5,0,0">
-								<!--自动生成矩阵-->
-							</Grid>
-						</StackPanel>
-					</ScrollViewer>
-				</TabItem>
-			</TabControl>
-			
-			
-		</Grid>
-		<Grid Grid.Column="1" RowDefinitions="120,Auto,70" Margin="10,100,10,0" VerticalAlignment="Center">
-			<Border
-				Grid.Row="0"
-				VerticalAlignment="Center"
-				Width="90"
-				Height="90"
-				CornerRadius="5"
-				BorderBrush="LightGray"
-				BorderThickness="2">
-				<Image Source="{Binding SelectImage.Image}"/>
-			</Border>
-			<StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center">
-				<TextBlock
-					Text="预测类型"
-					HorizontalAlignment="Center"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="{Binding PredictClass}"
-					HorizontalAlignment="Center"
-					TextWrapping="Wrap"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="置信度"
-					HorizontalAlignment="Center"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="{Binding Confidence}"
-					HorizontalAlignment="Center"
-					TextWrapping="Wrap"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="实际类型"
-					HorizontalAlignment="Center"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="{Binding ActualClass}"
-					HorizontalAlignment="Center"
-					TextWrapping="Wrap"
-					Margin="0,0,0,5"/>
-				<TextBlock
-					Text="图片路径"
-					HorizontalAlignment="Center"
-					Margin="0,0,0,5"/>
-				<SelectableTextBlock
-					Text="{Binding ImagePath}"
-					TextWrapping="Wrap"
-					HorizontalAlignment="Center"/>
-			</StackPanel>
-			<Button
-				Grid.Row="2"
-				VerticalAlignment="Center"
-				Classes="light"
-				Height="35"
-				Width="100"
-				Margin="0,0,0,5"
-				Command="{Binding ClassifyCommand}"
-				CommandParameter="{Binding ElementName=MakeMatrixGrid}"
-				Content="自动分类"/>
-		</Grid>
-		<Grid Grid.Column="2" RowDefinitions="100,*">
-			<controls:FloatingButton
-				Grid.Row="0"
-				Grid.Column="2"
-				Margin="0,0,10,0"
-				Width="120"
-				IsVisible="{Binding IsShowNextPageBtn}"
-				Command="{Binding GoToExportPageCommand}"
-				CommandParameter="{Binding ElementName=VerifyTabItem}"
-				HorizontalAlignment="Right"
-				VerticalAlignment="Center"
-				Classes="Light"
-				IsExtended="True">
-				<controls:FloatingButton.Styles>
-					<Style Selector="controls|FloatingButton">
-						<Setter Property="Content">
-							<Setter.Value>
-								<Template>
-									<StackPanel Orientation="Horizontal">
-										<Viewbox Stretch="None"
-												 HorizontalAlignment="Left"
-												 VerticalAlignment="Center">
-											<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
-										</Viewbox>
-										<TextBlock
-											Margin="10,0,0,0"
-											FontSize="16"
-											VerticalAlignment="Center"
-											Text="下一步"/>
-									</StackPanel>
-								</Template>
-							</Setter.Value>
-						</Setter>
-					</Style>
-				</controls:FloatingButton.Styles>
-			</controls:FloatingButton>
-			<Border
-				Grid.Row="1"
-				CornerRadius="5"
-				Margin="0,100,0,0"
-				IsVisible="{Binding IsInSortingTask}">
-				<ProgressBar Classes="circular" IsIndeterminate="True" />
-			</Border>
-			<Grid Grid.Row="1">
-				<TabControl
-					Grid.Row="1"
-					CornerRadius="5"
-					BorderBrush="LightGray"
-					BorderThickness="2"
-					Theme="{StaticResource ScrollableTabControl}"
-					x:Name="PreviewTab"
-					ItemsSource="{Binding ClassifiedImages}">
-					<i:Interaction.Behaviors>
-						<ia:EventTriggerBehavior EventName="SelectionChanged">
-							<ia:InvokeCommandAction 
-								Command="{Binding}"
-								CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}"/>
-						</ia:EventTriggerBehavior>
-					</i:Interaction.Behaviors>
-					<!-- 设置 TabItem 的标题 -->
-					<TabControl.ItemTemplate>
-						<DataTemplate DataType="model:PreviewImageModel">
-							<TextBlock Text="{Binding ClassName}" />
-						</DataTemplate>
-					</TabControl.ItemTemplate>
-					<!-- 设置每个 TabItem 的内容 -->
-					<TabControl.ContentTemplate>
-						<DataTemplate DataType="model:PreviewImageModel">
-							<!-- 绑定并展示该类别的缩略图 -->
-							<ScrollViewer Classes="no-auto-hide">
-								<ItemsControl ItemsSource="{Binding Thumbnails}">
-									<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<WrapPanel/>
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Button x:Name="classifiedImage_btn" Background="Transparent" BorderThickness="0" Click="classifiedImage_btn_Click"  CommandParameter="{Binding .}">
-												<Image Source="{Binding Image}" Width="64" Height="64"/>
-											</Button>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</ScrollViewer>
-						</DataTemplate>
-					</TabControl.ContentTemplate>
-				</TabControl>
-			</Grid>
-		</Grid>
-	</Grid>
+                                            <Style Selector="avalonia|MaterialIcon:not(.spinning)">
+                                                <Style.Animations>
+                                                    <Animation
+                                                        IterationCount="0"
+                                                        SpeedRatio="2"
+                                                        Duration="0:0:1">
+                                                        <KeyFrame Cue="0%">
+                                                            <Setter Property="RotateTransform.Angle" Value="0.0" />
+                                                        </KeyFrame>
+                                                    </Animation>
+                                                </Style.Animations>
+                                            </Style>
+                                        </avalonia:MaterialIcon.Styles>
+                                    </avalonia:MaterialIcon>
+                                </Button.Content>
+                            </Button>
+                        </Grid>
+                        <Border Grid.Row="1" BorderBrush="LightGray">
+                            <ScrollViewer Classes="no-auto-hide">
+                                <ItemsControl ItemsSource="{Binding MutationImages}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Image
+                                                Width="64"
+                                                Height="64"
+                                                Margin="5"
+                                                Source="{Binding Thumbnail}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                        <ProgressBar
+                            Grid.Row="1"
+                            Margin="4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Classes="circular"
+                            IsIndeterminate="True"
+                            IsVisible="False" />
+                    </Grid>
+                </TabItem>
+                <TabItem Header="验证汇总">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <StackPanel
+                            Grid.Row="2"
+                            Margin="10"
+                            Orientation="Vertical">
+                            <TextBlock Text="单个类别指标">
+                                <ToolTip.Tip>
+                                    <StackPanel>
+                                        <TextBlock>精确率 = 预测为该类别且正确的样本数/预测为该类别的样本总数</TextBlock>
+                                        <TextBlock>召回率 = 预测为该类别且正确的样本数/该类别的实际样本总数</TextBlock>
+                                        <TextBlock>F1分数 = 精确率和召回率的调和平均值</TextBlock>
+                                    </StackPanel>
+                                </ToolTip.Tip>
+                            </TextBlock>
+                            <DataGrid
+                                Margin="0,5,0,10"
+                                AutoGenerateColumns="False"
+                                BorderBrush="LightGray"
+                                ColumnWidth="*"
+                                FontSize="14"
+                                ItemsSource="{Binding ModelSingleQualityTable}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding ClassName}" Header="类别" />
+                                    <DataGridTextColumn Binding="{Binding Precision}" Header="精确率" />
+                                    <DataGridTextColumn Binding="{Binding Recall}" Header="召回率" />
+                                    <DataGridTextColumn Binding="{Binding F1_score}" Header="F1分数" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock Text="整体指标" />
+                            <DataGrid
+                                Margin="0,5,0,10"
+                                AutoGenerateColumns="False"
+                                BorderBrush="LightGray"
+                                ColumnWidth="*"
+                                FontSize="14"
+                                ItemsSource="{Binding ModelMacroQualityTable}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding Accuracy}" Header="准确率" />
+                                    <DataGridTextColumn Binding="{Binding MacroPrecision}" Header="宏精确率" />
+                                    <DataGridTextColumn Binding="{Binding MacroRecall}" Header="宏召回率" />
+                                    <DataGridTextColumn Binding="{Binding MacroF1}" Header="宏F1分数" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock Text="混淆矩阵" />
+                            <Grid x:Name="MakeMatrixGrid" Margin="0,5,0,0">
+                                <!--  自动生成矩阵  -->
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </Grid>
+        <!--  中间选择单张图片信息  -->
+        <Grid
+            Grid.Column="1"
+            Margin="10,100,10,0"
+            VerticalAlignment="Center"
+            RowDefinitions="120,Auto,70">
+            <Border
+                Grid.Row="0"
+                Width="90"
+                Height="90"
+                VerticalAlignment="Center"
+                BorderBrush="LightGray"
+                BorderThickness="2"
+                CornerRadius="5">
+                <Image Source="{Binding SelectImage.Image}" />
+            </Border>
+            <StackPanel
+                Grid.Row="1"
+                HorizontalAlignment="Center"
+                Orientation="Vertical">
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="预测类型" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="{Binding PredictClass}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="置信度" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="{Binding Confidence}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="实际类型" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="{Binding ActualClass}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,0,0,5"
+                    HorizontalAlignment="Center"
+                    Text="图片路径" />
+                <SelectableTextBlock
+                    HorizontalAlignment="Center"
+                    Text="{Binding ImagePath}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+            <Button
+                Grid.Row="2"
+                Width="100"
+                Height="35"
+                Margin="0,0,0,5"
+                VerticalAlignment="Center"
+                Classes="light"
+                Command="{Binding ClassifyCommand}"
+                CommandParameter="{Binding ElementName=MakeMatrixGrid}"
+                Content="自动分类" />
+        </Grid>
+        <!--  右侧识别结果  -->
+        <Grid Grid.Column="2" RowDefinitions="100,*">
+            <controls:FloatingButton
+                Grid.Row="0"
+                Grid.Column="2"
+                Width="120"
+                Margin="0,0,10,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Classes="Light"
+                Command="{Binding GoToExportPageCommand}"
+                CommandParameter="{Binding ElementName=VerifyTabItem}"
+                IsExtended="True"
+                IsVisible="{Binding IsShowNextPageBtn}">
+                <controls:FloatingButton.Styles>
+                    <Style Selector="controls|FloatingButton">
+                        <Setter Property="Content">
+                            <Setter.Value>
+                                <Template>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Stretch="None">
+                                            <avalonia:MaterialIcon
+                                                Width="24"
+                                                Height="24"
+                                                Kind="ChevronRight" />
+                                        </Viewbox>
+                                        <TextBlock
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="16"
+                                            Text="下一步" />
+                                    </StackPanel>
+                                </Template>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </controls:FloatingButton.Styles>
+            </controls:FloatingButton>
+            <Border
+                Grid.Row="1"
+                Margin="0,100,0,0"
+                CornerRadius="5"
+                IsVisible="{Binding IsInSortingTask}">
+                <ProgressBar Classes="circular" IsIndeterminate="True" />
+            </Border>
+            <Grid Grid.Row="1">
+                <TabControl
+                    x:Name="PreviewTab"
+                    Grid.Row="1"
+                    BorderBrush="LightGray"
+                    BorderThickness="2"
+                    CornerRadius="5"
+                    ItemsSource="{Binding ClassifiedImages}"
+                    Theme="{StaticResource ScrollableTabControl}">
+                    <i:Interaction.Behaviors>
+                        <ia:EventTriggerBehavior EventName="SelectionChanged">
+                            <ia:InvokeCommandAction Command="{Binding}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}" />
+                        </ia:EventTriggerBehavior>
+                    </i:Interaction.Behaviors>
+                    <!--  设置 TabItem 的标题  -->
+                    <TabControl.ItemTemplate>
+                        <DataTemplate DataType="model:PreviewImageModel">
+                            <TextBlock Text="{Binding ClassName}" />
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                    <!--  设置每个 TabItem 的内容  -->
+                    <TabControl.ContentTemplate>
+                        <DataTemplate DataType="model:PreviewImageModel">
+                            <!--  绑定并展示该类别的缩略图  -->
+                            <ScrollViewer Classes="no-auto-hide">
+                                <ItemsControl ItemsSource="{Binding Thumbnails}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button
+                                                x:Name="classifiedImage_btn"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Click="classifiedImage_btn_Click"
+                                                CommandParameter="{Binding .}">
+                                                <Image
+                                                    Width="64"
+                                                    Height="64"
+                                                    Source="{Binding Image}" />
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DataTemplate>
+                    </TabControl.ContentTemplate>
+                </TabControl>
+            </Grid>
+        </Grid>
+    </Grid>
 </UserControl>
