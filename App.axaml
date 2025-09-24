@@ -27,6 +27,7 @@
 				Source Han Sans CN Normal
 			</Setter>
 		</Style>
+		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
 	</Application.Styles>
 	<Application.Resources>
     </Application.Resources>

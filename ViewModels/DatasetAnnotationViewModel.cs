@@ -12,6 +12,7 @@ using Avalonia.Data;
 using Avalonia.Dialogs;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Notification;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -160,6 +161,9 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private int finishedCroppingCount = 0;
+
+        [ObservableProperty]
+        private NotificationMessageManager notifyManager;
         #endregion
 
         #region 事件和委托
@@ -177,6 +181,8 @@ namespace AutoTrainer.ViewModels
             OnAnnotationSelected += SelectedAnnvationChanged;
             // 监听属性变化
             PropertyChanged += DatasetAnnotationViewModel_PropertyChanged;
+            //初始化通知管理器
+            NotifyManager = new NotificationMessageManager();
         }
 
         private void DatasetAnnotationViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -659,9 +665,37 @@ namespace AutoTrainer.ViewModels
                 }
                 var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
                 AllImageAnnotations.SaveToFile(annotationPath);
+                NotifyManager.CreateMessage()
+                    .Accent("#161616")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Info")
+                    .HasMessage($"保存标注配置完成：{annotationPath}")
+                    .Dismiss().WithButton("打开文件夹", button =>
+                    {
+                        FileDirectoryHelper.OpenInExplorer(annotationPath, true);
+                    })
+                    .Dismiss().WithDelay(6000, t => { })
+                    .Queue();
             }
             catch (Exception ex)
             {
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Error")
+                    .HasMessage($"保存失败：{ex.Message}")
+                    .Dismiss().WithButton("复制信息", button =>
+                    {
+                        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                        {
+                            var clipboard = desktop.MainWindow?.Clipboard;
+                            clipboard?.SetTextAsync(ex.Message);  // 复制纯文本
+                        }
+                    })
+                    .Dismiss().WithDelay(6000, t => { })
+                    .Queue();
                 ProgressState = $"保存失败: {ex.Message}";
             }
         }
@@ -749,6 +783,7 @@ namespace AutoTrainer.ViewModels
                             continue;
                         // 获取当前图片的标注数据
                         var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                        // 根据是否应用为模板选择标注数据源
                         List<AnnotationItem> annotations = IsApplyAsTemplate
                             ? [.. CurrentImageAnnotations]
                             : AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
@@ -769,10 +804,12 @@ namespace AutoTrainer.ViewModels
                             foreach (var annotation in annotations)
                             {
                                 // 忽略点标注
-                                if (annotation is PointModel) // 假设点标注类名为 PointModel，根据实际情况调整
+                                if (annotation is PointModel)
                                     continue;
 
+                                // 获取边界框
                                 var boundingBox = annotation.GetBoundingBox();
+                                // 跳过无效边界框
                                 if (boundingBox.Width <= 0 || boundingBox.Height <= 0)
                                     continue;
 
@@ -839,6 +876,18 @@ namespace AutoTrainer.ViewModels
                             Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
+                    NotifyManager.CreateMessage()
+                        .Accent("#161616")
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasMessage($"裁剪完成，共裁剪 {FinishedCroppingCount} 张图片")
+                        .HasBadge("Info")
+                        .Dismiss().WithButton("打开文件夹", button =>
+                        {
+                            FileDirectoryHelper.OpenInExplorer(baseOutputPath, false);
+                        })
+                        .Dismiss().WithDelay(6000, t => { })
+                        .Queue();
                 }
                 catch (Exception ex)
                 {

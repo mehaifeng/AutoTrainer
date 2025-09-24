@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
     xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+	xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
     xmlns:converter="using:AutoTrainer.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
@@ -22,7 +23,9 @@
     <UserControl.Resources>
         <converter:BoolToBrushConverter x:Key="BoolToBrushConverter" />
     </UserControl.Resources>
-    <Grid>
+	<Grid>
+		<notification:NotificationMessageContainer Manager="{Binding NotifyManager}" ZIndex="999"/>
+        <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250" />
             <!--  左侧工具栏  -->
@@ -642,4 +645,5 @@
         </Border>
 
     </Grid>
+	</Grid>
 </UserControl>
