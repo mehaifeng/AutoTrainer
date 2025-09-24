@@ -47,6 +47,7 @@ namespace AutoTrainer.ViewModels
         public bool CanGoNext => CurrentImageIndex < ImageList.Count - 1;
         // 是否有选中的标注
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
+        public bool HasNoSelectedAnnotation => !HasSelectedAnnotation;
         // 图片文件夹
         public string Imagefolder = string.Empty;
         // 标注文件名
@@ -164,6 +165,20 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private NotificationMessageManager notifyManager;
+
+        [ObservableProperty]
+        private ObservableCollection<string> _currentImageClasses = new();
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsNotBatchProcessing))]
+        private bool isBatchProcessing = false;
+        public bool IsNotBatchProcessing => !IsBatchProcessing;
+
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(AddImageClassCommand))]
+        private string? _selectedClassForAction;
+
+        public bool CanAddImageClass => !string.IsNullOrEmpty(SelectedClassForAction) && !HasSelectedAnnotation;
         #endregion
 
         #region 事件和委托
@@ -183,6 +198,7 @@ namespace AutoTrainer.ViewModels
             PropertyChanged += DatasetAnnotationViewModel_PropertyChanged;
             //初始化通知管理器
             NotifyManager = new NotificationMessageManager();
+            CurrentImageAnnotations.CollectionChanged += CurrentImageAnnotations_CollectionChanged;
         }
 
         private void DatasetAnnotationViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -193,11 +209,28 @@ namespace AutoTrainer.ViewModels
                     OnPropertyChanged(nameof(CanGoPrevious));
                     OnPropertyChanged(nameof(CanGoNext));
                     LoadCurrentImage();
+                    // Proactively load thumbnails around the selected item
+                    _ = LoadThumbnailsInRange(Math.Max(0, CurrentImageIndex - 15), 30);
                     break;
                 case nameof(SelectedAnnotation):
                     OnPropertyChanged(nameof(HasSelectedAnnotation));
+                    OnPropertyChanged(nameof(HasNoSelectedAnnotation));
+                    AddImageClassCommand.NotifyCanExecuteChanged();
+                    if (SelectedAnnotation != null)
+                    {
+                        SelectedClassForAction = SelectedAnnotation.ClassName;
+                    }
                     break;
             }
+        }
+
+        partial void OnSelectedClassForActionChanged(string? value)
+        {
+            if (SelectedAnnotation != null && SelectedAnnotation.ClassName != value)
+            {
+                SelectedAnnotation.ClassName = value;
+            }
+            AddImageClassCommand.NotifyCanExecuteChanged();
         }
 
         #endregion
@@ -260,146 +293,119 @@ namespace AutoTrainer.ViewModels
                     AllowMultiple = false,
                     Title = "选择图像目录"
                 });
+
                 if (folders?.Count > 0)
                 {
                     var selectedFolder = folders[0];
                     Imagefolder = folders[0].TryGetLocalPath() ?? string.Empty;
-                    await LoadImagesFromFolder(selectedFolder);
+                    await LoadImagesFromFolder(selectedFolder.Path);
                 }
             }
             catch (Exception ex)
             {
-                // TODO: 显示错误消息
                 Debug.WriteLine($"导入目录图像失败: {ex.Message}");
-                // 可以考虑添加用户通知，例如：
-                // await ShowErrorDialog("导入失败", $"无法导入图像目录：{ex.Message}");
+                // Consider adding user notification
             }
         }
 
         /// <summary>
-        /// 从文件夹加载图像文件
+        /// 以异步和虚拟方式加载图像。
         /// </summary>
-        /// <param name="folder"></param>
-        private async Task LoadImagesFromFolder(IStorageFolder folder)
+        private async Task LoadImagesFromFolder(Uri folderUri)
         {
+            IsLoading = true;
+            ProgressState = "正在扫描文件路径...";
+            ImageList.Clear();
+            AllImageAnnotations.Clear(); // Also clear annotations from previous folder
+
             try
             {
-                var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                var imageItems = await Task.Run(() =>
                 {
-                    ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
-                };
-
-                // 清空现有列表（可选，根据需求决定是否保留原有图像）
-                ImageList.Clear();
-
-                var files = folder.GetItemsAsync();
-                var imageFiles = new List<IStorageFile>();
-                await foreach (var item in files)
-                {
-                    if (item is IStorageFile file &&
-                        supportedExtensions.Contains(System.IO.Path.GetExtension(file.Name)))
+                    var directoryInfo = new DirectoryInfo(folderUri.LocalPath);
+                    var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        imageFiles.Add(file);
-                    }
-                }
+                        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
+                    };
 
-                // 按文件名排序
-                imageFiles = imageFiles.OrderBy(file => file.Name).ToList();
-
-                var totalFiles = imageFiles.Count;
-                var processedFiles = 0;
-
-                var semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
-                var tasks = imageFiles.Select(async file =>
-                {
-                    await semaphore.WaitAsync();
-                    try
-                    {
-                        var imageItem = await CreateImageItem(file);
-                        if (imageItem != null)
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                ImageList.Add(imageItem);
-                            });
-                        }
-
-                        var current = Interlocked.Increment(ref processedFiles);
-                        var progress = (int)((double)current / totalFiles * 100);
-                        //ImportProgressChanged?.Invoke(this, progress);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
+                    return directoryInfo.GetFiles()
+                        .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
+                        .Select(f => f.FullName)
+                        .OrderBy(f => f)
+                        .Select(path => new ImageItem { FilePath = path, FileName = System.IO.Path.GetFileName(path) })
+                        .ToList();
                 });
 
-                await Task.WhenAll(tasks);
-                CurrentImage = new Bitmap(ImageList[0].FilePath);
-                CurrentImageIndex = 0;
+
+                ProgressState = "正在加载图片列表...";
+                ImageList = new ObservableCollection<ImageItem>(imageItems);
+
+                if (ImageList.Any())
+                {
+                    // Set the first image as current, but don't load its main bitmap yet
+                    CurrentImageIndex = 0;
+                }
+
+                // Asynchronously load thumbnails for the initial view
+                _ = LoadThumbnailsInRange(0, 30); // Load first 30 thumbnails in background
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"加载图像失败: {ex.Message}");
-                throw;
+                // Handle error
+            }
+            finally
+            {
+                IsLoading = false;
+                ProgressState = "就绪";
             }
         }
 
         /// <summary>
-        /// 创建图像项目
+        /// 异步加载 ImageList 中给定范围的项目的缩略图。
         /// </summary>
-        /// <param name="file"></param>
-        /// <returns></returns>
-        private async Task<ImageItem?> CreateImageItem(IStorageFile file)
+        private async Task LoadThumbnailsInRange(int startIndex, int count)
         {
-            try
+            var itemsToLoad = ImageList.Skip(startIndex).Take(count).ToList();
+            foreach (var item in itemsToLoad)
             {
-                var imageItem = new ImageItem
+                if (item.Thumbnail == null)
                 {
-                    FileName = file.Name,
-                    FilePath = file.Path.LocalPath
-                };
-
-                // 创建缩略图
-                imageItem.Thumbnail = await CreateThumbnail(file);
-
-                return imageItem;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"创建图像项失败 {file.Name}: {ex.Message}");
-                return null;
+                    try
+                    {
+                        item.Thumbnail = await CreateThumbnailAsync(item.FilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"创建缩略图失败 {item.FileName}: {ex.Message}");
+                    }
+                }
             }
         }
 
         /// <summary>
-        /// 创建缩略图
+        /// 从文件路径异步创建单个缩略图。
         /// </summary>
-        /// <param name="file"></param>
-        /// <param name="maxSize"></param>
-        /// <returns></returns>
-        private async Task<Bitmap?> CreateThumbnail(IStorageFile file, int maxSize = 150)
+        private async Task<Bitmap?> CreateThumbnailAsync(string filePath, int maxSize = 150)
         {
-            try
+            return await Task.Run(() =>
             {
-                using var stream = await file.OpenReadAsync();
-                using var originalBitmap = new Bitmap(stream);
-
-                // 计算缩略图尺寸，保持宽高比
-                var scale = Math.Min((double)maxSize / originalBitmap.PixelSize.Width,
-                                   (double)maxSize / originalBitmap.PixelSize.Height);
-
-                var newWidth = (int)(originalBitmap.PixelSize.Width * scale);
-                var newHeight = (int)(originalBitmap.PixelSize.Height * scale);
-
-                // 创建缩略图
-                return originalBitmap.CreateScaledBitmap(new PixelSize(newWidth, newHeight));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"创建缩略图失败 {file.Name}: {ex.Message}");
-                return null;
-            }
+                try
+                {
+                    using var stream = File.OpenRead(filePath);
+                    using var originalBitmap = new Bitmap(stream);
+                    var scale = Math.Min((double)maxSize / originalBitmap.PixelSize.Width,
+                                       (double)maxSize / originalBitmap.PixelSize.Height);
+                    var newWidth = (int)(originalBitmap.PixelSize.Width * scale);
+                    var newHeight = (int)(originalBitmap.PixelSize.Height * scale);
+                    return originalBitmap.CreateScaledBitmap(new PixelSize(newWidth, newHeight));
+                }
+                catch (Exception)
+                {
+                    // Return null or a placeholder "error" bitmap
+                    return null;
+                }
+            });
         }
 
         /// <summary>
@@ -465,11 +471,20 @@ namespace AutoTrainer.ViewModels
                 CurrentImageIndex++;
             }
         }
+
+        /// <summary>
+        /// “作为模板应用至全体图片”勾选状态改变
+        /// </summary>
+        /// <param name="value"></param>
         partial void OnIsApplyAsTemplateChanged(bool value)
         {
             ImageList[CurrentImageIndex].AsCroppingTemplate = value;
         }
 
+        /// <summary>
+        /// 当前选择图像索引改变
+        /// </summary>
+        /// <param name="value"></param>
         partial void OnCurrentImageIndexChanged(int value)
         {
             IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
@@ -516,6 +531,38 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        #endregion
+
+        #region 图像分类命令
+        [RelayCommand(CanExecute = nameof(CanAddImageClass))]
+        private void AddImageClass()
+        {
+            if (CurrentImageIndex < 0 || CurrentImageIndex >= ImageList.Count)
+                return;
+
+            var currentImageItem = ImageList[CurrentImageIndex];
+            if (SelectedClassForAction != null && !currentImageItem.ImageClasses.Contains(SelectedClassForAction))
+            {
+                currentImageItem.ImageClasses.Add(SelectedClassForAction);
+                // Also update the UI-bound collection
+                CurrentImageClasses.Add(SelectedClassForAction);
+            }
+        }
+
+        [RelayCommand]
+        private void RemoveImageClass(string className)
+        {
+            if (CurrentImageIndex < 0 || CurrentImageIndex >= ImageList.Count)
+                return;
+
+            var currentImageItem = ImageList[CurrentImageIndex];
+            if (currentImageItem.ImageClasses.Contains(className))
+            {
+                currentImageItem.ImageClasses.Remove(className);
+                // Also update the UI-bound collection
+                CurrentImageClasses.Remove(className);
+            }
+        }
         #endregion
 
         #region 标注操作命令
@@ -650,11 +697,83 @@ namespace AutoTrainer.ViewModels
         }
 
         /// <summary>
+        /// 保存当前图片的标注或将其作为分类数据
+        /// </summary>
+        [RelayCommand]
+        private void SaveCurrentAnnotation()
+        {
+            if (CurrentImageAnnotations.Any())
+            {
+                // If there are annotations, they are already saved in memory.
+                NotifyManager.CreateMessage()
+                    .Accent("#161616")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Info")
+                    .HasMessage("当前图片的标注已在内存中，切换图片时会自动保存。")
+                    .Dismiss().WithDelay(3000, t => { })
+                    .Queue();
+            }
+            else
+            {
+                // If there are no annotations, save the image to the folders of its assigned classes.
+                if (CurrentImageClasses.Count == 0)
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Warning")
+                        .HasMessage("请先使用右侧的 '+' 按钮为此图片添加分类。")
+                        .Dismiss().WithDelay(4000, t => { })
+                        .Queue();
+                    return;
+                }
+
+                try
+                {
+                    var classifiedImagesPath = System.IO.Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
+                    foreach (var className in CurrentImageClasses)
+                    {
+                        var classPath = System.IO.Path.Combine(classifiedImagesPath, className);
+                        Directory.CreateDirectory(classPath);
+                        var destFileName = System.IO.Path.Combine(classPath, CurrentImageFileName);
+                        File.Copy(CurrentImagePath, destFileName, true); // true to overwrite
+                    }
+
+                    NotifyManager.CreateMessage()
+                        .Accent("#161616")
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Success")
+                        .HasMessage($"图片已分类到: {string.Join(", ", CurrentImageClasses)}")
+                        .Dismiss().WithButton("打开总目录", button =>
+                        {
+                            FileDirectoryHelper.OpenInExplorer(classifiedImagesPath, false);
+                        })
+                        .Dismiss().WithDelay(5000, t => { })
+                        .Queue();
+                }
+                catch (Exception ex)
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Error")
+                        .HasMessage($"分类保存失败: {ex.Message}")
+                        .Dismiss().WithDelay(6000, t => { })
+                        .Queue();
+                }
+            }
+        }
+
+        /// <summary>
         /// 保存标注数据到本地文件
         /// </summary>
         /// <returns></returns>
         [RelayCommand]
-        private void SaveAnnotation()
+        private void SaveAllAnnotations()
         {
             try
             {
@@ -735,16 +854,68 @@ namespace AutoTrainer.ViewModels
         #region 导入导出命令
 
         [RelayCommand]
-        private void ImportAnnotations()
+        private async Task ImportAnnotations(UserControl control)
         {
             try
             {
-                // TODO: 实现标注文件导入
-                // 支持YOLO、COCO等格式
+                var topLevel = TopLevel.GetTopLevel(control);
+                if (topLevel == null) return;
+
+                var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    AllowMultiple = false,
+                    Title = "选择分类标签文件",
+                    FileTypeFilter = [new("Text files") { Patterns = ["*.txt"] }]
+                });
+
+                if (files?.Count > 0)
+                {
+                    var selectedFile = files[0].TryGetLocalPath();
+                    if (string.IsNullOrEmpty(selectedFile)) return;
+
+                    var (successCount, errorCount, newClasses) = AnnotationFileHelper.ImportClassifications(selectedFile, ImageList, ClassNames);
+
+                    if (successCount == -1)
+                    {
+                        NotifyManager.CreateMessage()
+                            .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                            .HasMessage("读取文件失败。")
+                            .Queue();
+                        return;
+                    }
+
+                    // Add new classes to the main collection
+                    foreach (var newClass in newClasses)
+                    {
+                        if (!ClassNames.Contains(newClass))
+                        {
+                            ClassNames.Add(newClass);
+                        }
+                    }
+
+                    // Refresh current image if it was affected
+                    if (CurrentImageIndex != -1)
+                    {
+                        var currentImageItem = ImageList[CurrentImageIndex];
+                        CurrentImageClasses.Clear();
+                        foreach (var cls in currentImageItem.ImageClasses)
+                        {
+                            CurrentImageClasses.Add(cls);
+                        }
+                    }
+
+                    NotifyManager.CreateMessage()
+                        .HasMessage($"导入完成: {successCount}条成功, {errorCount}条失败。新增类别: {newClasses.Count}个。")
+                        .Queue();
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"导入标注失败: {ex.Message}");
+                Debug.WriteLine($"导入标注失败: {ex.Message}");
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .HasMessage($"导入失败: {ex.Message}")
+                    .Queue();
             }
         }
 
@@ -765,7 +936,10 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 生成数据集
-
+        /// <summary>
+        /// 裁剪数据集并分类保存
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task CroppingImgAsDataSet()
         {
@@ -777,6 +951,7 @@ namespace AutoTrainer.ViewModels
             {
                 try
                 {
+                    FinishedCroppingCount = 0;
                     foreach (var imageItem in ImageList)
                     {
                         if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
@@ -876,18 +1051,22 @@ namespace AutoTrainer.ViewModels
                             Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
-                    NotifyManager.CreateMessage()
+                    App.TrainModel.TrainDataPath = baseOutputPath;
+                    Dispatcher.UIThread.Invoke(() =>
+                    {
+                        NotifyManager.CreateMessage()
                         .Accent("#161616")
                         .Background("#e5e4e2")
                         .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasMessage($"裁剪完成，共裁剪 {FinishedCroppingCount} 张图片")
+                        .HasMessage($"裁剪完成，数据集已创建并设置为训练路径。共裁剪 {FinishedCroppingCount} 张图片")
                         .HasBadge("Info")
-                        .Dismiss().WithButton("打开文件夹", button =>
+                        .Dismiss().WithButton("查看分类总目录", button =>
                         {
                             FileDirectoryHelper.OpenInExplorer(baseOutputPath, false);
                         })
                         .Dismiss().WithDelay(6000, t => { })
                         .Queue();
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -899,6 +1078,73 @@ namespace AutoTrainer.ViewModels
                     IsShowCroppingText = true;
                 }
             });
+        }
+
+        [RelayCommand]
+        private async Task BatchCreateDataset()
+        {
+            if (!ImageList.Any())
+            {
+                NotifyManager.CreateMessage().HasMessage("请先导入图片。").Queue();
+                return;
+            }
+
+            string baseOutputPath = System.IO.Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
+            Directory.CreateDirectory(baseOutputPath);
+            IsBatchProcessing = true;
+            ProgressState = "开始批量生成分类数据集...";
+            ProgressValue = 0;
+            ProgressMax = ImageList.Count;
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    int processedCount = 0;
+                    foreach (var imageItem in ImageList)
+                    {
+                        if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath) || !imageItem.ImageClasses.Any())
+                        {
+                            processedCount++;
+                            Dispatcher.UIThread.InvokeAsync(() => ProgressValue = processedCount);
+                            continue;
+                        }
+
+                        foreach (var className in imageItem.ImageClasses)
+                        {
+                            var classPath = System.IO.Path.Combine(baseOutputPath, className);
+                            Directory.CreateDirectory(classPath);
+                            var destFileName = System.IO.Path.Combine(classPath, imageItem.FileName);
+                            try
+                            {
+                                File.Copy(imageItem.FilePath, destFileName, true); // true to overwrite
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log error for this specific file
+                                Debug.WriteLine($"Failed to copy {imageItem.FileName} to {className} folder: {ex.Message}");
+                            }
+                        }
+                        processedCount++;
+                        Dispatcher.UIThread.InvokeAsync(() => ProgressValue = processedCount);
+                    }
+                });
+
+                App.TrainModel.TrainDataPath = baseOutputPath;
+                NotifyManager.CreateMessage()
+                    .HasMessage($"批量生成成功！数据集已设置为训练路径。")
+                    .Dismiss().WithButton("打开目录", button => FileDirectoryHelper.OpenInExplorer(baseOutputPath, false))
+                    .Queue();
+            }
+            catch (Exception ex)
+            {
+                NotifyManager.CreateMessage().HasMessage($"批量生成失败: {ex.Message}").Queue();
+            }
+            finally
+            {
+                IsBatchProcessing = false;
+                ProgressState = "就绪";
+            }
         }
         #endregion
 
@@ -966,6 +1212,8 @@ namespace AutoTrainer.ViewModels
         {
             if (CurrentImageIndex >= 0 && CurrentImageIndex < ImageList.Count)
             {
+                SelectedAnnotation = null; // 重置选中的标注
+                SelectedClassForAction = null; // 重置类别选择
                 var imageItem = ImageList[CurrentImageIndex];
                 CurrentImagePath = imageItem.FilePath;
                 CurrentImageFileName = System.IO.Path.GetFileName(imageItem.FilePath);
@@ -973,9 +1221,18 @@ namespace AutoTrainer.ViewModels
                 {
                     CurrentImage = new Bitmap(imageItem.FilePath);
                     CurrentImageSize = $"{CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height}";
-                    
+
                     // 加载该图像的标注数据
                     LoadAnnotationsForCurrentImage();
+
+                    // 加载图像级别的分类数据
+                    CurrentImageClasses.Clear();
+                    foreach (var cls in imageItem.ImageClasses)
+                    {
+                        CurrentImageClasses.Add(cls);
+                    }
+
+                    OnPropertyChanged(nameof(SelectedClassForAction));
                 }
                 catch (Exception ex)
                 {
@@ -1072,6 +1329,19 @@ namespace AutoTrainer.ViewModels
             TotalImageCount = ImageList.Count;
             AnnotatedImageCount = ImageList.Count(img => img.IsAnnotated);
             TotalAnnotationCount = ImageList.Sum(img => img.AnnotationCount);
+        }
+
+        private void CurrentImageAnnotations_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems != null && e.NewItems.Count > 0)
+            {
+                // When a new annotation is added, select it immediately.
+                var newItem = e.NewItems[e.NewItems.Count - 1] as AnnotationItem;
+                if (newItem != null)
+                {
+                    SelectedAnnotation = newItem;
+                }
+            }
         }
 
         #endregion

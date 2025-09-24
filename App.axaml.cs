@@ -32,7 +32,7 @@ namespace AutoTrainer
                 "Unknown";
         }
         /// <summary>
-        /// һ��ȫ�ֲ���
+        /// ip，key，符号等
         /// </summary>
         public static TrainModel TrainModel { get; set; } = new TrainModel();
         public static string LineBreak = OperatingSystem.IsWindows() ? "\r\n" : OperatingSystem.IsLinux()? "\n" : "\r";
@@ -40,7 +40,8 @@ namespace AutoTrainer
         public static readonly string endPoint = "127.0.0.1:9000";
         public static readonly string accessKey = "Jv3FFA8htlzEpIRBcVBI";
         public static readonly string secretKey = "RGdOvEMrV9flZOAEQtN4FYPWJf2xoaXjD0zlszAs";
-        #region ����·�������ʼ��
+
+        #region 全局变量
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
         public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
@@ -50,6 +51,7 @@ namespace AutoTrainer
         public static string MutationDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "MutationDatas");
         public static string ObjDownloadPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
         public static string AugmentTrainingDataPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
+
         private static void CheckDirectory()
         {
             if (!Directory.Exists(ConfigFolderPath)) Directory.CreateDirectory(ConfigFolderPath);
