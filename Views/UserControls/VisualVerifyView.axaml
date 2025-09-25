@@ -17,11 +17,6 @@
     d:DesignWidth="1200"
     x:DataType="vm:VisualVerifyViewModel"
     mc:Ignorable="d">
-    <i:Interaction.Behaviors>
-        <ia:EventTriggerBehavior EventName="Loaded">
-            <InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=VerifyTabItem}" />
-        </ia:EventTriggerBehavior>
-    </i:Interaction.Behaviors>
     <UserControl.Resources>
         <ControlTheme x:Key="RightBtn" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
@@ -70,7 +65,7 @@
                     x:Name="Rad_VarifyWithCreateDatas"
                     Content="数据集变异验证"
                     GroupName="ExistOrCreat"
-                    IsChecked="true" />
+                    IsChecked="{Binding IsSelectCreateMutationValidData}" />
                 <RadioButton
                     x:Name="Rad_VarifyWithExistDatas"
                     Margin="20,0,0,0"
@@ -83,6 +78,7 @@
                 VerticalAlignment="Center"
                 Orientation="Horizontal">
                 <TextBox
+					Text="{Binding ValidDatasFolderPath}"
                     Width="300"
                     Height="35"
                     BorderBrush="LightGray"
@@ -129,7 +125,7 @@
                             <Button
                                 Grid.Column="2"
                                 Classes="light"
-                                Command="{Binding RefreshMutationCommand}">
+                                Command="{Binding RefreshValidDataImagesCommand}">
                                 <Button.Content>
                                     <avalonia:MaterialIcon
                                         Width="26"
@@ -172,7 +168,7 @@
                         </Grid>
                         <Border Grid.Row="1" BorderBrush="LightGray">
                             <ScrollViewer Classes="no-auto-hide">
-                                <ItemsControl ItemsSource="{Binding MutationImages}">
+                                <ItemsControl ItemsSource="{Binding ValidDataImages}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel />
@@ -201,7 +197,7 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="验证汇总">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel
                             Grid.Row="2"
                             Margin="10"
@@ -245,9 +241,11 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="混淆矩阵" />
-                            <Grid x:Name="MakeMatrixGrid" Margin="0,5,0,0">
-                                <!--  自动生成矩阵  -->
-                            </Grid>
+							<ScrollViewer  Margin="0,5,0,0" HorizontalScrollBarVisibility="Auto">
+                                <Grid x:Name="MakeMatrixGrid">
+                                    <!--  自动生成矩阵  -->
+                                </Grid>
+							</ScrollViewer>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
