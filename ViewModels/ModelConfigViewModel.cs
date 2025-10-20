@@ -143,7 +143,7 @@ namespace AutoTrainer.ViewModels
         private async Task GetPython()
         {
             var command = OperatingSystem.IsWindows() ? "where python" : "which python";
-            var result = await CmdHelper.ExecuteLine(command);
+            var result = await CliWrapHelper.ExecuteLine(command);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(result.Output))
@@ -160,7 +160,7 @@ namespace AutoTrainer.ViewModels
                         }
                         else
                         {
-                            var validResult = await CmdHelper.ExecuteLine(path + " --version");
+                            var validResult = await CliWrapHelper.ExecuteLine(path + " --version");
                             if (validResult.Error != null && validResult.Output != null)
                             {
                                 if (validResult.Error.Contains("Python"))
@@ -196,7 +196,7 @@ namespace AutoTrainer.ViewModels
                 sb.Append(" && ");
                 sb.Append($"python {modelHelperScript} list");
                 var command = sb.ToString();
-                var result = await CmdHelper.ExecuteLine(command);
+                var result = await CliWrapHelper.ExecuteLine(command);
                 if (result.ExitCode == 0)
                 {
                     if (!string.IsNullOrEmpty(result.Output))
@@ -422,7 +422,7 @@ namespace AutoTrainer.ViewModels
             sb.Append(" && ");
             sb.Append($"python -m venv {venvName}");
             var command = sb.ToString();
-            var result = await CmdHelper.ExecuteLine(command, onOutputReceived:HandleOutput);
+            var result = await CliWrapHelper.ExecuteLine(command, onOutputReceived:HandleOutput);
             if (result.ExitCode == 0)
             {
                 PythonVenvPath = Path.Combine(venvFolder, venvName);
@@ -440,7 +440,7 @@ namespace AutoTrainer.ViewModels
             {
                 missingApps = [];
                 //验证所填venv环境是否可用
-                bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
+                bool isVenvValid = await CliWrapHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
                     IsExcutingPyScript = true;
@@ -451,7 +451,7 @@ namespace AutoTrainer.ViewModels
                     sb.Append(" && ");
                     sb.Append("pip list");
                     var command = sb.ToString();
-                    var result = await CmdHelper.ExecuteLine(command);
+                    var result = await CliWrapHelper.ExecuteLine(command);
                     if (result.ExitCode == 0)
                     {
                         if (!string.IsNullOrEmpty(result.Output))
@@ -530,7 +530,7 @@ namespace AutoTrainer.ViewModels
                     IsVisibleProgressBar = true;
                     IsRunningProgressBar = true;
                     // 安装缺失的软件包
-                    await CmdHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
+                    await CliWrapHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
                     // 重新执行Python脚本
                     await ExecutePy();
                 }
@@ -559,7 +559,7 @@ namespace AutoTrainer.ViewModels
                 sb.Append(" && ");
                 sb.Append($"python {modelHelperScript} info {SelectModel}");
                 var command = sb.ToString();
-                var result = await CmdHelper.ExecuteLine(command);
+                var result = await CliWrapHelper.ExecuteLine(command);
                 IsLoadingModelList = false;
                 if (result.ExitCode == 0)
                 {

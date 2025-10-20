@@ -9,6 +9,7 @@ AutoTrainer is a .NET 8.0 desktop application built with Avalonia UI that serves
 **Key Technologies:**
 - **.NET 8.0** with Avalonia UI for the desktop interface
 - **Python** with PyTorch for machine learning backend
+- **CliWrap** for cross-platform command execution and process management
 - **MVVM pattern** for UI architecture
 - **Serilog** for logging
 - **Cross-platform support** (Windows, Linux, macOS)
@@ -21,7 +22,7 @@ The project follows a hybrid architecture combining a .NET frontend with a Pytho
 - **Views/**: Avalonia XAML UI files organized by user controls
 - **ViewModels/**: MVVM view models inheriting from ViewModelBase
 - **Models/**: Data models and configuration classes
-- **Helpers/**: Utility classes including CmdHelper for Python execution
+- **Helpers/**: Utility classes including CliWrapHelper for Python execution
 - **Converters/**: XAML value converters
 - **Extension/**: Extension methods and utilities
 
@@ -33,7 +34,7 @@ The project follows a hybrid architecture combining a .NET frontend with a Pytho
   - `ModelHelper.py`: Utility functions for model operations
 
 ### Communication Bridge
-- **CmdHelper.cs**: Manages Python virtual environment activation and script execution
+- **CliWrapHelper.cs**: Manages Python virtual environment activation and script execution using CliWrap library
 - **ModelParam.json**: Configuration file that passes parameters from .NET to Python
 - **JSON logging**: Structured logging system for real-time training progress monitoring
 
@@ -57,7 +58,7 @@ AutoTrainer/
 ├── Views/              # Avalonia XAML UI files
 ├── ViewModels/         # MVVM view models
 ├── Models/             # Data models
-├── Helpers/            # Utility classes (CmdHelper.cs)
+├── Helpers/            # Utility classes (CliWrapHelper.cs)
 ├── PyScripts/          # Python ML scripts
 ├── Configs/            # Configuration files
 ├── DataSet/            # Training data storage
@@ -122,7 +123,7 @@ When modifying ModelParam.json or adding new parameters:
 4. **Export testing**: Validate ONNX/TensorFlow conversion
 
 ### Common Debugging Areas
-- **Python execution**: Check CmdHelper logs for venv activation issues
+- **Python execution**: Check CliWrapHelper logs for venv activation issues
 - **Training progress**: Monitor JSON logs in Logs/PyTrain/ directory
 - **Model loading**: Verify paths and permissions for model files
 - **Data loading**: Ensure image folders follow expected structure
@@ -135,9 +136,12 @@ When modifying ModelParam.json or adding new parameters:
 - Handle case sensitivity for non-Windows platforms
 
 ### Shell Execution
-- CmdHelper automatically detects OS and uses appropriate shell
+- CliWrapHelper automatically detects OS and uses appropriate shell
+- Uses CliWrap library for improved cross-platform compatibility and error handling
 - Environment variables set for UTF-8 encoding in Python processes
 - Virtual environment activation handles .bat vs bash script differences
+- Real-time output streaming with async/await pattern
+- Cancellation token support for long-running operations
 
 ## Logging and Monitoring
 

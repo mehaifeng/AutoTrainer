@@ -134,7 +134,7 @@ namespace AutoTrainer.ViewModels
             var arguments = $"--config {configPath}";
             _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
-            var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript,App.PythonVenvPath,arguments,isShowTerminal: true, null, cancellationTokenSource.Token);
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript,App.PythonVenvPath,arguments,isShowTerminal: true, null, cancellationTokenSource.Token);
             if (result.ExitCode != 0 && result.Error != null)
             {
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", result.Error, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();

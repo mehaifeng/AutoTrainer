@@ -751,7 +751,7 @@ namespace AutoTrainer.ViewModels
                         {
                             FileDirectoryHelper.OpenInExplorer(classifiedImagesPath, false);
                         })
-                        .Dismiss().WithDelay(5000, t => { })
+                        .Dismiss().WithDelay(6000, t => { })
                         .Queue();
                 }
                 catch (Exception ex)
@@ -859,7 +859,10 @@ namespace AutoTrainer.ViewModels
             try
             {
                 var topLevel = TopLevel.GetTopLevel(control);
-                if (topLevel == null) return;
+                if (topLevel == null)
+                {
+                    return;
+                }
 
                 var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
@@ -879,12 +882,16 @@ namespace AutoTrainer.ViewModels
                     {
                         NotifyManager.CreateMessage()
                             .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                            .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                            .Background("#e5e4e2")
+                            .HasBadge("Error")
                             .HasMessage("读取文件失败。")
+                            .Dismiss().WithDelay(6000, t => { })
                             .Queue();
                         return;
                     }
 
-                    // Add new classes to the main collection
+                    //向主集合添加新类
                     foreach (var newClass in newClasses)
                     {
                         if (!ClassNames.Contains(newClass))
@@ -893,7 +900,7 @@ namespace AutoTrainer.ViewModels
                         }
                     }
 
-                    // Refresh current image if it was affected
+                    //刷新当前受到影响的图像，给它们加上匹配的类别
                     if (CurrentImageIndex != -1)
                     {
                         var currentImageItem = ImageList[CurrentImageIndex];
@@ -905,16 +912,24 @@ namespace AutoTrainer.ViewModels
                     }
 
                     NotifyManager.CreateMessage()
-                        .HasMessage($"导入完成: {successCount}条成功, {errorCount}条失败。新增类别: {newClasses.Count}个。")
+                        .Accent("#161616")
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Info")
+                        .HasMessage($"导入结果: {successCount}条成功, {errorCount}条失败。新增类别: {newClasses.Count}个。")
+                        .Dismiss().WithDelay(6000)
                         .Queue();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"导入标注失败: {ex.Message}");
                 NotifyManager.CreateMessage()
                     .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Error")
                     .HasMessage($"导入失败: {ex.Message}")
+                    .Dismiss().WithDelay(6000)
                     .Queue();
             }
         }
@@ -1064,7 +1079,7 @@ namespace AutoTrainer.ViewModels
                         {
                             FileDirectoryHelper.OpenInExplorer(baseOutputPath, false);
                         })
-                        .Dismiss().WithDelay(6000, t => { })
+                        .Dismiss().WithDelay(6000)
                         .Queue();
                     });
                 }
@@ -1085,7 +1100,14 @@ namespace AutoTrainer.ViewModels
         {
             if (!ImageList.Any())
             {
-                NotifyManager.CreateMessage().HasMessage("请先导入图片。").Queue();
+                NotifyManager.CreateMessage()
+                    .HasBadge("Warning")
+                    .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .Background("#e5e4e2")
+                    .HasMessage("请先导入图片。")
+                    .Dismiss().WithDelay(6000)
+                    .Queue();
                 return;
             }
 
@@ -1133,14 +1155,25 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.TrainDataPath = baseOutputPath;
                 App.TrainModel.NumClasses = Directory.GetDirectories(baseOutputPath).Length;
                 NotifyManager.CreateMessage()
+                    .Accent("#161616")
+                    .HasBadge("Info")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
                     .HasMessage($"批量生成成功！数据集已设置为训练路径。")
                     .Dismiss().WithButton("打开目录", button => FileDirectoryHelper.OpenInExplorer(baseOutputPath, false))
-                    .Dismiss().WithDelay(6000, B => { })
+                    .Dismiss().WithDelay(6000)
                     .Queue();
             }
             catch (Exception ex)
             {
-                NotifyManager.CreateMessage().HasMessage($"批量生成失败: {ex.Message}").Queue();
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .HasBadge("Error")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasMessage($"批量生成失败: {ex.Message}")
+                    .Dismiss().WithDelay(6000)
+                    .Queue();
             }
             finally
             {

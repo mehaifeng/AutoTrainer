@@ -140,7 +140,7 @@ namespace AutoTrainer.ViewModels
             sb.Append($" --output-path {specialPyLogPath}");
             var argument = sb.ToString();
             IsInSortingTask = true;
-            await CmdHelper.ExecutePythonScriptAsync(classifyPyFilePath, venvFolder, argument, false);
+            await CliWrapHelper.ExecutePythonScriptAsync(classifyPyFilePath, venvFolder, argument, false);
             if (System.IO.File.Exists(specialPyLogPath))
             {
                 var jsonStr = await System.IO.File.ReadAllTextAsync(specialPyLogPath);

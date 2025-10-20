@@ -54,7 +54,7 @@ namespace AutoTrainer.ViewModels
             var arguments = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, HandleOutput, System.Threading.CancellationToken.None);
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, HandleOutput, System.Threading.CancellationToken.None);
             IsConverting = false;
             IsEnableConvert = true;
             SnackbarHost.Post(
@@ -121,7 +121,7 @@ namespace AutoTrainer.ViewModels
             var argument = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            await CmdHelper.ExecutePythonScriptAsync(pythonScript, venvFolder, argument, false, HandleOutput);
+            await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, venvFolder, argument, false, HandleOutput);
             IsConverting = false;
             IsEnableConvert = true;
             SnackbarHost.Post(
