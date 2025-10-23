@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using CliWrap;
 using CliWrap.Buffered;
 using CliWrap.EventStream;
+using Serilog;
 
 namespace AutoTrainer.Helpers
 {
@@ -29,19 +30,31 @@ namespace AutoTrainer.Helpers
         /// <returns></returns>
         public static async Task<bool> IsVenvValid(string venvPath)
         {
-            // 构建Python解释器的路径
-            var pythonPath = OperatingSystem.IsWindows()
-                ? Path.Combine(venvPath, "Scripts", "python.exe")
-                : Path.Combine(venvPath, "bin", "python");
+            Log.Debug("验证Python虚拟环境: {VenvPath}", venvPath);
 
-            // 检查Python解释器是否存在
-            if (!System.IO.File.Exists(pythonPath))
+            if (string.IsNullOrEmpty(venvPath))
             {
+                Log.Warning("虚拟环境路径为空");
                 return false;
             }
 
             try
             {
+                // 构建Python解释器的路径
+                var pythonPath = OperatingSystem.IsWindows()
+                    ? Path.Combine(venvPath, "Scripts", "python.exe")
+                    : Path.Combine(venvPath, "bin", "python");
+
+                Log.Debug("检查Python解释器: {PythonPath}", pythonPath);
+
+                // 检查Python解释器是否存在
+                if (!System.IO.File.Exists(pythonPath))
+                {
+                    Log.Warning("未找到Python解释器: {PythonPath}", pythonPath);
+                    return false;
+                }
+
+                Log.Debug("找到Python解释器，测试功能");
                 // 使用CliWrap执行Python命令
                 var result = await Cli.Wrap(pythonPath)
                     .WithArguments("-c \"import sys; print(sys.version_info[:2])\"")
@@ -50,18 +63,25 @@ namespace AutoTrainer.Helpers
                 var output = result.StandardOutput;
                 string pattern = @"^\(\d+,\s*\d+\)$";
 
+                Log.Debug("Python版本测试输出: {Output}", output.Trim());
+
                 // 检查输出是否包含Python版本信息
                 if (Regex.IsMatch(output.Trim(), pattern))
                 {
+                    Log.Information("虚拟环境验证成功: {VenvPath}", venvPath);
                     return true;
                 }
+                else
+                {
+                    Log.Warning("Python版本输出格式无效: {Output}", output.Trim());
+                    return false;
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Error(ex, "验证Python虚拟环境失败: {VenvPath}", venvPath);
                 return false;
             }
-
-            return false;
         }
 
         /// <summary>
@@ -79,7 +99,17 @@ namespace AutoTrainer.Helpers
             bool isShowTerminal = false,
             OutputReceivedHandler? onOutputReceived = null)
         {
+            Log.Debug("执行命令行: {Arguments} 在目录: {Directory}, 显示终端: {ShowTerminal}",
+                arguments, workingDirectory ?? Environment.CurrentDirectory, isShowTerminal);
+
+            if (string.IsNullOrWhiteSpace(arguments))
+            {
+                Log.Warning("无法执行空命令");
+                return new CommandResult { ExitCode = -1, Error = "Command cannot be empty" };
+            }
+
             var result = new CommandResult();
+            var startTime = DateTime.UtcNow;
 
             try
             {
@@ -91,6 +121,7 @@ namespace AutoTrainer.Helpers
                 {
                     shellPath = "cmd.exe";
                     shellArgs = $"/c {arguments}";
+                    Log.Debug("使用Windows shell: {ShellPath} 参数: {ShellArgs}", shellPath, shellArgs);
                 }
                 else
                 {
@@ -102,11 +133,17 @@ namespace AutoTrainer.Helpers
                         if (!File.Exists(shellPath))
                         {
                             shellPath = "/bin/zsh";
+                            Log.Debug("macOS上未找到bash，使用zsh: {ShellPath}", shellPath);
+                        }
+                        else
+                        {
+                            Log.Debug("使用macOS bash shell: {ShellPath}", shellPath);
                         }
                     }
                     else // Linux
                     {
                         shellPath = "/bin/bash";
+                        Log.Debug("使用Linux bash shell: {ShellPath}", shellPath);
                     }
                     // Unix-like 系统的命令参数格式相同
                     shellArgs = $"-c \"{arguments.Replace("\"", "\\\"")}\"";
@@ -125,7 +162,11 @@ namespace AutoTrainer.Helpers
                     string defaultPath = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
                     var currentPath = Environment.GetEnvironmentVariable("PATH");
                     environmentVariables["PATH"] = string.IsNullOrEmpty(currentPath) ? defaultPath : currentPath + ":" + defaultPath;
+                    Log.Debug("设置macOS PATH: {Path}", environmentVariables["PATH"]);
                 }
+
+                Log.Debug("配置命令环境变量: {EnvVars}",
+                    string.Join(", ", environmentVariables.Keys));
 
                 var command = Cli.Wrap(shellPath)
                     .WithArguments(shellArgs)
@@ -134,17 +175,22 @@ namespace AutoTrainer.Helpers
 
                 if (isShowTerminal)
                 {
+                    Log.Debug("在终端模式下执行命令（无输出重定向）");
                     // 显示终端模式 - 直接执行而不重定向输出
                     var processResult = await command.ExecuteAsync();
                     result.ExitCode = processResult.ExitCode;
+                    Log.Information("终端模式下命令完成，退出码: {ExitCode}", processResult.ExitCode);
                 }
                 else
                 {
                     if (onOutputReceived != null)
                     {
+                        Log.Debug("在实时输出模式下执行命令");
                         // 实时输出模式
                         var commandTask = command.ListenAsync();
                         CommandResult? finalResult = null;
+                        var outputLines = 0;
+                        var errorLines = 0;
 
                         await foreach (var cmdEvent in commandTask)
                         {
@@ -153,37 +199,65 @@ namespace AutoTrainer.Helpers
                                 case StandardOutputCommandEvent stdOut:
                                     if (!string.IsNullOrEmpty(stdOut.Text))
                                     {
+                                        outputLines++;
+                                        Log.Debug("命令标准输出行 {LineCount}: {Text}", outputLines,
+                                            stdOut.Text.Trim().Substring(0, Math.Min(100, stdOut.Text.Trim().Length)));
                                         onOutputReceived(stdOut.Text);
                                     }
                                     break;
                                 case StandardErrorCommandEvent stdErr:
                                     if (!string.IsNullOrEmpty(stdErr.Text))
                                     {
+                                        errorLines++;
+                                        Log.Warning("命令标准错误行 {LineCount}: {Text}", errorLines,
+                                            stdErr.Text.Trim().Substring(0, Math.Min(100, stdErr.Text.Trim().Length)));
                                         onOutputReceived(stdErr.Text);
                                     }
                                     break;
                                 case ExitedCommandEvent exited:
                                     finalResult = new CommandResult { ExitCode = exited.ExitCode };
+                                    Log.Information("命令进程退出，退出码: {ExitCode}", exited.ExitCode);
                                     break;
                             }
                         }
 
                         result.ExitCode = finalResult?.ExitCode ?? 0;
+                        Log.Debug("实时执行完成。总标准输出行数: {StdOutCount}, 标准错误行数: {StdErrCount}",
+                            outputLines, errorLines);
                     }
                     else
                     {
+                        Log.Debug("在缓冲输出模式下执行命令");
                         // 缓冲输出模式
                         var bufferedResult = await command.ExecuteBufferedAsync(Encoding.UTF8);
                         result.Output = bufferedResult.StandardOutput;
                         result.Error = bufferedResult.StandardError;
                         result.ExitCode = bufferedResult.ExitCode;
+
+                        Log.Debug("缓冲执行完成。退出码: {ExitCode}, 标准输出长度: {StdOutLen}, 标准错误长度: {StdErrLen}",
+                            bufferedResult.ExitCode,
+                            bufferedResult.StandardOutput?.Length ?? 0,
+                            bufferedResult.StandardError?.Length ?? 0);
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("命令执行被取消: {Arguments}", arguments);
+                result.Error = "Command execution was cancelled";
+                result.ExitCode = -1;
+            }
             catch (Exception ex)
             {
+                Log.Error(ex, "命令执行失败: {Arguments}", arguments);
                 result.Error = ex.Message;
                 result.ExitCode = -1;
+            }
+            finally
+            {
+                var duration = DateTime.UtcNow - startTime;
+                Log.Information("命令执行完成，耗时 {Duration}ms，退出码 {ExitCode}: {Arguments}",
+                    duration.TotalMilliseconds, result.ExitCode, arguments);
             }
 
             return result;
@@ -207,10 +281,33 @@ namespace AutoTrainer.Helpers
             OutputReceivedHandler? onOutputReceived = null,
             CancellationToken cancellationToken = default)
         {
+            Log.Information("执行Python脚本: {PythonScript} 虚拟环境: {VenvPath}, 参数: {Arguments}",
+                pythonScriptPath, venvPath, arguments ?? "无");
+
+            if (string.IsNullOrEmpty(pythonScriptPath))
+            {
+                Log.Error("Python脚本路径为空");
+                return new CommandResult { ExitCode = -1, Error = "Python script path cannot be empty" };
+            }
+
+            if (string.IsNullOrEmpty(venvPath))
+            {
+                Log.Error("虚拟环境路径为空");
+                return new CommandResult { ExitCode = -1, Error = "Virtual environment path cannot be empty" };
+            }
+
+            if (!File.Exists(pythonScriptPath))
+            {
+                Log.Error("未找到Python脚本: {PythonScript}", pythonScriptPath);
+                return new CommandResult { ExitCode = -1, Error = $"Python script not found: {pythonScriptPath}" };
+            }
+
             var command = new StringBuilder();
             var activateScript = OperatingSystem.IsWindows()
                 ? Path.Combine(venvPath, "Scripts", "activate.bat")
                 : $"source {Path.Combine(venvPath, "bin", "activate")}";
+
+            Log.Debug("使用虚拟环境激活脚本: {ActivateScript}", activateScript);
 
             command.Append(activateScript);
             command.Append(" && ");
@@ -221,13 +318,26 @@ namespace AutoTrainer.Helpers
                 command.Append($" {arguments}");
             }
 
-            var result = await ExecuteCommandAsync(
-                command.ToString(),
-                isShowTerminal,
-                onOutputReceived: onOutputReceived,
-                cancellationToken: cancellationToken);
+            var fullCommand = command.ToString();
+            Log.Debug("构建Python执行命令: {Command}", fullCommand);
 
-            return result;
+            try
+            {
+                var result = await ExecuteCommandAsync(
+                    fullCommand,
+                    isShowTerminal,
+                    onOutputReceived: onOutputReceived,
+                    cancellationToken: cancellationToken);
+
+                Log.Information("Python脚本执行完成: {PythonScript} 退出码: {ExitCode}",
+                    pythonScriptPath, result.ExitCode);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "执行Python脚本失败: {PythonScript}", pythonScriptPath);
+                return new CommandResult { ExitCode = -1, Error = ex.Message };
+            }
         }
 
         /// <summary>

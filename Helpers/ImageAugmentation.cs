@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -15,18 +16,25 @@ namespace AutoTrainer.Helpers
 
         public static List<string> AugmentImageOne(int index, bool[] checks, string originalImagePath, string outputDirectory, int augmentationCount)
         {
+            Log.Debug("开始图像增强: {ImagePath}, 索引: {Index}, 增强数量: {Count}",
+                originalImagePath, index, augmentationCount);
+
             if (!File.Exists(originalImagePath))
             {
+                Log.Error("未找到原始图像文件: {ImagePath}", originalImagePath);
                 throw new FileNotFoundException("原始图像文件不存在。", originalImagePath);
             }
+
             if (!Directory.Exists(outputDirectory))
             {
+                Log.Debug("创建输出目录: {Directory}", outputDirectory);
                 Directory.CreateDirectory(outputDirectory);
             }
 
             List<string> augmentedImagePaths = new List<string>();
             try
             {
+                Log.Debug("加载原始图像进行增强: {ImagePath}", originalImagePath);
                 using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load<Rgba32>(originalImagePath))
                 {
                     for (int i = 0; i < augmentationCount; i++)
@@ -89,10 +97,12 @@ namespace AutoTrainer.Helpers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"图像增强过程中发生错误：{ex.Message}");
+                Log.Error(ex, "图像增强过程中出错: {ImagePath}", originalImagePath);
                 return new List<string>();
             }
 
+            Log.Information("图像增强成功完成。从 {ImagePath} 生成了 {Count} 张增强图像",
+                originalImagePath, augmentedImagePaths.Count);
             return augmentedImagePaths;
         }
 
