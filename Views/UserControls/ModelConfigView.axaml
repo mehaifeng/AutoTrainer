@@ -2,14 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
-             mc:Ignorable="d" 
-			 d:DesignWidth="1200" 
+			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+			 mc:Ignorable="d"
+			 d:DesignWidth="1200"
 			 d:DesignHeight="850"
 			 x:Name="ModelTabItem"
              x:Class="AutoTrainer.ModelConfigView"
@@ -27,50 +25,50 @@
 				</Grid.RowDefinitions>
 				<Grid Grid.Row="0">
 					<Grid.RowDefinitions>
-						<RowDefinition Height="60"/>
-						<RowDefinition Height="60"/>
+						<RowDefinition Height="80"/>
+						<RowDefinition Height="80"/>
 						<RowDefinition Height="50"/>
 						<RowDefinition Height="Auto"/>
 						<RowDefinition Height=".6*"/>
 						<RowDefinition Height=".4*"/>
 					</Grid.RowDefinitions>
 					<!--python path-->
-					<TextBox 
-						Grid.Row="0"
-						UseFloatingWatermark="True" 
-						Classes="outline" 
-						IsEnabled="{Binding IsEnablePythonConfigView}"
-						Theme="{StaticResource OutlineTextBox}" 
-						Text="{Binding PythonPath}"
-						p1:TextFieldAssist.Label="Python路径" />
+					<StackPanel Grid.Row="0" Margin="5">
+						<TextBlock Text="Python路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+						<TextBox
+							IsEnabled="{Binding IsEnablePythonConfigView}"
+							Classes="outline"
+							Text="{Binding PythonPath}"
+							Watermark="Python可执行文件路径" />
+					</StackPanel>
 					<!--python venv path-->
-					<TextBox
-						Grid.Row="1"
-						UseFloatingWatermark="True"
-						Classes="outline"
-						IsEnabled="{Binding IsEnablePythonConfigView}"
-						Theme="{StaticResource OutlineTextBox}"
-						Text="{Binding PythonVenvPath}"
-						p1:TextFieldAssist.Label="Venv路径" />
+					<StackPanel Grid.Row="1" Margin="5">
+						<TextBlock Text="Venv路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+						<TextBox
+							IsEnabled="{Binding IsEnablePythonConfigView}"
+							Classes="outline"
+							Text="{Binding PythonVenvPath}"
+							Watermark="虚拟环境路径" />
+					</StackPanel>
 					<!--Global-Venv-CreateVenv-->
 					<StackPanel
-						Grid.Row="2" 
+						Grid.Row="2"
 						IsEnabled="{Binding IsEnablePythonConfigView}"
-						Orientation="Horizontal" 
+						Orientation="Horizontal"
 						VerticalAlignment="Center"
 						HorizontalAlignment="Center">
-						<RadioButton 
-							GroupName="1" 
+						<RadioButton
+							GroupName="1"
 							Content="全局环境"
 							VerticalAlignment="Center"
 							IsChecked="{Binding IsCheckedGlobal}"/>
-						<RadioButton 
+						<RadioButton
 							GroupName="1"
 							Content="虚拟环境"
 							Margin="10,0,0,0"
 							VerticalAlignment="Center"
 							IsChecked="{Binding IsCheckedVenv}"/>
-						<Button Classes="light"
+						<Button
 							Command="{Binding ScanningVenvCommand}"
 							Margin="10,0,0,0"
 							ToolTip.Tip="搜索Venv环境"
@@ -81,32 +79,17 @@
 								<Panel>
 									<!-- 默认文本 -->
 									<StackPanel Orientation="Horizontal" IsVisible="{Binding !IsScanningVenv}">
-										<avalonia:MaterialIcon Kind="FileSearch" IsVisible="{Binding !IsScanningVenv}"/>
+										<Path Width="16" Height="16" Data="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" Fill="#FF080808"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
 									<!-- Loading图标 -->
-									<avalonia:MaterialIcon Kind="Loading"
-														 IsVisible="{Binding IsScanningVenv}">
-										<avalonia:MaterialIcon.Styles>
-											<Style Selector="avalonia|MaterialIcon">
-												<Style.Animations>
-													<Animation Duration="0:0:1"
-															 IterationCount="INFINITE">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-														<KeyFrame Cue="100%">
-															<Setter Property="RotateTransform.Angle" Value="360.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
-										</avalonia:MaterialIcon.Styles>
-									</avalonia:MaterialIcon>
+									<Path Width="16" Height="16" Data="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" Fill="#FF080808"
+										   IsVisible="{Binding IsScanningVenv}">
+										</Path>
 								</Panel>
 							</Button.Content>
 						</Button>
-						<Button Classes="light"
+						<Button
 							Command="{Binding CreateVenvCommand}"
 							Margin="10,0,0,0"
 							VerticalAlignment="Center"
@@ -117,29 +100,14 @@
 								<Panel>
 									<!-- 默认文本 -->
 									<StackPanel Orientation="Horizontal" IsVisible="{Binding IsEnablePythonConfigView}">
-										<avalonia:MaterialIcon Kind="PlusCircle" IsVisible="{Binding IsEnablePythonConfigView}"/>
+										<Path Width="16" Height="16" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Fill="#FF080808"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
 
 									<!-- Loading图标 -->
-									<avalonia:MaterialIcon Kind="Loading"
-														 IsVisible="{Binding !IsEnablePythonConfigView}">
-										<avalonia:MaterialIcon.Styles>
-											<Style Selector="avalonia|MaterialIcon">
-												<Style.Animations>
-													<Animation Duration="0:0:1"
-															 IterationCount="INFINITE">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-														<KeyFrame Cue="100%">
-															<Setter Property="RotateTransform.Angle" Value="360.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
-										</avalonia:MaterialIcon.Styles>
-									</avalonia:MaterialIcon>
+									<Path Width="16" Height="16" Data="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" Fill="#FF080808"
+										   IsVisible="{Binding !IsEnablePythonConfigView}">
+										</Path>
 								</Panel>
 
 							</Button.Content>
@@ -153,52 +121,60 @@
 						Text="{Binding ScanningFolder}"
 						IsVisible="{Binding IsScanningVenv}"/>
 					<!--Pip list-->
-					<TextBox 
-						Grid.Row="4"
-						UseFloatingWatermark="True" 
-						p1:TextFieldAssist.Label="软件包列表" 
-						Classes="outline" 
-						Theme="{StaticResource OutlineTextBox}" 
-						Text="{Binding PipApps}"
-						AcceptsReturn="True" 
-						TextWrapping="Wrap"  />
-					<!--reuirements-->
-					<TextBox
-						Grid.Row="5"
-						Margin="0,10,0,0"
-						UseFloatingWatermark="True"
-						p1:TextFieldAssist.Label="软件包需求"
-						Classes="outline"
-						Theme="{StaticResource OutlineTextBox}"
-						Text="{Binding Requirements}"
-						IsReadOnly="True"
-						AcceptsReturn="True"
-						TextWrapping="Wrap"  />
+					<Grid Grid.Row="4" Margin="5" RowDefinitions="Auto,*">
+						<TextBlock
+							Grid.Row="0"
+							Text="软件包列表"
+							Margin="0,0,0,5"
+							FontSize="12"
+							FontWeight="SemiBold"/>
+						<TextBox
+							Grid.Row="1"
+							Text="{Binding PipApps}"
+							TextWrapping="Wrap"
+							AcceptsReturn="True"/>
+					</Grid>
+					<!--requirements-->
+					<Grid Grid.Row="5" Margin="5,10,5,5" RowDefinitions="Auto,*">
+						<TextBlock
+							Grid.Row="0"
+							Text="软件包需求"
+							Margin="0,0,0,5"
+							FontSize="12"
+							FontWeight="SemiBold"/>
+						<TextBox
+							Grid.Row="1"
+							Classes="outline"
+							Text="{Binding Requirements}"
+							IsReadOnly="True"
+							AcceptsReturn="True"
+							TextWrapping="Wrap"/>
+					</Grid>
 				</Grid>
 				<!--Enviroment State-->
-				<StackPanel 
-					Grid.Row="1" 
+				<StackPanel
+					Grid.Row="1"
 					Margin="0,15,0,0"
 					Orientation="Vertical">
-					<TextBlock 
+					<TextBlock
 						HorizontalAlignment="Center"
 						Margin="0,0,0,10"
 						Text="{Binding EnvironmentState}"
 						Foreground="{Binding StateForeground}"/>
-					<Button 
+					<Button
 						Width="160"
 						Height="30"
 						Margin="0,0,0,10"
 						IsVisible="{Binding IsVisibleInstallMissing}"
 						Command="{Binding InstallMissingAppCommand}"
-						Theme="{StaticResource MaterialFlatButton}" 
-						Content="Install Missing Apps" 
+						Classes="outline"
+						Content="Install Missing Apps"
 						Foreground="Red"/>
 					<ProgressBar
 						Margin="0,0,0,10"
 						BorderThickness="1"
 						Foreground="White"
-						IsIndeterminate="{Binding IsRunningProgressBar}" 
+						IsIndeterminate="{Binding IsRunningProgressBar}"
 						IsVisible="{Binding IsVisibleProgressBar}"/>
 				</StackPanel>
 			</Grid>
@@ -225,23 +201,25 @@
 									<ColumnDefinition/>
 									<ColumnDefinition/>
 								</Grid.ColumnDefinitions>
-								<ComboBox
-									Grid.Column="0"
-									Width="200"
-									HorizontalAlignment="Left"
-									VerticalAlignment="Center"
-									Theme="{StaticResource MaterialOutlineComboBox}"
-									p1:ComboBoxAssist.Label="选择模型"
-									SelectedItem="{Binding SelectModel}"
-									ItemsSource="{Binding ModelList}">
-									<i:Interaction.Behaviors>
-										<ia:EventTriggerBehavior EventName="SelectionChanged">
-											<ia:InvokeCommandAction Command="{Binding SelectModelToShowCommand}" />
-										</ia:EventTriggerBehavior>
-									</i:Interaction.Behaviors>
-								</ComboBox>
+								<!--Select PreTrained Model-->
+								<Grid Grid.Column="0">
+									<TextBlock Text="选择预训练模型" FontSize="12" FontWeight="SemiBold"/>
+									<ComboBox
+										Width="200"
+										HorizontalAlignment="Left"
+										VerticalAlignment="Bottom"
+										SelectedItem="{Binding SelectModel}"
+										ItemsSource="{Binding ModelList}">
+										<i:Interaction.Behaviors>
+											<ia:EventTriggerBehavior EventName="SelectionChanged">
+												<ia:InvokeCommandAction Command="{Binding SelectModelToShowCommand}" />
+											</ia:EventTriggerBehavior>
+										</i:Interaction.Behaviors>
+									</ComboBox>
+								</Grid>
+								<!--Select Local Weight-->
 								<Button
-									Grid.Column="1" 
+									Grid.Column="1"
 									IsVisible="{Binding IsVisibleIntroduce}"
 									Command="{Binding SelectLocalModelCommand}"
 									Content="选择本地权重"
@@ -253,8 +231,8 @@
 									FontSize="20"
 									VerticalAlignment="Center"
 									Margin="10,10,0,0"/>
-								<!--下一步-->
-								<controls:FloatingButton
+								<!--Next Step-->
+								<Button
 									Grid.Column="3"
 									Margin="0,10,0,0"
 									Width="120"
@@ -263,105 +241,78 @@
 									HorizontalAlignment="Right"
 									VerticalAlignment="Center"
 									IsVisible="{Binding IsVisibleIntroduce}"
-									Classes="Light"
-									IsExtended="True">
-									<controls:FloatingButton.Styles>
-										<Style Selector="controls|FloatingButton">
-											<Setter Property="Content">
-												<Setter.Value>
-													<Template>
-														<StackPanel Orientation="Horizontal">
-															<Viewbox Stretch="None"
-															         HorizontalAlignment="Left"
-															         VerticalAlignment="Center">
-																<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
-															</Viewbox>
-															<TextBlock
-																Margin="10,0,0,0"
-																FontSize="16"
-																VerticalAlignment="Center"
-																Text="下一步"/>
-														</StackPanel>
-													</Template>
-												</Setter.Value>
-											</Setter>
-										</Style>
-									</controls:FloatingButton.Styles>
-								</controls:FloatingButton>
+									Classes="floating">
+									<StackPanel Orientation="Horizontal">
+										<Path Width="24" Height="24" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="White" VerticalAlignment="Center"/>
+										<TextBlock
+											Margin="10,0,0,0"
+											FontSize="16"
+											VerticalAlignment="Center"
+											Foreground="White"
+											Text="下一步"/>
+									</StackPanel>
+								</Button>
 							</Grid>
+							<!--Load PreTrained Model Information ProgressBar-->
 							<ProgressBar
 								Grid.Row="1"
 								Margin="0,60,0,0"
 								IsVisible="{Binding IsLoadingModelList}"
 								IsIndeterminate="{Binding IsLoadingModelList}"
-								Classes="circular"
 								Height="35"
 								Width="35"/>
+							<!--PreTrained Model Introduce Text-->
 							<TextBox
-								Margin="10"
 								Grid.Row="1"
+								Margin="10"
+								IsVisible="{Binding IsVisibleIntroduce}"
 								CornerRadius="10"
-								UseFloatingWatermark="True"
-								p1:TextFieldAssist.Label="Multiline textfield"
-								Classes="filled" Theme="{StaticResource FilledTextBox}"
 								AcceptsReturn="True"
 								TextWrapping="Wrap"
-								IsVisible="{Binding IsVisibleIntroduce}"
+								MinHeight="100"
 								Text="{Binding SelectModelIntroduce}" />
 						</Grid>
 					</Border>
 				</Grid>
+				<!--Output Text And Excuted Activate Button-->
 				<Border Grid.Row="1" BorderBrush="Black" BorderThickness="0,2,0,0">
 					<Grid>
 						<!--Output-->
-						<TextBox 
-						    x:Name="Outout_tb"
-							Classes="filled" 
-							AcceptsReturn="True" 
+						<TextBox
+							x:Name="Outout_tb"
+							AcceptsReturn="True"
 							TextWrapping="Wrap"
-							Theme="{StaticResource FilledTextBox}"
+							MinHeight="80"
+							CornerRadius="0"
 							Text="{Binding Outputs}"
 							TextChanged="Outout_tb_TextChanged"/>
 						<!--Start Execute-->
-						<controls:FloatingButton 
-							Classes="Light Mini" 
-							HorizontalAlignment="Right" 
-							VerticalAlignment="Bottom" 
+						<Button
+							HorizontalAlignment="Right"
+							VerticalAlignment="Bottom"
 							IsEnabled="{Binding !IsExcutingPyScript}"
 							Margin="10"
+							Width="80"
+							Height="40"
 							Command="{Binding ExecutePyCommand}">
-							<controls:FloatingButton.Content>
-								<Panel>
-									<!-- 默认文本 -->
-									<Viewbox>
-										<avalonia:MaterialIcon Kind="Play" IsVisible="{Binding !IsExcutingPyScript}"/>
-									</Viewbox>
-
-									<!-- Loading图标 -->
-									<avalonia:MaterialIcon Kind="Loading"
-														   Width="26"
-														   Height="26"
-														 IsVisible="{Binding IsExcutingPyScript}">
-										<avalonia:MaterialIcon.Styles>
-											<Style Selector="avalonia|MaterialIcon">
-												<Style.Animations>
-													<Animation Duration="0:0:1"
-															 IterationCount="INFINITE">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-														<KeyFrame Cue="100%">
-															<Setter Property="RotateTransform.Angle" Value="360.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
-										</avalonia:MaterialIcon.Styles>
-									</avalonia:MaterialIcon>
-								</Panel>
-
-							</controls:FloatingButton.Content>
-						</controls:FloatingButton>
+							<Panel HorizontalAlignment="Center" VerticalAlignment="Center">
+								<!-- 默认文本 -->
+								<iconPacks:PackIconMaterial
+									Kind="Play"
+									IsVisible="{Binding !IsExcutingPyScript}"
+									Width="24"
+									Height="24"/>
+								<!-- Loading图标 -->
+								<iconPacks:PackIconMaterial
+									Width="12"
+									Height="12"
+									Kind="Loading">
+									<iconPacks:PackIconMaterial.RenderTransform>
+										<RotateTransform/>
+									</iconPacks:PackIconMaterial.RenderTransform>
+								</iconPacks:PackIconMaterial>
+							</Panel>
+						</Button>
 					</Grid>
 				</Border>
 			</Grid>

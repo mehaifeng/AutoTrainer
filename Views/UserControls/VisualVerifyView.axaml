@@ -2,14 +2,11 @@
     x:Class="AutoTrainer.VisualVerifyView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-    xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
     xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:model="using:AutoTrainer.Models"
-    xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
     xmlns:vm="using:AutoTrainer.ViewModels"
     x:Name="VerifyTabItem"
     Padding="10"
@@ -27,10 +24,7 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Stretch="None">
-                        <avalonia:MaterialIcon
-                            Width="24"
-                            Height="24"
-                            Kind="ChevronRight" />
+                        <Path Width="24" Height="24" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="Black"/>
                     </Viewbox>
                 </ControlTemplate>
             </Setter>
@@ -44,10 +38,7 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Stretch="None">
-                        <avalonia:MaterialIcon
-                            Width="24"
-                            Height="24"
-                            Kind="ChevronLeft" />
+                        <Path Width="24" Height="24" Data="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" Fill="Black"/>
                     </Viewbox>
                 </ControlTemplate>
             </Setter>
@@ -127,13 +118,9 @@
                                 Classes="light"
                                 Command="{Binding RefreshValidDataImagesCommand}">
                                 <Button.Content>
-                                    <avalonia:MaterialIcon
-                                        Width="26"
-                                        Height="26"
-                                        Classes.spinning="{Binding IsSpinning}"
-                                        Kind="Refresh">
-                                        <avalonia:MaterialIcon.Styles>
-                                            <Style Selector="avalonia|MaterialIcon.spinning">
+                                    <Path Width="26" Height="26" Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" Fill="Black">
+                                        <Path.Styles>
+                                            <Style Selector="Path.spinning">
                                                 <Style.Animations>
                                                     <Animation
                                                         IterationCount="INFINITE"
@@ -149,7 +136,7 @@
                                                 </Style.Animations>
                                             </Style>
 
-                                            <Style Selector="avalonia|MaterialIcon:not(.spinning)">
+                                            <Style Selector="Path:not(.spinning)">
                                                 <Style.Animations>
                                                     <Animation
                                                         IterationCount="0"
@@ -161,8 +148,8 @@
                                                     </Animation>
                                                 </Style.Animations>
                                             </Style>
-                                        </avalonia:MaterialIcon.Styles>
-                                    </avalonia:MaterialIcon>
+                                        </Path.Styles>
+                                    </Path>
                                 </Button.Content>
                             </Button>
                         </Grid>
@@ -320,45 +307,36 @@
         </Grid>
         <!--  右侧识别结果  -->
         <Grid Grid.Column="2" RowDefinitions="100,*">
-            <controls:FloatingButton
+            <Button
                 Grid.Row="0"
                 Grid.Column="2"
                 Width="120"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
-                Classes="Light"
+                Background="#FF080808"
+                Foreground="White"
+                BorderThickness="0"
+                CornerRadius="16"
+                Padding="16,8"
+                FontWeight="SemiBold"
                 Command="{Binding GoToExportPageCommand}"
                 CommandParameter="{Binding ElementName=VerifyTabItem}"
-                IsExtended="True"
                 IsVisible="{Binding IsShowNextPageBtn}">
-                <controls:FloatingButton.Styles>
-                    <Style Selector="controls|FloatingButton">
-                        <Setter Property="Content">
-                            <Setter.Value>
-                                <Template>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Viewbox
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            Stretch="None">
-                                            <avalonia:MaterialIcon
-                                                Width="24"
-                                                Height="24"
-                                                Kind="ChevronRight" />
-                                        </Viewbox>
-                                        <TextBlock
-                                            Margin="10,0,0,0"
-                                            VerticalAlignment="Center"
-                                            FontSize="16"
-                                            Text="下一步" />
-                                    </StackPanel>
-                                </Template>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </controls:FloatingButton.Styles>
-            </controls:FloatingButton>
+                <StackPanel Orientation="Horizontal">
+                    <Viewbox
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Stretch="None">
+                        <Path Width="24" Height="24" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="White"/>
+                    </Viewbox>
+                    <TextBlock
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="16"
+                        Text="下一步" />
+                </StackPanel>
+            </Button>
             <Border
                 Grid.Row="1"
                 Margin="0,100,0,0"

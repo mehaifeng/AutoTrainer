@@ -3,16 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:model="using:AutoTrainer.Models"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-			 xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
 			 xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              FontFamily=""
-			 d:DesignWidth="1200" 
+			 d:DesignWidth="1200"
 			 d:DesignHeight="850"
 			 Padding="10"
 			 x:Name="TrainTabItem"
@@ -52,7 +49,7 @@
 			Margin="10,0,0,0"
 			RowDefinitions="Auto,50,6*,55">
 			<Grid Grid.Row="0">
-				<controls:FloatingButton
+				<Button
 					Grid.Row="0"
 					Margin="10,0,10,0"
 					Width="120"
@@ -61,31 +58,21 @@
 					CommandParameter="{Binding ElementName=TrainTabItem}"
 					HorizontalAlignment="Right"
 					VerticalAlignment="Center"
-					Classes="Light"
-					IsExtended="True">
-					<controls:FloatingButton.Styles>
-						<Style Selector="controls|FloatingButton">
-							<Setter Property="Content">
-								<Setter.Value>
-									<Template>
-										<StackPanel Orientation="Horizontal">
-											<Viewbox Stretch="None"
-													 HorizontalAlignment="Left"
-													 VerticalAlignment="Center">
-												<avalonia:MaterialIcon Kind="ChevronRight" Width="24" Height="24" />
-											</Viewbox>
-											<TextBlock
-												Margin="10,0,0,0"
-												FontSize="16"
-												VerticalAlignment="Center"
-												Text="下一步"/>
-										</StackPanel>
-									</Template>
-								</Setter.Value>
-							</Setter>
-						</Style>
-					</controls:FloatingButton.Styles>
-				</controls:FloatingButton>
+					Background="#FF080808"
+					Foreground="White"
+					BorderThickness="0"
+					CornerRadius="16"
+					Padding="16,8"
+					FontWeight="SemiBold">
+					<StackPanel Orientation="Horizontal">
+						<Path Width="24" Height="24" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="White" VerticalAlignment="Center"/>
+						<TextBlock
+							Margin="10,0,0,0"
+							FontSize="16"
+							VerticalAlignment="Center"
+							Text="下一步"/>
+					</StackPanel>
+				</Button>
 			</Grid>
 			<Grid Grid.Row="1">
 				<StackPanel Orientation="Vertical">

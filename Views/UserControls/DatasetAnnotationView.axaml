@@ -2,17 +2,14 @@
     x:Class="AutoTrainer.DatasetAnnotationView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-    xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
-	xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
+    	xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
     xmlns:converter="using:AutoTrainer.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
     xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:model="using:AutoTrainer.Models"
-    xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
-    xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+      xmlns:paz="using:Avalonia.Controls.PanAndZoom"
     xmlns:vm="using:AutoTrainer.ViewModels"
     x:Name="DataAnnotationView"
     Padding="10,0,10,0"
@@ -214,10 +211,7 @@
                             IsEnabled="{Binding CanGoPrevious}"
                             ToolTip.Tip="上一张图片">
                             <!--  Command="{Binding PreviousImageCommand}" IsEnabled="{Binding CanGoPrevious}"  -->
-                            <avalonia:MaterialIcon
-                                Width="20"
-                                Height="20"
-                                Kind="ChevronLeft" />
+                            <Path Width="20" Height="20" Data="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z" Fill="Black"/>
                         </Button>
 
                         <Button
@@ -228,10 +222,7 @@
                             IsEnabled="{Binding CanGoNext}"
                             ToolTip.Tip="下一张图片">
                             <!--  Command="{Binding NextImageCommand}" IsEnabled="{Binding CanGoNext}"  -->
-                            <avalonia:MaterialIcon
-                                Width="20"
-                                Height="20"
-                                Kind="ChevronRight" />
+                            <Path Width="20" Height="20" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="Black"/>
                         </Button>
                     </StackPanel>
 
@@ -264,10 +255,7 @@
                             IsEnabled="{Binding CanUndo}"
                             ToolTip.Tip="撤销">
                             <!--  Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}"  -->
-                            <avalonia:MaterialIcon
-                                Width="20"
-                                Height="20"
-                                Kind="Undo" />
+                            <Path Width="20" Height="20" Data="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z" Fill="Black"/>
                         </Button>
 
                         <Button
@@ -278,10 +266,7 @@
                             IsEnabled="{Binding CanRedo}"
                             ToolTip.Tip="重做">
                             <!--  Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}"  -->
-                            <avalonia:MaterialIcon
-                                Width="20"
-                                Height="20"
-                                Kind="Redo" />
+                            <Path Width="20" Height="20" Data="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.54,15.22L3.91,16C4.95,12.81 7.96,10.5 11.5,10.5C13.46,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z" Fill="Black"/>
                         </Button>
 
                         <Button
@@ -291,10 +276,11 @@
                             Command="{Binding SaveCurrentAnnotationCommand}"
                             ToolTip.Tip="保存当前标注或分类">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <avalonia:MaterialIcon
+                                <Path
                                     Width="18"
                                     Height="18"
-                                    Kind="Check" />
+                                    Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"
+                                    Fill="Green"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -416,11 +402,11 @@
                                                     CornerRadius="8"
                                                     IsVisible="{Binding IsAnnotated}"
                                                     ZIndex="1">
-                                                    <avalonia:MaterialIcon
+                                                    <Path
                                                         Width="12"
                                                         Height="12"
-                                                        Foreground="White"
-                                                        Kind="Check" />
+                                                        Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"
+                                                        Fill="White"/>
                                                 </Border>
 
                                                 <!--  选中遮罩  -->
@@ -469,13 +455,12 @@
                     <Expander Header="当前标注" IsExpanded="True">
                         <StackPanel Margin="10" Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
-                                <ComboBox
-                                    Grid.Column="0"
-                                    Theme="{StaticResource MaterialOutlineComboBox}"
-                                    Classes="dense"
-                                    p1:ComboBoxAssist.Label="选择类别"
-                                    ItemsSource="{Binding ClassNames}"
-                                    SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}" />
+                                <StackPanel Spacing="5" Grid.Column="0">
+                                    <TextBlock Text="选择类别" FontSize="12" Margin="0,0,0,2"/>
+                                    <ComboBox
+                                        ItemsSource="{Binding ClassNames}"
+                                        SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}" />
+                                </StackPanel>
                                 <Button
                                     Grid.Column="1"
                                     Width="30"
@@ -485,7 +470,11 @@
                                     Classes="accent"
                                     Command="{Binding AddImageClassCommand}"
                                     ToolTip.Tip="添加图像分类">
-                                    <avalonia:MaterialIcon Kind="Add" />
+                                    <Path
+                                        Width="16"
+                                        Height="16"
+                                        Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
+                                        Fill="White"/>
                                 </Button>
                             </Grid>
                             <TextBlock Text="边界框" Margin="0,10,0,10" IsVisible="{Binding HasSelectedAnnotation}"/>
@@ -628,50 +617,32 @@
 	                            Command="{Binding SaveAllAnnotationsCommand}"
 	                            Content="保存全部图片标注" />
                             <Button Classes="light" Command="{Binding BatchCreateDatasetCommand}">
-                                <Grid>
-                                    <avalonia:MaterialIcon Kind="Loading" IsVisible="{Binding IsBatchProcessing}">
-                                        <avalonia:MaterialIcon.Styles>
-                                            <Style Selector="avalonia|MaterialIcon">
-                                                <Style.Animations>
-                                                    <Animation Duration="0:0:1"
-                                                             IterationCount="INFINITE">
-                                                        <KeyFrame Cue="0%">
-                                                            <Setter Property="RotateTransform.Angle" Value="0.0"/>
-                                                        </KeyFrame>
-                                                        <KeyFrame Cue="100%">
-                                                            <Setter Property="RotateTransform.Angle" Value="360.0"/>
-                                                        </KeyFrame>
-                                                    </Animation>
-                                                </Style.Animations>
-                                            </Style>
-                                        </avalonia:MaterialIcon.Styles>
-                                    </avalonia:MaterialIcon>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <Path
+                                        Width="16"
+                                        Height="16"
+                                        Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z">
+                                        <Path.RenderTransform>
+                                            <RotateTransform Angle="0"/>
+                                        </Path.RenderTransform>
+                                    </Path>
                                     <TextBlock IsVisible="{Binding IsNotBatchProcessing}" Text="批生成分类数据集"/>
-                                </Grid>
+                                </StackPanel>
                             </Button>
 							<Button
                                 Classes="light"
                                 Command="{Binding CroppingImgAsDataSetCommand}">
-								<Grid>
-								    <avalonia:MaterialIcon Kind="Loading" IsVisible="{Binding IsCroppingInProgress}">
-										<avalonia:MaterialIcon.Styles>
-											<Style Selector="avalonia|MaterialIcon">
-												<Style.Animations>
-													<Animation Duration="0:0:1"
-															 IterationCount="INFINITE">
-														<KeyFrame Cue="0%">
-															<Setter Property="RotateTransform.Angle" Value="0.0"/>
-														</KeyFrame>
-														<KeyFrame Cue="100%">
-															<Setter Property="RotateTransform.Angle" Value="360.0"/>
-														</KeyFrame>
-													</Animation>
-												</Style.Animations>
-											</Style>
-										</avalonia:MaterialIcon.Styles>
-									</avalonia:MaterialIcon>
+								<StackPanel Orientation="Horizontal" Spacing="5">
+								    <Path
+                                        Width="16"
+                                        Height="16"
+                                        Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z">
+                                        <Path.RenderTransform>
+                                            <RotateTransform Angle="0"/>
+                                        </Path.RenderTransform>
+                                    </Path>
 								    <TextBlock IsVisible="{Binding IsShowCroppingText}" Text="裁剪并生成数据集"/>
-								</Grid>
+								</StackPanel>
 							</Button>
                         </StackPanel>
                     </Expander>
@@ -690,23 +661,14 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Spacing="10">
-                <avalonia:MaterialIcon Kind="Loading">
-					<avalonia:MaterialIcon.Styles>
-						<Style Selector="avalonia|MaterialIcon">
-							<Style.Animations>
-								<Animation Duration="0:0:1"
-                                         IterationCount="INFINITE">
-									<KeyFrame Cue="0%">
-										<Setter Property="RotateTransform.Angle" Value="0.0"/>
-									</KeyFrame>
-									<KeyFrame Cue="100%">
-										<Setter Property="RotateTransform.Angle" Value="360.0"/>
-									</KeyFrame>
-								</Animation>
-							</Style.Animations>
-						</Style>
-					</avalonia:MaterialIcon.Styles>
-				</avalonia:MaterialIcon>
+                <Path
+                    Width="32"
+                    Height="32"
+                    Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z">
+                    <Path.RenderTransform>
+                        <RotateTransform Angle="0"/>
+                    </Path.RenderTransform>
+                </Path>
                 <TextBlock HorizontalAlignment="Center" Text="处理中..." />
             </StackPanel>
         </Border>
