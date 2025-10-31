@@ -18,9 +18,17 @@ namespace AutoTrainer
 
             if (type != null)
             {
-                var control = (Control)Activator.CreateInstance(type)!;
-                control.DataContext = data;
-                return control;
+                try
+                {
+                    var control = (Control)Activator.CreateInstance(type)!;
+                    control.DataContext = data;
+                    return control;
+                }
+                catch (Exception ex)
+                {
+                    // 如果创建控件失败，返回错误信息
+                    return new TextBlock { Text = "Failed to create view: " + name + "\nError: " + ex.Message };
+                }
             }
 
             return new TextBlock { Text = "Not Found: " + name };
@@ -28,6 +36,10 @@ namespace AutoTrainer
 
         public bool Match(object? data)
         {
+            // 排除已经有DataTemplate的模型类型
+            if (data?.GetType().Name.Contains("PreviewImageModel") == true)
+                return false;
+
             return data is ViewModelBase;
         }
     }

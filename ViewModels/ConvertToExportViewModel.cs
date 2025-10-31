@@ -1,11 +1,8 @@
 ﻿using AutoTrainer.Helpers;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Material.Styles.Controls;
-using Material.Styles.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,7 +35,7 @@ namespace AutoTrainer.ViewModels
         /// 转换为ONNX
         /// </summary>
         [RelayCommand]
-        public async Task ConvertToONNX(SnackbarHost o)
+        public async Task ConvertToONNX()
         {
             var onnxFolder = Path.Combine(App.ModelOutputFolderPath ?? string.Empty, "onnx");
             Directory.CreateDirectory(onnxFolder);
@@ -54,57 +51,16 @@ namespace AutoTrainer.ViewModels
             var arguments = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            var result = await CmdHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, HandleOutput, System.Threading.CancellationToken.None);
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, HandleOutput, System.Threading.CancellationToken.None);
             IsConverting = false;
             IsEnableConvert = true;
-            SnackbarHost.Post(
-            new SnackbarModel(
-                "模型已转换为onnx",
-                TimeSpan.FromSeconds(8),
-                new SnackbarButtonModel
-                {
-                    Text = "打开目录",
-                    Action = () =>
-                    {
-                        var psi = new ProcessStartInfo();
-                        if (OperatingSystem.IsWindows())
-                        {
-                            psi.FileName = "explorer";
-                            psi.Arguments = onnxFolder;
-                        }
-                        else if (OperatingSystem.IsLinux())
-                        {
-                            psi.FileName = "xdg-open";
-                            psi.Arguments = onnxFolder;
-                        }
-                        else if (OperatingSystem.IsMacOS())
-                        {
-                            psi.FileName = "open";
-                            psi.Arguments = onnxFolder;
-                        }
-                        else
-                        {
-                            throw new PlatformNotSupportedException("不支持的操作系统");
-                        }
-
-                        try
-                        {
-                            Process.Start(psi);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"打开目录失败: {ex.Message}");
-                        }
-                    }
-                }),
-            o.HostName,
-            DispatcherPriority.Normal);
+            // 转换完成，可以在输出窗口中查看结果
         }
         /// <summary>
         /// 转换为TensorFlow
         /// </summary>
         [RelayCommand]
-        public async Task ConvertToTensorFlow(SnackbarHost o)
+        public async Task ConvertToTensorFlow()
         {
             var tensorflowFolder = Path.Combine(App.ModelOutputFolderPath ?? string.Empty, "tensorflow");
             Directory.CreateDirectory(tensorflowFolder);
@@ -121,26 +77,10 @@ namespace AutoTrainer.ViewModels
             var argument = sb.ToString();
             IsConverting = true;
             IsEnableConvert = false;
-            await CmdHelper.ExecutePythonScriptAsync(pythonScript, venvFolder, argument, false, HandleOutput);
+            await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, venvFolder, argument, false, HandleOutput);
             IsConverting = false;
             IsEnableConvert = true;
-            SnackbarHost.Post(
-            new SnackbarModel(
-                "模型已转换为tensorflow",
-                TimeSpan.FromSeconds(8),
-                new SnackbarButtonModel
-                {
-                    Text = "打开目录",
-                    Action = () =>
-                    {
-                        var psi = new ProcessStartInfo();
-                        psi.FileName = @"c:\windows\explorer.exe";
-                        psi.Arguments = tensorflowFolder;
-                        Process.Start(psi);
-                    }
-                }),
-            o.HostName,
-            DispatcherPriority.Normal);
+            // 转换完成，可以在输出窗口中查看结果
         }
 
         private void HandleOutput(string data)

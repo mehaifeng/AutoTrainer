@@ -143,14 +143,38 @@ namespace AutoTrainer.ViewModels
         private async Task GetPython()
         {
             var command = OperatingSystem.IsWindows() ? "where python" : "which python";
-            var result = await CmdHelper.ExecuteLine(command);
+            var result = await CliWrapHelper.ExecuteLine(command);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(result.Output))
                 {
                     var splitChart = OperatingSystem.IsWindows() ? "\r\n" : OperatingSystem.IsLinux()? "\n" : "\r";
-                    var paths = result.Output.Split(splitChart);
-                    PythonPath = paths[0];
+                    var validPythons = new List<string>();
+                    //所有的Python路径
+                    var pythonPaths = result.Output.Split(splitChart);
+                    foreach (var path in pythonPaths)
+                    {
+                        if (path.Contains("WindowsApps") || string.IsNullOrEmpty(path))
+                        {
+                            continue; // 跳过WindowsApps中的Python路径
+                        }
+                        else
+                        {
+                            var validResult = await CliWrapHelper.ExecuteLine(path + " --version");
+                            if (validResult.Error != null && validResult.Output != null)
+                            {
+                                if (validResult.Error.Contains("Python"))
+                                {
+                                    continue;
+                                }
+                                else if(validResult.Output.Contains("Python"))
+                                {
+                                    validPythons.Add(path);
+                                }
+                            }
+                        }
+                    }
+                    PythonPath = validPythons[0];
                 }
             }
             sb.Append(result.Output);
@@ -172,7 +196,7 @@ namespace AutoTrainer.ViewModels
                 sb.Append(" && ");
                 sb.Append($"python {modelHelperScript} list");
                 var command = sb.ToString();
-                var result = await CmdHelper.ExecuteLine(command);
+                var result = await CliWrapHelper.ExecuteLine(command);
                 if (result.ExitCode == 0)
                 {
                     if (!string.IsNullOrEmpty(result.Output))
@@ -394,13 +418,16 @@ namespace AutoTrainer.ViewModels
             string venvName = DateTime.Now.ToString("yyMMddHHmmss_Venv");
             IsEnablePythonConfigView = false;
             StringBuilder sb = new StringBuilder();
-            sb.Append($"cd {venvFolder}");
-            sb.Append("&&");
+            sb.Append($"cd /d{venvFolder}");
+            sb.Append(" && ");
             sb.Append($"python -m venv {venvName}");
             var command = sb.ToString();
-            await CmdHelper.ExecuteLine(command);
+            var result = await CliWrapHelper.ExecuteLine(command, onOutputReceived:HandleOutput);
+            if (result.ExitCode == 0)
+            {
+                PythonVenvPath = Path.Combine(venvFolder, venvName);
+            }
             IsEnablePythonConfigView = true;
-            PythonVenvPath = Path.Combine(venvFolder,venvName);
         }
         /// <summary>
         /// 进入Venv环境，执行Pip List
@@ -413,7 +440,7 @@ namespace AutoTrainer.ViewModels
             {
                 missingApps = [];
                 //验证所填venv环境是否可用
-                bool isVenvValid = CmdHelper.IsVenvValid(PythonVenvPath);
+                bool isVenvValid = await CliWrapHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
                     IsExcutingPyScript = true;
@@ -424,7 +451,7 @@ namespace AutoTrainer.ViewModels
                     sb.Append(" && ");
                     sb.Append("pip list");
                     var command = sb.ToString();
-                    var result = await CmdHelper.ExecuteLine(command);
+                    var result = await CliWrapHelper.ExecuteLine(command);
                     if (result.ExitCode == 0)
                     {
                         if (!string.IsNullOrEmpty(result.Output))
@@ -503,7 +530,7 @@ namespace AutoTrainer.ViewModels
                     IsVisibleProgressBar = true;
                     IsRunningProgressBar = true;
                     // 安装缺失的软件包
-                    await CmdHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
+                    await CliWrapHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
                     // 重新执行Python脚本
                     await ExecutePy();
                 }
@@ -532,7 +559,7 @@ namespace AutoTrainer.ViewModels
                 sb.Append(" && ");
                 sb.Append($"python {modelHelperScript} info {SelectModel}");
                 var command = sb.ToString();
-                var result = await CmdHelper.ExecuteLine(command);
+                var result = await CliWrapHelper.ExecuteLine(command);
                 IsLoadingModelList = false;
                 if (result.ExitCode == 0)
                 {

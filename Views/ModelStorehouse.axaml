@@ -6,9 +6,7 @@
 		xmlns:converter="using:AutoTrainer.Converters"
 		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 		xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
-		xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-		xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
-        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="850"
+	        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="850"
         x:Class="AutoTrainer.ModelStorehouse"
 		x:DataType="vm:ModelStorehouseViewModel"
 		Closed="Window_Closed"
@@ -16,44 +14,6 @@
 	<Window.Resources>
 		<converter:IconTypeConverter x:Key="IconTypeConverter"/>
 	</Window.Resources>
-	<Window.Styles>
-		<Style Selector="ListBoxItem">
-			<Setter Property="Foreground" Value="Transparent" />
-			<Setter Property="Background" Value="Transparent" />
-			<Setter Property="BorderThickness" Value="0" />
-			<Setter Property="Padding" Value="8" />
-			<Setter Property="Template">
-				<ControlTemplate>
-					<Border Name="PART_RootBorder"
-							CornerRadius="{TemplateBinding CornerRadius}"
-							Background="{TemplateBinding Background}"
-							BorderBrush="{TemplateBinding BorderBrush}"
-							BorderThickness="{TemplateBinding BorderThickness}">
-						<Panel Name="PART_RootPanel">
-							<Border Name="selectedBorder"
-									Background="{TemplateBinding Foreground}"
-									CornerRadius="{TemplateBinding CornerRadius}" />
-							<Border Name="pointerOverBorder"
-									Background="{TemplateBinding Foreground}"
-									CornerRadius="{TemplateBinding CornerRadius}" />
-							<Border CornerRadius="{TemplateBinding CornerRadius}"
-									ClipToBounds="True">
-								<ContentPresenter Name="PART_ContentPresenter"
-												  Background="{TemplateBinding Background}"
-												  BorderBrush="{TemplateBinding BorderBrush}"
-												  BorderThickness="{TemplateBinding BorderThickness}"
-												  ContentTemplate="{TemplateBinding ContentTemplate}"
-												  Content="{TemplateBinding Content}"
-												  Padding="{TemplateBinding Padding}"
-												  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-												  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
-							</Border>
-						</Panel>
-					</Border>
-				</ControlTemplate>
-			</Setter>
-		</Style>
-	</Window.Styles>
 	<Grid RowDefinitions="110,60,*" Margin="10">
 		<Grid Grid.Row="0" RowDefinitions="40,70">
 			<TextBlock 
@@ -90,12 +50,12 @@
 					</ListBox.ItemTemplate>
 				</ListBox>
 				<Border Grid.Column="1" Margin="10,0,0,0">
-					<controls:FloatingButton Classes="Accent" IsExtended="True">
+					<Button>
 						<StackPanel Orientation="Horizontal">
-							<avalonia:MaterialIcon Kind="Plus" />
+							<Path Width="16" Height="16" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Fill="White"/>
 							<TextBlock Text="添加项目" Margin="5,0,0,0" VerticalAlignment="Center"/>
 						</StackPanel>
-					</controls:FloatingButton>
+					</Button>
 				</Border>
 			</Grid>
 		</Grid>
@@ -104,33 +64,29 @@
 			Orientation="Horizontal"
 			HorizontalAlignment="Left"
 			Margin="10,0,0,0">
-			<controls:FloatingButton
+			<Button
 				x:Name="DownloadSelected_Btn"
 				Width="100"
 				IsVisible="{Binding IsShowDownloadBtn}"
-				Classes="Accent"
 				Command="{Binding DownloadSelectedCommand}"
-				IsExtended="True"
 				Margin="0,0,15,0">
 				<Grid HorizontalAlignment="Center" VerticalAlignment="Center" ColumnDefinitions="20,60">
-					<avalonia:MaterialIcon Kind="Download" Height="20" Width="20"/>
+					<Path Width="20" Height="20" Data="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" Fill="White"/>
 					<TextBlock Grid.Column="1" Text="下载所选" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 				</Grid>
-			</controls:FloatingButton>
-			<controls:FloatingButton
+			</Button>
+			<Button
 				Width="50"
-				Classes="Accent" 
-				IsExtended="True"
 				Command="{Binding BackFolderCommand}"
 				Margin="0,0,15,0">
-				<avalonia:MaterialIcon Kind="ArrowLeft" />
-			</controls:FloatingButton>
+				<Path Width="20" Height="20" Data="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" Fill="White"/>
+			</Button>
 			<SelectableTextBlock 
 				Text="{Binding MinioPath}" 
 				FontSize="16"
 				VerticalAlignment="Center"/>
 		</StackPanel>
-		<DataGrid
+		<!--<DataGrid
 			x:Name="ModelFactory_DG"
 			Grid.Row="2"
 			Margin="0,5,0,10"
@@ -145,7 +101,7 @@
 				</ia:EventTriggerBehavior>
 			</i:Interaction.Behaviors>
 			<DataGrid.Columns>
-				<!--全选-->
+				--><!--全选--><!--
 				<DataGridTemplateColumn Width="40">
 					<DataGridTemplateColumn.Header>
 						<CheckBox IsChecked="{Binding IsAllChecked,UpdateSourceTrigger=PropertyChanged}" Command="{Binding ExcuteSelectAllCommand}"/>
@@ -187,6 +143,6 @@
 				<DataGridTextColumn Header="大小" Binding="{Binding ModelSize}"/>
 				<DataGridTextColumn Header="最后修改日期" Binding="{Binding LastModifiedDateTime}"/>
 			</DataGrid.Columns>
-		</DataGrid>
+		</DataGrid>-->
 	</Grid>
 </Window>

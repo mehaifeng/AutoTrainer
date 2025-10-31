@@ -2,9 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AutoTrainer.App"
              xmlns:local="using:AutoTrainer"
-			 xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-			 xmlns:dataGrid="clr-namespace:Material.Avalonia.DataGrid;assembly=Material.Avalonia.DataGrid"
+			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:themes="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
              RequestedThemeVariant="Default">
 	<Application.Styles>
 		<Style Selector="TextBox">
@@ -27,6 +26,8 @@
 				Source Han Sans CN Normal
 			</Setter>
 		</Style>
+		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
+		<StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
 	</Application.Styles>
 	<Application.Resources>
     </Application.Resources>
@@ -37,8 +38,6 @@
     </Application.DataTemplates>
   
     <Application.Styles>
-	    <avalonia:MaterialIconStyles/>
-		<dataGrid:MaterialDataGridStyles/>
-		<themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#080808" SecondaryColor="#FFFFFF"/>
+        <themes:FluentTheme/>
     </Application.Styles>
 </Application>

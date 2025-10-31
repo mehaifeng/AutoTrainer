@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Logging;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -38,17 +39,24 @@ namespace AutoTrainer.ViewModels
     {
         public VisualVerifyViewModel()
         {
-            MutationImages = [];
+            ValidDataImages = [];
             ClassifiedImages = [new PreviewImageModel() { ClassName = "类别"}];
             ModelSingleQualityTable = [new ModelSingleQuality() { ClassName = "0", Accuracy = 0, F1_score = 0, Precision = 0, Recall=0}];
             ModelMacroQualityTable = [new ModelMacroQuality() { Accuracy = 0, MacroPrecision = 0, MacroRecall = 0, MacroF1 = 0 }];
         }
+        /// <summary>
+        /// 是否选择创建变异数据集作为验证集
+        /// </summary>
         [ObservableProperty]
-        private ObservableCollection<MutationImage> mutationImages;
+        private bool isSelectCreateMutationValidData = true;
+        [ObservableProperty]
+        private string? validDatasFolderPath;
+        [ObservableProperty]
+        private ObservableCollection<MutationImage> validDataImages;
         [ObservableProperty]
         private ObservableCollection<PreviewImageModel> classifiedImages;
         [ObservableProperty]
-        private bool isLoadingMutationData = false;
+        private bool isLoadingValidData = false;
         [ObservableProperty]
         private bool isInSortingTask = false;
         [ObservableProperty]
@@ -70,23 +78,43 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isSpinning = false;
         [ObservableProperty]
-        private int validationImageRate = 20;
+        private int validationImageRate = 15;
 
         /// <summary>
-        /// 第一次打开Tab
+        /// 选择包含验证数据的文件夹
         /// </summary>
-        /// <param name="o"></param>
-        /// <returns></returns>
+        /// <remarks>如果用户取消文件夹选择或选择了无效文件夹，则应用程序状态不会发生任何变化。该方法会根据所选文件夹更新与验证数据路径和类计数相关的属性。</remarks>
+        /// <param name="userControl">用于确定显示文件夹选择器对话框的顶级窗口上下文的用户界面控件。不能为空。</param>
+        /// <returns>表示异步操作的任务。当验证数据已加载且应用程序状态已更新时，该任务完成。</returns>
         [RelayCommand]
-        public async Task Loaded(UserControl o)
+        public async Task SelectedExistVarifyDatas(UserControl userControl)
         {
-            if (MutationImages.Count == 0)
+            var topLevel = TopLevel.GetTopLevel(userControl);
+            if (topLevel == null) return;
+
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions()
             {
-                IsSpinning = true;
-                IsLoadingMutationData = true;
-                await Task.Run(LoadMutationData);
-                IsLoadingMutationData = false;
-                IsSpinning = false;
+                AllowMultiple = false,
+                Title = "选择验证集目录"
+            });
+            if(folders != null && folders.Count > 0)
+            {
+                var selectedFolder = folders[0];
+                if(selectedFolder != null)
+                {
+                    var path = selectedFolder.Path.LocalPath;
+                    if(Directory.Exists(path))
+                    {
+                        App.TrainModel.ValDataPath = path;
+                        App.TrainModel.NumClasses = Directory.GetDirectories(path).Length;
+                        ValidDatasFolderPath = path;
+                        IsSpinning = true;
+                        IsLoadingValidData = true;
+                        await Task.Run(LoadMutationData);
+                        IsLoadingValidData = false;
+                        IsSpinning = false;
+                    }
+                }
             }
         }
         /// <summary>
@@ -112,7 +140,7 @@ namespace AutoTrainer.ViewModels
             sb.Append($" --output-path {specialPyLogPath}");
             var argument = sb.ToString();
             IsInSortingTask = true;
-            await CmdHelper.ExecutePythonScriptAsync(classifyPyFilePath, venvFolder, argument, false);
+            await CliWrapHelper.ExecutePythonScriptAsync(classifyPyFilePath, venvFolder, argument, false);
             if (System.IO.File.Exists(specialPyLogPath))
             {
                 var jsonStr = await System.IO.File.ReadAllTextAsync(specialPyLogPath);
@@ -170,14 +198,21 @@ namespace AutoTrainer.ViewModels
         /// 刷新变异数据集
         /// </summary>
         [RelayCommand]
-        private async Task RefreshMutation()
+        private async Task RefreshValidDataImages()
         {
-            if(!IsInSortingTask && !IsLoadingMutationData && !IsSpinning)
+            if(!IsInSortingTask && !IsLoadingValidData && !IsSpinning)
             {
                 IsSpinning = true;
-                IsLoadingMutationData = true;
-                await Task.Run(LoadMutationData);
-                IsLoadingMutationData = false;
+                IsLoadingValidData = true;
+                if (IsSelectCreateMutationValidData)
+                {
+                    await Task.Run(LoadMutationData);
+                }
+                else
+                {
+                    await Task.Run(LoadSelectedValidDatas);
+                }
+                IsLoadingValidData = false;
                 IsSpinning = false;
             }
         }
@@ -185,69 +220,114 @@ namespace AutoTrainer.ViewModels
 
         #region 函数
         /// <summary>
-        /// 加载变异图像
+        /// 加载选择的验证图像
         /// </summary>
-        public void LoadMutationData()
+        public void LoadSelectedValidDatas()
         {
-            MutationImages = [];
-            var dataSetPath = App.TrainModel.TrainDataPath;
-            if (string.IsNullOrEmpty(dataSetPath))
+            var dataSetPath = ValidDatasFolderPath;
+            if (IsSelectCreateMutationValidData)
             {
                 return;
             }
-            else
+            if (string.IsNullOrEmpty(dataSetPath) || !Directory.Exists(dataSetPath))
             {
-                var typeClasses = Directory.GetDirectories(dataSetPath);
-                if (typeClasses.Length > 0)
+                return;
+            }
+
+            ValidDataImages = [];
+            var typeClasses = Directory.GetDirectories(dataSetPath);
+            if (typeClasses.Length > 0)
+            {
+                App.TrainModel.NumClasses = typeClasses.Length;
+                foreach (var classDir in typeClasses)
                 {
-                    // App.TrainModel.NumClasses = typeClasses.Length;
-                    App.TrainModel.TrainDataPath = dataSetPath;
-                    var files = new List<string>();
-                    Dictionary<string,int> classNameToIndexDic = [];
-                    for (int i = 0;i< typeClasses.Length;i++)
+                    var className = new DirectoryInfo(classDir).Name;
+                    var files = Directory.GetFiles(classDir)
+                        .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList();
+
+                    foreach (var file in files)
                     {
-                        classNameToIndexDic.Add(typeClasses[i].Split(App.Separator).Last(),i);
-                        files.AddRange(Directory.GetFiles(typeClasses[i])
-                            .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
-                    }
-                    Shuffle(files);
-                    //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
-                    //一共要获取的文件数目
-                    var getFilesCount = Convert.ToInt32(files.Count * ValidationImageRate * 0.01);
-                    var tofiles = files.Take(getFilesCount).ToArray();
-                    var mutationDatas = Directory.GetFiles(App.MutationDataPath);
-                    foreach (var readyToDelete in mutationDatas)
-                    {
-                        System.IO.File.Delete(readyToDelete);
-                    }
-                    for(int i=0;i<tofiles.Length;i++)
-                    {
-                        var count = tofiles[i].Split(App.Separator);
-                        var className = count[count.Length - 2];
-                        var index = classNameToIndexDic[className];
-                        bool[] Augmentations = [true, true, false, false, true, true];
-                        ImageAugmentation.AugmentImageOne(index, Augmentations, tofiles[i], App.MutationDataPath, 1);
-                    }
-                    mutationDatas = Directory.GetFiles(App.MutationDataPath);
-                    var pattern = @"^(.*)\(";
-                    foreach (var mutationData in mutationDatas)
-                    {
-                        using (var stream = System.IO.File.OpenRead(mutationData))
+                        using (var stream = System.IO.File.OpenRead(file))
                         {
                             var bitmap = new Bitmap(stream);
                             var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
-                            var classDescribe = mutationData.Split("_CLASS_")[1];
-                            Match match = Regex.Match(classDescribe, pattern);
-                            MutationImages.Add(new MutationImage
+                            ValidDataImages.Add(new MutationImage
                             {
-                                ClassName = match.Groups[1].Value,
-                                ImagePath = mutationData,
+                                ClassName = className,
+                                ImagePath = file,
                                 Thumbnail = thumbnail
                             });
                         }
                     }
                 }
             }
+        }
+        /// <summary>
+        /// 加载变异图像
+        /// </summary>
+        public void LoadMutationData()
+        {
+            var dataSetPath = App.TrainModel.TrainDataPath;
+            if (!IsSelectCreateMutationValidData)
+            {
+                return;
+            }
+            if (string.IsNullOrEmpty(dataSetPath))
+            {
+                return;
+            }
+            ValidDataImages = [];
+            var typeClasses = Directory.GetDirectories(dataSetPath);
+            if (typeClasses.Length > 0)
+            {
+                App.TrainModel.NumClasses = typeClasses.Length;
+                App.TrainModel.TrainDataPath = dataSetPath;
+                var files = new List<string>();
+                Dictionary<string,int> classNameToIndexDic = [];
+                for (int i = 0;i< typeClasses.Length;i++)
+                {
+                    classNameToIndexDic.Add(typeClasses[i].Split(App.Separator).Last(),i);
+                    files.AddRange(Directory.GetFiles(typeClasses[i])
+                        .Where(f => f.EndsWith(".png") || f.EndsWith(".jpg") || f.EndsWith(".bmp")).ToList());
+                }
+                Shuffle(files);
+                //ImageAugmentation.AugmentImage(image, dataSetPath, 5);
+                //一共要获取的文件数目
+                var getFilesCount = Convert.ToInt32(files.Count * ValidationImageRate * 0.01);
+                var tofiles = files.Take(getFilesCount).ToArray();
+                var mutationDatas = Directory.GetFiles(App.MutationDataPath);
+                foreach (var readyToDelete in mutationDatas)
+                {
+                    System.IO.File.Delete(readyToDelete);
+                }
+                for(int i=0;i<tofiles.Length;i++)
+                {
+                    var count = tofiles[i].Split(App.Separator);
+                    var className = count[count.Length - 2];
+                    var index = classNameToIndexDic[className];
+                    bool[] Augmentations = [true, true, false, false, true, true];
+                    ImageAugmentation.AugmentImageOne(index, Augmentations, tofiles[i], App.MutationDataPath, 1);
+                }
+                mutationDatas = Directory.GetFiles(App.MutationDataPath);
+                var pattern = @"^(.*)\(";
+                foreach (var mutationData in mutationDatas)
+                {
+                    using (var stream = System.IO.File.OpenRead(mutationData))
+                    {
+                        var bitmap = new Bitmap(stream);
+                        var thumbnail = ResizeBitmap(bitmap, 64, 64); // 调整为缩略图尺寸
+                        var classDescribe = mutationData.Split("_CLASS_")[1];
+                        Match match = Regex.Match(classDescribe, pattern);
+                        ValidDataImages.Add(new MutationImage
+                        {
+                            ClassName = match.Groups[1].Value,
+                            ImagePath = mutationData,
+                            Thumbnail = thumbnail
+                        });
+                    }
+                }
+            }
+            
         }
         /// <summary>
         /// 缩放图片
@@ -262,6 +342,14 @@ namespace AutoTrainer.ViewModels
             var resizedBitmap = bitmap.CreateScaledBitmap(new PixelSize(width, height), BitmapInterpolationMode.MediumQuality);
             return resizedBitmap;
         }
+        /// <summary>
+        /// 随机重新排序指定列表中的元素
+        /// </summary>
+        /// <remarks>此方法会就地修改输入列表，并且不会返回新列表。
+        /// 随机排序是使用随机数生成器执行的，因此每次调用时元素的顺序都会有所不同。
+        /// 此方法不是线程安全的。</remarks>
+        /// <typeparam name="T">列表中要随机排列的元素的类型。</typeparam>
+        /// <param name="list">元素将被随机重新排序的列表。不能为空。</param>
         public static void Shuffle<T>(List<T> list)
         {
             Random rng = new Random();
@@ -286,8 +374,11 @@ namespace AutoTrainer.ViewModels
             foreach (var result in results)
             {
                 var predicted = result.predictedClass;
-                var actual = MutationImages.First(t => t.ImagePath == result.imagePath).ClassName;
-                valueKeys.Add((actual ?? "NULL", predicted ?? "NULL"));
+                var actual = ValidDataImages.First(t => t.ImagePath == result.imagePath).ClassName;
+                if (actual != null && predicted != null)
+                {
+                    valueKeys.Add((actual, predicted));
+                }
             }
             ModelMacroQuality modelMacroQuality = new();
             var groups = valueKeys.GroupBy(x => x.Item1).ToArray();
@@ -333,7 +424,11 @@ namespace AutoTrainer.ViewModels
             //计算并生成混淆矩阵
             UpdateMatrix(valueKeys, o);
         }
-
+        /// <summary>
+        /// 更新混淆矩阵
+        /// </summary>
+        /// <param name="actual_predicteds"></param>
+        /// <param name="_grid"></param>
         public void UpdateMatrix(List<(string actual, string predicted)> actual_predicteds,Grid _grid)
         {
             _grid.Children.Clear();
@@ -385,7 +480,13 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
-
+        /// <summary>
+        /// 将具有指定文本的粗体、居中标题单元格添加到指定网格的指定行和列
+        /// </summary>
+        /// <param name="text">要在标题单元格中显示的文本。</param>
+        /// <param name="row">放置标题单元格的从零开始的行索引。</param>
+        /// <param name="col">放置标题单元格的从零开始的列索引。</param>
+        /// <param name="_grid">将添加标题单元格的网格。不能为空。</param>
         private void AddHeaderCell(string text, int row, int col, Grid _grid)
         {
             var textBlock = new TextBlock
@@ -401,7 +502,14 @@ namespace AutoTrainer.ViewModels
             Grid.SetColumn(textBlock, col);
             _grid.Children.Add(textBlock);
         }
-
+        /// <summary>
+        /// 添加一个矩阵单元格到指定网格的指定行和列。
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="row"></param>
+        /// <param name="col"></param>
+        /// <param name="isDiagonal"></param>
+        /// <param name="_grid"></param>
         private void AddMatrixCell(int value, int row, int col, bool isDiagonal, Grid _grid)
         {
             var border = new Border

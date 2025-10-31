@@ -4,11 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:controls="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
              xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
-			 xmlns:p1="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
 			 d:DesignWidth="1200"
 			 d:DesignHeight="850"
 			 x:Name="ConverterView"
@@ -19,7 +16,7 @@
 			<ia:InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
 		</ia:EventTriggerBehavior>
 	</i:Interaction.Behaviors>
-	<controls:SnackbarHost x:Name="SnackBarHost" HostName="{Binding $self.Name}" HorizontalAlignment="Center">
+	<Grid HorizontalAlignment="Center">
 		<Grid RowDefinitions=".75*,.25*">
 			<Grid Grid.Row="0" RowDefinitions="Auto,Auto,80" VerticalAlignment="Center">
 				<Border
@@ -29,7 +26,6 @@
 					VerticalAlignment="Top"
 					Margin="20"
 					Grid.Column="0"
-					CornerRadius="5"
 					BorderBrush="Black"
 					BorderThickness="1"
 					Width="180"
@@ -60,14 +56,12 @@
 						BorderThickness="0"
 						IsEnabled="{Binding IsEnableConvert}"
 						Command="{Binding ConvertToONNXCommand}"
-						CommandParameter="{Binding ElementName=SnackBarHost}"
 						Content="Convert to ONNX"
 						Margin="0,0,0,15"/>
 					<Button
 						BorderThickness="0"
 						IsEnabled="{Binding IsEnableConvert}"
 						Command="{Binding ConvertToTensorFlowCommand}"
-						CommandParameter="{Binding ElementName=SnackBarHost}"
 						Content="Convert to TensorFlow"/>
 				</StackPanel>
 				<Border Grid.Row="2">
@@ -79,20 +73,21 @@
 						Foreground="WhiteSmoke"/>
 				</Border>
 			</Grid>
-			<TextBox
-				x:Name="ConvertingOutput_Tb"
-				UseFloatingWatermark="True"
-				Classes="filled" 
-				HorizontalAlignment="Stretch"
-				Width="1200"
-				VerticalContentAlignment="Top"
-				Theme="{StaticResource FilledTextBox}"
-				AcceptsReturn="True" 
-				TextWrapping="Wrap"
-				TextChanged="ConvertingOutput_Tb_TextChanged"
-				CaretIndex="{Binding CaretEndIndex}"
-				Grid.Row="1" 
-				Text="{Binding ConvertingOutput}"/>
+			<StackPanel Grid.Row="1" Margin="5">
+				<TextBlock Text="转换输出" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+				<TextBox
+					x:Name="ConvertingOutput_Tb"
+					Classes="filled"
+					HorizontalAlignment="Stretch"
+					Width="1200"
+					VerticalContentAlignment="Top"
+					AcceptsReturn="True"
+					TextWrapping="Wrap"
+					MinHeight="100"
+					TextChanged="ConvertingOutput_Tb_TextChanged"
+					CaretIndex="{Binding CaretEndIndex}"
+					Text="{Binding ConvertingOutput}"/>
+			</StackPanel>
 		</Grid>
-	</controls:SnackbarHost>
+	</Grid>
 </UserControl>
