@@ -10,52 +10,14 @@
 		WindowStartupLocation="CenterScreen"
         x:Class="AutoTrainer.SelectTrainingTypeView"
         Title="SelectTrainingTypeView">
-	<Window.Styles>
-		<Style Selector="Button.light">
-			<Setter Property="Background" Value="#FFF5F5F5"/>
-			<Setter Property="BorderBrush" Value="#FFE0E0E0"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="Foreground" Value="#FF333333"/>
-		</Style>
-		<Style Selector="Button.light:pointerover">
-			<Setter Property="Background" Value="#FFE8E8E8"/>
-			<Setter Property="BorderBrush" Value="#FFD0D0D0"/>
-		</Style>
-		<Style Selector="Button.flat">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Foreground" Value="#FF007ACC"/>
-		</Style>
-		<Style Selector="Button.flat:pointerover">
-			<Setter Property="Background" Value="#22007ACC"/>
-		</Style>
-		<Style Selector="Border.card">
-			<Setter Property="Background" Value="White"/>
-			<Setter Property="BorderBrush" Value="#FFE0E0E0"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="BoxShadow" Value="0 2 4 0 #1A000000"/>
-		</Style>
-		<Style Selector="TextBlock.headline6">
-			<Setter Property="FontSize" Value="20"/>
-			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="Margin" Value="0,0,0,8"/>
-		</Style>
-		<Style Selector="TextBlock.body2">
-			<Setter Property="FontSize" Value="14"/>
-			<Setter Property="Opacity" Value="0.7"/>
-			<Setter Property="Margin" Value="0,0,0,8"/>
-		</Style>
-	</Window.Styles>
 	<Grid>
-		<Border Width="330" Padding="16" VerticalAlignment="Center" Classes="card">
+		<Border Width="330" Padding="16" VerticalAlignment="Center" BorderThickness="1" BorderBrush="LightGray">
 			<StackPanel>
 				<Image Source="avares://AutoTrainer/Assets/ImageClassify.webp"/>
 				<StackPanel Margin="8">
 					<TextBlock Classes="headline6" Text="视觉模型" />
 					<TextBlock Classes="body2" Text="Secondary text" />
-					<TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Text="这是一个基于PyTorch的图像分类模型训练工具，支持多种预训练模型和自定义数据集。" />
+					<TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Text="这是一个基于PyTorch的图像分类模型训练工具，支持多种预训练模型和自定义数据集。"/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal">
 					<Button

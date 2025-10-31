@@ -11,18 +11,6 @@
 			 x:Name="ConverterView"
 			 x:DataType="vm:ConvertToExportViewModel"
              x:Class="AutoTrainer.ConvertToExportView">
-	<UserControl.Styles>
-		<Style Selector="TextBox.filled">
-			<Setter Property="Background" Value="#FFF5F5F5"/>
-			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="Foreground" Value="#FF080808"/>
-		</Style>
-		<Style Selector="TextBox.filled:focus">
-			<Setter Property="Background" Value="White"/>
-			<Setter Property="BorderBrush" Value="#FF007ACC"/>
-			<Setter Property="BorderThickness" Value="2"/>
-		</Style>
-	</UserControl.Styles>
 	<i:Interaction.Behaviors>
 		<ia:EventTriggerBehavior EventName="Loaded">
 			<ia:InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
@@ -38,7 +26,6 @@
 					VerticalAlignment="Top"
 					Margin="20"
 					Grid.Column="0"
-					CornerRadius="5"
 					BorderBrush="Black"
 					BorderThickness="1"
 					Width="180"
