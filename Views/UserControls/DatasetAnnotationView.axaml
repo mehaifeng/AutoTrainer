@@ -228,13 +228,11 @@
                         <Button
                             Width="60"
                             Height="30"
-                            Classes="light"
                             Command="{Binding PreviousImageCommand}"
                             IsEnabled="{Binding CanGoPrevious}"
                             ToolTip.Tip="上一张图片">
 							<iconPacks:PackIconMaterial
 								Kind="ChevronLeft"
-								Foreground="Black"
 								Width="15"
 								Height="15"/>
                         </Button>
@@ -242,13 +240,11 @@
                         <Button
                             Width="60"
                             Height="30"
-                            Classes="light"
                             Command="{Binding NextImageCommand}"
                             IsEnabled="{Binding CanGoNext}"
                             ToolTip.Tip="下一张图片">
 							<iconPacks:PackIconMaterial
 								Kind="ChevronRight"
-								Foreground="Black"
 								Width="15"
 								Height="15"/>
                         </Button>
@@ -278,7 +274,6 @@
                         <Button
                             Width="60"
                             Height="30"
-                            Classes="light"
                             Command="{Binding UndoCommand}"
                             IsEnabled="{Binding CanUndo}"
                             ToolTip.Tip="撤销">
@@ -289,7 +284,6 @@
                         <Button
                             Width="60"
                             Height="30"
-                            Classes="light"
                             Command="{Binding RedoCommand}"
                             IsEnabled="{Binding CanRedo}"
                             ToolTip.Tip="重做">
@@ -613,7 +607,7 @@
                 </Expander>
 
                     <!--  快捷操作  -->
-                    <Expander Header="快捷操作" IsExpanded="True">
+                    <Expander Header="快捷操作" IsExpanded="True" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="8">
                             <CheckBox
                                 x:Name="Chk_ApplyAsTemplate"
