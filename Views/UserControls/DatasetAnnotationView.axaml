@@ -13,7 +13,6 @@
 	xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
     xmlns:vm="using:AutoTrainer.ViewModels"
     x:Name="DataAnnotationView"
-    Padding="10,0,10,0"
     d:DesignHeight="850"
     d:DesignWidth="1300"
     x:DataType="vm:DatasetAnnotationViewModel"
@@ -23,6 +22,9 @@
 			<Setter Property="Width" Value="130"/>
 			<Setter Property="HorizontalContentAlignment" Value="Center"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Expander">
+			<Setter Property="Background" Value="{x:Null}"/>
 		</Style>
 		<Style Selector="iconPacks|PackIconMaterial">
 			<Setter Property="HorizontalAlignment" Value="Center"/>
@@ -186,15 +188,10 @@
 
                     <!--  统计信息  -->
                     <Expander Header="统计信息" IsExpanded="True" HorizontalAlignment="Stretch">
-                        <StackPanel Spacing="5">
+                        <StackPanel Spacing="5" Orientation="Vertical">
                             <TextBlock Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}" />
                             <TextBlock Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}" />
                             <TextBlock Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}" />
-                            <ProgressBar
-                                Height="6"
-								Margin="10,0,10,0"
-                                Maximum="{Binding TotalImageCount}"
-                                Value="{Binding AnnotatedImageCount}" />
                         </StackPanel>
                     </Expander>
 
@@ -215,10 +212,7 @@
 
             <!--  顶部工具栏  -->
             <Border
-                Grid.Row="0"
-                Background="White"
-                BorderBrush="LightGray"
-                BorderThickness="0,0,0,1">
+                Grid.Row="0">
                 <Grid Margin="10,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -320,10 +314,7 @@
             <!--  图像显示区域  -->
             <Border
                 x:Name="ImageBorder"
-                Grid.Row="1"
-                Background="Gray"
-                BorderBrush="LightGray"
-                BorderThickness="1">
+                Grid.Row="1">
                 <paz:ZoomBorder
                     x:Name="ImageZoomBorder"
 					ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -352,11 +343,7 @@
             </Border>
 
             <!--  底部缩略图导航  -->
-            <Border
-                Grid.Row="2"
-                Background="White"
-                BorderBrush="LightGray"
-                BorderThickness="0,1,0,0">
+            <Border Grid.Row="2">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

@@ -505,7 +505,13 @@ namespace AutoTrainer.ViewModels
             }
             try
             {
-                var jsonStr = await File.ReadAllTextAsync(App.TrainModel.PyTrainLogOutputPath);
+                string jsonStr;
+                // 使用FileStream来减少文件锁定时间
+                using (var fileStream = new FileStream(App.TrainModel.PyTrainLogOutputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var streamReader = new StreamReader(fileStream, Encoding.UTF8))
+                {
+                    jsonStr = await streamReader.ReadToEndAsync();
+                }
                 Log.Debug("Read training log content, length: {Length} characters", jsonStr.Length);
 
                 var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);

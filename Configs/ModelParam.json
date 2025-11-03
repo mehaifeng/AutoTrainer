@@ -14,5 +14,13 @@
   "val_data_path": null,
   "num_classes": 0,
   "mutation_data_path": "D:\\VsSources\\AutoTrainer\\DataSet\\MutationDatas",
-  "use_Data_augmentation": false
+  "use_Data_augmentation": false,
+  "loss_function_config": {
+    "type": "CrossEntropyLoss",
+    "args": {
+      "weight": "",
+      "label_smoothing": 0.0,
+      "reduction": "mean"
+    }
+  }
 }

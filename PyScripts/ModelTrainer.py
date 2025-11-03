@@ -41,10 +41,9 @@ class BaseModelConfig(ABC):
 class TorchvisionModelConfig(BaseModelConfig):
     """torchvision预训练模型的配置类"""
 
-    def __init__(self, model_name: str, num_classes: int, config:Dict[str,Any], pretrained: bool = True,  logger: Any = None):
+    def __init__(self, model_name: str, num_classes: int, config:Dict[str,Any], logger: Any = None):
         self.model_name = model_name
         self.num_classes = num_classes
-        self.pretrained = pretrained
         self.config = config  # 存储配置字典
         self.logger = logger
 
@@ -122,7 +121,7 @@ class TorchvisionModelConfig(BaseModelConfig):
         # 初始化模型 - 如果是本地权重则不使用预训练
         if is_local_weights:
             # 创建不带预训练权重的模型
-            model = model_loader(weight=None)
+            model = model_loader(weights=None)
             # 该不带预训练权重的模型需要修改全连接层结构，主要是修改分类数量
             self._modify_classifier(model)
             
@@ -146,49 +145,42 @@ class TorchvisionModelConfig(BaseModelConfig):
                 
                 # --- 使用标准初始化方式作为回退 ---
                 try:
-                    # 构建权重枚举字符串，例如："ResNet18_Weights"
-                    weights_enum_name = f"{self.model_name.capitalize().replace('_', '')}_Weights"
-                    # 尝试从models模块获取对应的权重枚举，例如：models.ResNet18_Weights
-                    weights_enum = getattr(models, weights_enum_name, None)
-
-                    if weights_enum:
-                        self.logger.log_entry("Debug", f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
-                        print(f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
-                        model = model_loader(weights=weights_enum.DEFAULT) # Use the 'DEFAULT' weights
-                    else:
-                        # 如果特定的权重枚举不存在或者用于没有该枚举的旧模型，则回退
-                        self.logger.log_entry("Debug", f"Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
-                        print(f"Warning: Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
-                        model = model_loader(pretrained=True) # Keep old way as fallback
+                    # 统一使用DEFAULT权重，简化处理逻辑
+                    self.logger.log_entry("Debug", f"Loading model {self.model_name} with default weights")
+                    print(f"Loading model {self.model_name} with default weights")
+                    model = model_loader(weights='DEFAULT')
 
                 except Exception as e:
                     # 更广泛的回退，以防上述逻辑对某些模型失败
-                    self.logger.log_entry("Debug", f"Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
-                    print(f"Warning: Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
-                    model = model_loader(pretrained=True) # Keep old way as broad fallback
+                    self.logger.log_entry("Debug", f"Error loading weights via enum for {self.model_name}: {e}. Using default weights.")
+                    print(f"Warning: Error loading weights via enum for {self.model_name}: {e}. Using default weights.")
+                    try:
+                        # 尝试使用默认权重
+                        model = model_loader(weights='DEFAULT')
+                    except:
+                        # 如果不支持DEFAULT，尝试使用旧的API（但可能会有警告）
+                        try:
+                            model = model_loader(pretrained=True)
+                        except:
+                            # 最后的回退，使用IMAGENET1K_V1
+                            model = model_loader(weights="IMAGENET1K_V1")
         else:
-            # --- 使用原有的标准初始化方式 ---
+            # --- 使用标准初始化方式 ---
             try:
-                # 构建权重枚举字符串，例如："ResNet18_Weights"
-                weights_enum_name = f"{self.model_name.capitalize().replace('_', '')}_Weights"
-                # 尝试从models模块获取对应的权重枚举，例如：models.ResNet18_Weights
-                weights_enum = getattr(models, weights_enum_name, None)
-
-                if weights_enum:
-                    self.logger.log_entry("Debug", f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
-                    print(f"Loading model {self.model_name} with weights: {weights_enum_name}.DEFAULT")
-                    model = model_loader(weights=weights_enum.DEFAULT) # Use the 'DEFAULT' weights
-                else:
-                    # 如果特定的权重枚举不存在或者用于没有该枚举的旧模型，则回退
-                    self.logger.log_entry("Debug", f"Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
-                    print(f"Warning: Weights enum {weights_enum_name} not found. Falling back to pretrained=True (might be deprecated).")
-                    model = model_loader(pretrained=True) # Keep old way as fallback
+                # 统一使用DEFAULT权重，简化处理逻辑
+                self.logger.log_entry("Debug", f"Loading model {self.model_name} with default weights")
+                print(f"Loading model {self.model_name} with default weights")
+                model = model_loader(weights='DEFAULT')
 
             except Exception as e:
                 # 更广泛的回退，以防上述逻辑对某些模型失败
-                self.logger.log_entry("Debug", f"Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
-                print(f"Warning: Error loading weights via enum for {self.model_name}: {e}. Falling back to pretrained=True.")
-                model = model_loader(pretrained=True) # Keep old way as broad fallback
+                self.logger.log_entry("Debug", f"Error loading default weights for {self.model_name}: {e}. Using alternative weights.")
+                print(f"Warning: Error loading default weights for {self.model_name}: {e}. Using alternative weights.")
+                try:
+                    model = model_loader(weights="IMAGENET1K_V1")
+                except:
+                    # 最后的回退，使用旧的API（但可能会有警告）
+                    model = model_loader(pretrained=True)
 
         # 修改最后的分类层
         if self.model_name.startswith('resnet'):
@@ -591,8 +583,34 @@ class TrainingLogger:
         print(f"[{entry['timestamp']}] {message_type}: {message}")
 
     def _save_log(self):
-        with open(self.log_path, 'w', encoding='utf-8') as f:
-            json.dump(self.log_data, f, ensure_ascii=False, indent=2)
+        max_retries = 5
+        retry_delay = 0.1  # 100ms
+
+        for attempt in range(max_retries):
+            try:
+                # 使用临时文件写入，然后原子性替换
+                temp_path = self.log_path + '.tmp'
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.log_data, f, ensure_ascii=False, indent=2)
+
+                # 原子性地替换文件
+                import shutil
+                shutil.move(temp_path, self.log_path)
+                break  # 成功写入，退出循环
+
+            except PermissionError as e:
+                if attempt < max_retries - 1:
+                    # 等待一段时间后重试
+                    import time
+                    time.sleep(retry_delay * (attempt + 1))  # 递增等待时间
+                else:
+                    # 最后一次尝试失败，记录警告但不中断训练
+                    print(f"Warning: Could not write to log file after {max_retries} attempts: {e}")
+                    print("Training will continue, but log updates may be delayed.")
+
+            except Exception as e:
+                print(f"Error saving log file: {e}")
+                break  # 非权限错误，直接退出
 
 
 # main.py
@@ -615,7 +633,6 @@ def main():
             model_name=config['pretrained_model'],
             num_classes=num_classes,
             config = config,
-            pretrained=True,
             logger = logger
         )
 

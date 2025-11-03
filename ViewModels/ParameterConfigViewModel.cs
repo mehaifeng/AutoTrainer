@@ -447,21 +447,19 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
             App.TrainModel.RandomContrastChecked = RandomContrastChecked;
             App.TrainModel.RandomZoomChecked = RandomZoomChecked;
-            if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight)) 
+            // 始终设置损失函数配置
+            App.TrainModel.LossFunction = new LossFunctionModel
             {
-                App.TrainModel.LossFunction = new LossFunctionModel
+                type = SelectedLossFunction,
+                args = new Params
                 {
-                    type = SelectedLossFunction,
-                    args = new Params
-                    {
-                        weight = GetWeightArray(Weight),
-                        pos_weight = GetWeightArray(Pos_weight),
-                        label_smoothing = LabelSmoothing,
-                        Beta = Beta,
-                        reduction = SelectedReduction
-                    }
-                };
-            }
+                    weight = !string.IsNullOrEmpty(Weight) ? GetWeightArray(Weight) : null,
+                    pos_weight = !string.IsNullOrEmpty(Pos_weight) ? GetWeightArray(Pos_weight) : null,
+                    label_smoothing = LabelSmoothing,
+                    Beta = Beta,
+                    reduction = SelectedReduction
+                }
+            };
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
             string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
             await File.WriteAllTextAsync(configPath, jsonStr);
