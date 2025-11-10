@@ -19,7 +19,7 @@
     mc:Ignorable="d">
 	<UserControl.Styles>
 		<Style Selector="Button">
-			<Setter Property="Width" Value="130"/>
+			<Setter Property="Width" Value="150"/>
 			<Setter Property="HorizontalContentAlignment" Value="Center"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
 		</Style>
@@ -168,19 +168,28 @@
 							</Button>
                             <Button
                                 Classes="light"
-                                Command="{Binding ImportAnnotationsCommand}"
+                                Command="{Binding ImportClassesAnnotationsCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="ImageEditOutline" />
-									<TextBlock Text="导入图片标注"/>
+									<TextBlock Text="导入分类标签"/>
 								</StackPanel>
 							</Button>
                             <Button
                                 Classes="light"
-                                Command="{Binding ExportAnnotationsCommand}">
+                                Command="{Binding ImportCOCOFileCommand}"
+                                CommandParameter="{Binding ElementName=DataAnnotationView}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="ImageEditOutline" />
+									<TextBlock Text="导入COCO标注"/>
+								</StackPanel>
+							</Button>
+                            <Button
+                                Classes="light"
+                                Command="{Binding ExportCOCOFileCommand}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="FileExportOutline" />
-									<TextBlock Text="导出标注文件"/>
+									<TextBlock Text="导出COCO标注"/>
 								</StackPanel>
 							</Button>
                         </StackPanel>

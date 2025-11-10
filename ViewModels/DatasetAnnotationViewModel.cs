@@ -20,6 +20,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
 using Newtonsoft.Json;
+using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Processing;
@@ -144,7 +145,6 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private int totalAnnotationCount = 0;
 
-
         [ObservableProperty]
         private bool canUndo = false;
 
@@ -185,8 +185,10 @@ namespace AutoTrainer.ViewModels
         public Action<AnnotationItem>? OnAnnotationSelected;
         #endregion
 
-        #region 构造函数
-
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="canvas"></param>
         public DatasetAnnotationViewModel(Canvas canvas)
         {
             ImageCanvas = canvas;
@@ -233,9 +235,7 @@ namespace AutoTrainer.ViewModels
             AddImageClassCommand.NotifyCanExecuteChanged();
         }
 
-        #endregion
 
-        #region 标注模式切换命令
 
         [RelayCommand]
         private void SelectManualMode()
@@ -250,10 +250,6 @@ namespace AutoTrainer.ViewModels
             CurrentMode = AnnotationMethodEnum.AIAssisted;
             // TODO: 实现AI辅助标注
         }
-
-        #endregion
-
-        #region 标注工具命令
 
         [RelayCommand]
         private void SelectRectangleTool()
@@ -273,9 +269,6 @@ namespace AutoTrainer.ViewModels
             CurrentTool = AnnotationToolEnum.Point;
         }
 
-        #endregion
-
-        #region 图像导入和导航命令
         /// <summary>
         /// 导入图像目录
         /// </summary>
@@ -309,143 +302,23 @@ namespace AutoTrainer.ViewModels
         }
 
         /// <summary>
-        /// 以异步和虚拟方式加载图像。
+        /// 导入COCO标注文件
         /// </summary>
-        private async Task LoadImagesFromFolder(Uri folderUri)
-        {
-            IsLoading = true;
-            ProgressState = "正在扫描文件路径...";
-            ImageList.Clear();
-            AllImageAnnotations.Clear(); // Also clear annotations from previous folder
-
-            try
-            {
-                var imageItems = await Task.Run(() =>
-                {
-                    var directoryInfo = new DirectoryInfo(folderUri.LocalPath);
-                    var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
-                    };
-
-                    return directoryInfo.GetFiles()
-                        .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
-                        .Select(f => f.FullName)
-                        .OrderBy(f => f)
-                        .Select(path => new ImageItem { FilePath = path, FileName = System.IO.Path.GetFileName(path) })
-                        .ToList();
-                });
-
-
-                ProgressState = "正在加载图片列表...";
-                ImageList = new ObservableCollection<ImageItem>(imageItems);
-
-                if (ImageList.Any())
-                {
-                    // Set the first image as current, but don't load its main bitmap yet
-                    CurrentImageIndex = 0;
-                }
-
-                // Asynchronously load thumbnails for the initial view
-                _ = LoadThumbnailsInRange(0, 30); // Load first 30 thumbnails in background
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"加载图像失败: {ex.Message}");
-                // Handle error
-            }
-            finally
-            {
-                IsLoading = false;
-                ProgressState = "就绪";
-            }
-        }
-
-        /// <summary>
-        /// 异步加载 ImageList 中给定范围的项目的缩略图。
-        /// </summary>
-        private async Task LoadThumbnailsInRange(int startIndex, int count)
-        {
-            var itemsToLoad = ImageList.Skip(startIndex).Take(count).ToList();
-            foreach (var item in itemsToLoad)
-            {
-                if (item.Thumbnail == null)
-                {
-                    try
-                    {
-                        item.Thumbnail = await CreateThumbnailAsync(item.FilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"创建缩略图失败 {item.FileName}: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 从文件路径异步创建单个缩略图。
-        /// </summary>
-        private async Task<Bitmap?> CreateThumbnailAsync(string filePath, int maxSize = 150)
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    using var stream = File.OpenRead(filePath);
-                    using var originalBitmap = new Bitmap(stream);
-                    var scale = Math.Min((double)maxSize / originalBitmap.PixelSize.Width,
-                                       (double)maxSize / originalBitmap.PixelSize.Height);
-                    var newWidth = (int)(originalBitmap.PixelSize.Width * scale);
-                    var newHeight = (int)(originalBitmap.PixelSize.Height * scale);
-                    return originalBitmap.CreateScaledBitmap(new PixelSize(newWidth, newHeight));
-                }
-                catch (Exception)
-                {
-                    // Return null or a placeholder "error" bitmap
-                    return null;
-                }
-            });
-        }
-
-        /// <summary>
-        /// 导入选择的图片
-        /// </summary>
-        /// <param name="control"></param>
         /// <returns></returns>
         [RelayCommand]
-        private async Task ImportImages(UserControl control)
+        private async Task ImportCOCOFile()
         {
-            try
-            {
-                FilePickerFileType imageAll = new FilePickerFileType("ImageAll")
-                {
-                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp"],
-                    AppleUniformTypeIdentifiers = ["sample.jpg"],
-                    MimeTypes = ["image/*"]
-                };
-                var topLevel = TopLevel.GetTopLevel(control);
-                if (topLevel != null)
-                {
-                    var file = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
-                    {
-                        Title = "选择一张图片",
-                        AllowMultiple = false,
-                        FileTypeFilter = [imageAll],
-                    });
-                    if (file.Count != 0)
-                    {
-                        CurrentImageFileName = System.IO.Path.GetFileName(file[0].TryGetLocalPath() ?? string.Empty);
-                        CurrentImage = new Bitmap(file[0].Path.LocalPath);
-                        CurrentImageSize = $"{CurrentImage.PixelSize.Width}x{CurrentImage.PixelSize.Height}";
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // TODO: 显示错误消息
-                Debug.WriteLine($"导入图像失败: {ex.Message}");
-            }
+
+        }
+
+        /// <summary>
+        /// 导出COCO标注文件
+        /// </summary>
+        /// <returns></returns>
+        [RelayCommand]
+        private async Task OutputCOCOFile()
+        {
+
         }
 
         /// <summary>
@@ -472,27 +345,6 @@ namespace AutoTrainer.ViewModels
             }
         }
 
-        /// <summary>
-        /// “作为模板应用至全体图片”勾选状态改变
-        /// </summary>
-        /// <param name="value"></param>
-        partial void OnIsApplyAsTemplateChanged(bool value)
-        {
-            ImageList[CurrentImageIndex].AsCroppingTemplate = value;
-        }
-
-        /// <summary>
-        /// 当前选择图像索引改变
-        /// </summary>
-        /// <param name="value"></param>
-        partial void OnCurrentImageIndexChanged(int value)
-        {
-            IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
-        }
-
-        #endregion
-
-        #region 类别管理命令
         /// <summary>
         /// 添加类别
         /// </summary>
@@ -531,9 +383,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
-        #endregion
-
-        #region 图像分类命令
+        /// <summary>
+        /// 添加图像分类
+        /// </summary>
         [RelayCommand(CanExecute = nameof(CanAddImageClass))]
         private void AddImageClass()
         {
@@ -549,6 +401,10 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 移除图像分类
+        /// </summary>
+        /// <param name="className"></param>
         [RelayCommand]
         private void RemoveImageClass(string className)
         {
@@ -563,9 +419,7 @@ namespace AutoTrainer.ViewModels
                 CurrentImageClasses.Remove(className);
             }
         }
-        #endregion
 
-        #region 标注操作命令
         /// <summary>
         /// 清除所有标注
         /// </summary>
@@ -601,7 +455,7 @@ namespace AutoTrainer.ViewModels
             if (SelectedAnnotation != null)
             {
                 SaveToUndoStack();
-                if(SelectedAnnotation.GetType() == typeof(RectangleModel))
+                if (SelectedAnnotation.GetType() == typeof(RectangleModel))
                 {
                     // 删除矩形标注
                     var rectangle = (RectangleModel)SelectedAnnotation;
@@ -819,10 +673,9 @@ namespace AutoTrainer.ViewModels
             }
         }
 
-        #endregion
-
-        #region 模板标注命令
-
+        /// <summary>
+        /// 创建模板
+        /// </summary>
         [RelayCommand]
         private void CreateTemplate()
         {
@@ -831,30 +684,40 @@ namespace AutoTrainer.ViewModels
             // TODO: 进入模板创建模式
         }
 
+        /// <summary>
+        /// 保存模板
+        /// </summary>
         [RelayCommand]
         private void SaveTemplate()
         {
-            
+
         }
 
+        /// <summary>
+        /// 应用模板
+        /// </summary>
         [RelayCommand]
         private void ApplyTemplate()
         {
-            
+
         }
 
+        /// <summary>
+        /// 批次应用模板
+        /// </summary>
         [RelayCommand]
         private void BatchApplyTemplate()
         {
-            
+
         }
 
-        #endregion
-
-        #region 导入导出命令
-
+        /// <summary>
+        /// 导入分类标签文件
+        /// </summary>
+        /// <param name="control"></param>
+        /// <returns></returns>
         [RelayCommand]
-        private async Task ImportAnnotations(UserControl control)
+        private async Task ImportClassesAnnotations(UserControl control)
         {
             try
             {
@@ -934,23 +797,305 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 导出COCO标注文件
+        /// </summary>
+        /// <param name="control">用于显示文件保存对话框的控件</param>
+        /// <returns></returns>
         [RelayCommand]
-        private async Task ExportAnnotations()
+        private async Task ExportCOCOFile(UserControl control)
         {
             try
             {
-                // TODO: 实现标注文件导出
-                // 支持多种格式导出
+                // 检查是否有图片和标注数据
+                if (!ImageList.Any())
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Warning")
+                        .HasMessage("没有图片数据可导出。")
+                        .Dismiss().WithDelay(4000, t => { })
+                        .Queue();
+                    return;
+                }
+
+                // 检查是否有标注数据
+                var hasAnnotations = AllImageAnnotations.Any() || ImageList.Any(img => img.IsAnnotated);
+                if (!hasAnnotations)
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Warning")
+                        .HasMessage("没有标注数据可导出。")
+                        .Dismiss().WithDelay(4000, t => { })
+                        .Queue();
+                    return;
+                }
+
+                // 检查是否只支持矩形框和多边形标注
+                var hasUnsupportedAnnotations = AllImageAnnotations.Values.Any(annotations =>
+                    annotations.Any(ann => ann.AnnotationType == AnnotationToolEnum.Point));
+
+                if (hasUnsupportedAnnotations)
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Warning")
+                        .HasMessage("当前只支持矩形框和多边形标注的COCO导出，点标注将被忽略。")
+                        .Dismiss().WithDelay(5000, t => { })
+                        .Queue();
+                }
+
+                var topLevel = TopLevel.GetTopLevel(control);
+                if (topLevel == null) return;
+
+                // 显示文件保存对话框
+                var saveFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "保存COCO标注文件",
+                    SuggestedFileName = "annotations.json",
+                    FileTypeChoices = [new("JSON文件") { Patterns = ["*.json"] }]
+                });
+
+                if (saveFile == null) return;
+
+                var savePath = saveFile.TryGetLocalPath();
+                if (string.IsNullOrEmpty(savePath)) return;
+
+                // 开始导出
+                ProgressState = "正在导出COCO标注文件...";
+                IsLoading = true;
+
+                await Task.Run(() => ExportToCOCOFormat(savePath));
+
+                NotifyManager.CreateMessage()
+                    .Accent("#161616")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Success")
+                    .HasMessage($"COCO标注文件导出成功：{savePath}")
+                    .Dismiss().WithButton("打开文件夹", button =>
+                    {
+                        var folder = System.IO.Path.GetDirectoryName(savePath);
+                        if (!string.IsNullOrEmpty(folder))
+                            FileDirectoryHelper.OpenInExplorer(folder, false);
+                    })
+                    .Dismiss().WithDelay(6000, t => { })
+                    .Queue();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"导出标注失败: {ex.Message}");
+                Log.Error($"导出COCO标注失败: {ex.Message}");
+                Debug.WriteLine($"导出COCO标注失败: {ex.Message}");
+
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Error")
+                    .HasMessage($"导出失败：{ex.Message}")
+                    .Dismiss().WithDelay(6000, t => { })
+                    .Queue();
+            }
+            finally
+            {
+                IsLoading = false;
+                ProgressState = "就绪";
             }
         }
 
-        #endregion
+        /// <summary>
+        /// 导出数据到COCO格式
+        /// </summary>
+        /// <param name="savePath">保存路径</param>
+        private void ExportToCOCOFormat(string savePath)
+        {
+            var cocoDataset = new CocoDataset
+            {
+                Info = new Info
+                {
+                    Description = "AutoTrainer Dataset Annotations",
+                    Url = "https://github.com/mehaifeng/AutoTrainer",
+                    Version = "1.0",
+                    Year = DateTime.Now.Year,
+                    Contributor = "AutoTrainer",
+                    DateCreated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                },
+                Licenses = new List<License>
+                {
+                    new License
+                    {
+                        Id = 1,
+                        Name = "Unknown License",
+                        Url = ""
+                    }
+                },
+                Images = new List<COCOImage>(),
+                Annotations = new List<Annotation>(),
+                Categories = new List<Category>()
+            };
 
-        #region 生成数据集
+            // 收集所有类别名称
+            var allClassNames = new HashSet<string>();
+            foreach (var annotations in AllImageAnnotations.Values)
+            {
+                foreach (var annotation in annotations)
+                {
+                    if (!string.IsNullOrEmpty(annotation.ClassName))
+                    {
+                        allClassNames.Add(annotation.ClassName);
+                    }
+                }
+            }
+
+            // 创建类别映射
+            var categoryIdMap = new Dictionary<string, int>();
+            int categoryId = 1;
+            foreach (var className in allClassNames)
+            {
+                categoryIdMap[className] = categoryId;
+                cocoDataset.Categories.Add(new Category
+                {
+                    Id = categoryId,
+                    Name = className,
+                    Supercategory = "object"
+                });
+                categoryId++;
+            }
+
+            // 创建图像和标注
+            int imageId = 1;
+            int annotationId = 1;
+
+            foreach (var imageItem in ImageList)
+            {
+                if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
+                    continue;
+
+                // 获取图像尺寸
+                int imageWidth = 0, imageHeight = 0;
+                try
+                {
+                    using var bitmap = new Bitmap(imageItem.FilePath);
+                    imageWidth = bitmap.PixelSize.Width;
+                    imageHeight = bitmap.PixelSize.Height;
+                }
+                catch
+                {
+                    // 如果无法读取图像尺寸，使用默认值
+                    imageWidth = 1024;
+                    imageHeight = 1024;
+                }
+
+                // 添加图像信息
+                var cocoImage = new COCOImage
+                {
+                    Id = imageId,
+                    Width = imageWidth,
+                    Height = imageHeight,
+                    FileName = imageItem.FileName
+                };
+                cocoDataset.Images.Add(cocoImage);
+
+                // 获取该图像的标注
+                var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                var annotations = AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
+                    ? imageAnnotations
+                    : new List<AnnotationItem>();
+
+                // 转换标注为COCO格式
+                foreach (var annotation in annotations)
+                {
+                    // 只处理矩形框和多边形标注
+                    if (annotation.AnnotationType == AnnotationToolEnum.Point)
+                        continue;
+
+                    if (string.IsNullOrEmpty(annotation.ClassName) || !categoryIdMap.ContainsKey(annotation.ClassName))
+                        continue;
+
+                    var cocoAnnotation = new Annotation
+                    {
+                        Id = annotationId,
+                        ImageId = imageId,
+                        CategoryId = categoryIdMap[annotation.ClassName],
+                        IsCrowd = 0
+                    };
+
+                    var boundingBox = annotation.GetBoundingBox();
+                    cocoAnnotation.Bbox = new List<double>
+                    {
+                        Math.Round(boundingBox.X, 2),
+                        Math.Round(boundingBox.Y, 2),
+                        Math.Round(boundingBox.Width, 2),
+                        Math.Round(boundingBox.Height, 2)
+                    };
+                    cocoAnnotation.Area = Math.Round(boundingBox.Width * boundingBox.Height, 2);
+
+                    // 处理分割数据
+                    if (annotation.AnnotationType == AnnotationToolEnum.Polygon && annotation is PolygonModel polygon)
+                    {
+                        // 多边形分割
+                        var segmentation = new List<double>();
+                        foreach (var point in polygon.Points)
+                        {
+                            segmentation.Add(Math.Round(point.X, 2));
+                            segmentation.Add(Math.Round(point.Y, 2));
+                        }
+
+                        if (segmentation.Count > 0)
+                        {
+                            cocoAnnotation.Segmentation = new Segmentation
+                            {
+                                Polygons = new List<List<double>> { segmentation }
+                            };
+                        }
+                    }
+                    else
+                    {
+                        // 矩形框分割 - 使用边界框作为多边形
+                        var rectSegmentation = new List<double>
+                        {
+                            Math.Round(boundingBox.X, 2),
+                            Math.Round(boundingBox.Y, 2),
+                            Math.Round(boundingBox.X + boundingBox.Width, 2),
+                            Math.Round(boundingBox.Y, 2),
+                            Math.Round(boundingBox.X + boundingBox.Width, 2),
+                            Math.Round(boundingBox.Y + boundingBox.Height, 2),
+                            Math.Round(boundingBox.X, 2),
+                            Math.Round(boundingBox.Y + boundingBox.Height, 2)
+                        };
+
+                        cocoAnnotation.Segmentation = new Segmentation
+                        {
+                            Polygons = new List<List<double>> { rectSegmentation }
+                        };
+                    }
+
+                    cocoDataset.Annotations.Add(cocoAnnotation);
+                    annotationId++;
+                }
+
+                imageId++;
+            }
+
+            // 保存为JSON文件
+            var jsonSettings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+                Converters = new List<JsonConverter> { new SegmentationConverter() }
+            };
+
+            var json = JsonConvert.SerializeObject(cocoDataset, jsonSettings);
+            File.WriteAllText(savePath, json);
+        }
+
         /// <summary>
         /// 裁剪数据集并分类保存
         /// </summary>
@@ -1063,7 +1208,7 @@ namespace AutoTrainer.ViewModels
                         catch (Exception ex)
                         {
                             // 可选：记录日志或提示错误
-                            Console.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
+                            Debug.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
                     App.TrainModel.TrainDataPath = baseOutputPath;
@@ -1095,6 +1240,10 @@ namespace AutoTrainer.ViewModels
             });
         }
 
+        /// <summary>
+        /// 批量创建分类数据集
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task BatchCreateDataset()
         {
@@ -1181,9 +1330,9 @@ namespace AutoTrainer.ViewModels
                 ProgressState = "就绪";
             }
         }
-        #endregion
 
-        #region 私有方法
+
+        #region 函数
         /// <summary>
         /// 更新UI(动态加载标注)
         /// </summary>
@@ -1379,6 +1528,123 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        /// <summary>
+        /// 以异步和虚拟方式加载图像。
+        /// </summary>
+        private async Task LoadImagesFromFolder(Uri folderUri)
+        {
+            IsLoading = true;
+            ProgressState = "正在扫描文件路径...";
+            ImageList.Clear();
+            AllImageAnnotations.Clear(); // Also clear annotations from previous folder
+
+            try
+            {
+                var imageItems = await Task.Run(() =>
+                {
+                    var directoryInfo = new DirectoryInfo(folderUri.LocalPath);
+                    var supportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
+                    };
+
+                    return directoryInfo.GetFiles()
+                        .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
+                        .Select(f => f.FullName)
+                        .OrderBy(f => f)
+                        .Select(path => new ImageItem { FilePath = path, FileName = System.IO.Path.GetFileName(path) })
+                        .ToList();
+                });
+
+
+                ProgressState = "正在加载图片列表...";
+                ImageList = new ObservableCollection<ImageItem>(imageItems);
+
+                if (ImageList.Any())
+                {
+                    // Set the first image as current, but don't load its main bitmap yet
+                    CurrentImageIndex = 0;
+                }
+
+                // Asynchronously load thumbnails for the initial view
+                _ = LoadThumbnailsInRange(0, 30); // Load first 30 thumbnails in background
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"加载图像失败: {ex.Message}");
+                // Handle error
+            }
+            finally
+            {
+                IsLoading = false;
+                ProgressState = "就绪";
+            }
+        }
+
+        /// <summary>
+        /// 异步加载 ImageList 中给定范围的项目的缩略图。
+        /// </summary>
+        private async Task LoadThumbnailsInRange(int startIndex, int count)
+        {
+            var itemsToLoad = ImageList.Skip(startIndex).Take(count).ToList();
+            foreach (var item in itemsToLoad)
+            {
+                if (item.Thumbnail == null)
+                {
+                    try
+                    {
+                        item.Thumbnail = await CreateThumbnailAsync(item.FilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"创建缩略图失败 {item.FileName}: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 从文件路径异步创建单个缩略图。
+        /// </summary>
+        private async Task<Bitmap?> CreateThumbnailAsync(string filePath, int maxSize = 150)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    using var stream = File.OpenRead(filePath);
+                    using var originalBitmap = new Bitmap(stream);
+                    var scale = Math.Min((double)maxSize / originalBitmap.PixelSize.Width,
+                                       (double)maxSize / originalBitmap.PixelSize.Height);
+                    var newWidth = (int)(originalBitmap.PixelSize.Width * scale);
+                    var newHeight = (int)(originalBitmap.PixelSize.Height * scale);
+                    return originalBitmap.CreateScaledBitmap(new PixelSize(newWidth, newHeight));
+                }
+                catch (Exception)
+                {
+                    // Return null or a placeholder "error" bitmap
+                    return null;
+                }
+            });
+        }
+
+        /// <summary>
+        /// “作为模板应用至全体图片”勾选状态改变
+        /// </summary>
+        /// <param name="value"></param>
+        partial void OnIsApplyAsTemplateChanged(bool value)
+        {
+            ImageList[CurrentImageIndex].AsCroppingTemplate = value;
+        }
+
+        /// <summary>
+        /// 当前选择图像索引改变
+        /// </summary>
+        /// <param name="value"></param>
+        partial void OnCurrentImageIndexChanged(int value)
+        {
+            IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
+        }
         #endregion
     }
 }
