@@ -3,8 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
 			 mc:Ignorable="d"
 			 d:DesignWidth="1200"
@@ -235,11 +233,11 @@
 										VerticalAlignment="Bottom"
 										SelectedItem="{Binding SelectModel}"
 										ItemsSource="{Binding ModelList}">
-										<i:Interaction.Behaviors>
-											<ia:EventTriggerBehavior EventName="SelectionChanged">
-												<ia:InvokeCommandAction Command="{Binding SelectModelToShowCommand}" />
-											</ia:EventTriggerBehavior>
-										</i:Interaction.Behaviors>
+										<Interaction.Behaviors>
+											<EventTriggerBehavior EventName="SelectionChanged">
+												<InvokeCommandAction Command="{Binding SelectModelToShowCommand}"/>
+											</EventTriggerBehavior>
+										</Interaction.Behaviors>
 									</ComboBox>
 								</Grid>
 								<!--Select Local Weight-->

@@ -186,7 +186,8 @@
 							</Button>
                             <Button
                                 Classes="light"
-                                Command="{Binding ExportCOCOFileCommand}">
+                                Command="{Binding ExportCOCOFileCommand}"
+								CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="FileExportOutline" />
 									<TextBlock Text="导出COCO标注"/>
@@ -266,12 +267,25 @@
                         HorizontalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="10">
-                        <TextBlock
+						<!--导入的COCO标注类型选择-->
+						<Grid
+							ColumnDefinitions="*,10,*">
+						    <RadioButton
+								Command="{Binding SelectDetectionRectTypeCommand}"
+								IsChecked="{Binding IsCheckDetectionRectType}"
+							    Content="识别框标签"
+							    GroupName="InputCOCOAnnotationType"/>
+						    <RadioButton
+								Grid.Column="2"
+								Command="{Binding SelectInstanceSegmentTypeCommand}"
+								IsChecked="{Binding !IsCheckDetectionRectType}"
+							    Content="实例分割标签"
+							    GroupName="InputCOCOAnnotationType"/>
+						</Grid>
+						<TextBlock
                             VerticalAlignment="Center"
                             FontWeight="Bold"
                             Text="{Binding CurrentImageSize}" />
-                        <!--  Text="{Binding CurrentImageInfo}"  -->
-
                         <TextBlock VerticalAlignment="Center" Text="{Binding ElementName=ImageZoomBorder, Path=ZoomX, StringFormat='缩放: {0:F0}%'}" />
                     </StackPanel>
 
@@ -453,6 +467,17 @@
             <ScrollViewer>
                 <StackPanel Margin="5" Spacing="10">
 
+                    <!-- 训练集路径 -->
+					<StackPanel Orientation="Vertical" Spacing="8">
+						<Grid RowDefinitions="*,5,*">
+							<Label Content="训练集路径："/>
+							<SelectableTextBlock
+                                Grid.Row="2"
+                                Text="{Binding TrainDatasetPath}"
+                                ToolTip.Tip="{Binding TrainDatasetPath}"/>
+						</Grid>
+					</StackPanel>
+					
                     <!--  图片信息  -->
                     <Expander Header="图片信息" IsExpanded="True" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="5">
@@ -481,6 +506,7 @@
                                     SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}" />
 								<Button
 	                                Grid.Column="1"
+									IsEnabled="False"
 	                                Width="30"
 	                                Height="30"
 	                                Margin="5,0,0,0"
@@ -550,7 +576,6 @@
                             </Grid>
                             
                             <Button
-                                Classes="light"
                                 Command="{Binding DeleteSelectedAnnotationCommand}"
                                 CommandParameter="{Binding ElementName=AnnotationCanvas}"
                                 Content="删除标注"

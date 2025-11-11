@@ -353,11 +353,11 @@
                     CornerRadius="5"
                     ItemsSource="{Binding ClassifiedImages}"
                     Theme="{StaticResource ScrollableTabControl}">
-                    <i:Interaction.Behaviors>
-                        <ia:EventTriggerBehavior EventName="SelectionChanged">
-                            <ia:InvokeCommandAction Command="{Binding}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}" />
-                        </ia:EventTriggerBehavior>
-                    </i:Interaction.Behaviors>
+					<Interaction.Behaviors>
+						<EventTriggerBehavior EventName="SelectionChanged">
+							<InvokeCommandAction Command="{Binding}" CommandParameter="{Binding ElementName=PreviewTab, Path=SelectedItem}" />
+						</EventTriggerBehavior>
+					</Interaction.Behaviors>
                     <!--  设置 TabItem 的标题  -->
                     <TabControl.ItemTemplate>
                         <DataTemplate DataType="model:PreviewImageModel">

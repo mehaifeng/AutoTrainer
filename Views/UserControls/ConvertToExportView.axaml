@@ -4,18 +4,16 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
-			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 d:DesignWidth="1200"
 			 d:DesignHeight="850"
 			 x:Name="ConverterView"
 			 x:DataType="vm:ConvertToExportViewModel"
              x:Class="AutoTrainer.ConvertToExportView">
-	<i:Interaction.Behaviors>
-		<ia:EventTriggerBehavior EventName="Loaded">
-			<ia:InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
-		</ia:EventTriggerBehavior>
-	</i:Interaction.Behaviors>
+	<Interaction.Behaviors>
+		<EventTriggerBehavior EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
+		</EventTriggerBehavior>
+	</Interaction.Behaviors>
 	<Grid HorizontalAlignment="Center">
 		<Grid RowDefinitions=".75*,.25*">
 			<Grid Grid.Row="0" RowDefinitions="Auto,Auto,80" VerticalAlignment="Center">

@@ -55,6 +55,8 @@ namespace AutoTrainer.ViewModels
         public string AnnotationFileName = "AnnotationConfig.json";
         // 存储所有图片的标注数据
         public Dictionary<string, List<AnnotationItem>> AllImageAnnotations = [];
+        // 存储上次导入的COCO数据，用于模式切换时重新处理
+        private CocoDataset? _lastImportedCocoDataset;
         #endregion
 
         #region 可绑定字段属性
@@ -179,6 +181,15 @@ namespace AutoTrainer.ViewModels
         private string? _selectedClassForAction;
 
         public bool CanAddImageClass => !string.IsNullOrEmpty(SelectedClassForAction) && !HasSelectedAnnotation;
+
+        /// <summary>
+        /// 是否勾选检测框标注类型
+        /// </summary>
+        [ObservableProperty]
+        private bool isCheckDetectionRectType = true;
+
+        [ObservableProperty]
+        private string trainDatasetPath = string.Empty;
         #endregion
 
         #region 事件和委托
@@ -270,6 +281,46 @@ namespace AutoTrainer.ViewModels
         }
 
         /// <summary>
+        /// 选择识别框标签模式
+        /// </summary>
+        [RelayCommand]
+        private void SelectDetectionRectType()
+        {
+            IsCheckDetectionRectType = true;
+            NotifyManager.CreateMessage()
+                .Accent("#161616")
+                .Background("#e5e4e2")
+                .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                .HasBadge("Info")
+                .HasMessage("已切换到识别框标签模式")
+                .Dismiss().WithDelay(2000, t => { })
+                .Queue();
+
+            // 如果有导入的COCO数据，重新处理标注
+            ReprocessAnnotationsFromCOCOData();
+        }
+
+        /// <summary>
+        /// 选择实例分割标签模式
+        /// </summary>
+        [RelayCommand]
+        private void SelectInstanceSegmentType()
+        {
+            IsCheckDetectionRectType = false;
+            NotifyManager.CreateMessage()
+                .Accent("#161616")
+                .Background("#e5e4e2")
+                .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                .HasBadge("Info")
+                .HasMessage("已切换到实例分割标签模式")
+                .Dismiss().WithDelay(2000, t => { })
+                .Queue();
+
+            // 如果有导入的COCO数据，重新处理标注
+            ReprocessAnnotationsFromCOCOData();
+        }
+
+        /// <summary>
         /// 导入图像目录
         /// </summary>
         /// <param name="control"></param>
@@ -292,6 +343,7 @@ namespace AutoTrainer.ViewModels
                     var selectedFolder = folders[0];
                     Imagefolder = folders[0].TryGetLocalPath() ?? string.Empty;
                     await LoadImagesFromFolder(selectedFolder.Path);
+                    TrainDatasetPath = Imagefolder;
                 }
             }
             catch (Exception ex)
@@ -304,21 +356,77 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 导入COCO标注文件
         /// </summary>
+        /// <param name="control">用于显示文件选择对话框的控件</param>
         /// <returns></returns>
         [RelayCommand]
-        private async Task ImportCOCOFile()
+        private async Task ImportCOCOFile(UserControl control)
         {
+            try
+            {
+                // 检查是否已导入图片
+                if (!ImageList.Any())
+                {
+                    NotifyManager.CreateMessage()
+                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Warning")
+                        .HasMessage("请先导入图片目录，然后再导入COCO标注文件。")
+                        .Dismiss().WithDelay(4000, t => { })
+                        .Queue();
+                    return;
+                }
 
-        }
+                var topLevel = TopLevel.GetTopLevel(control);
+                if (topLevel == null) return;
 
-        /// <summary>
-        /// 导出COCO标注文件
-        /// </summary>
-        /// <returns></returns>
-        [RelayCommand]
-        private async Task OutputCOCOFile()
-        {
+                // 显示文件选择对话框
+                var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    AllowMultiple = false,
+                    Title = "选择COCO标注文件",
+                    FileTypeFilter = [new("JSON文件") { Patterns = ["*.json"] }]
+                });
 
+                if (files?.Count > 0)
+                {
+                    var selectedFile = files[0].TryGetLocalPath();
+                    if (string.IsNullOrEmpty(selectedFile)) return;
+
+                    IsLoading = true;
+                    ProgressState = "正在导入COCO标注文件...";
+                    ProgressValue = 0;
+                    ProgressMax = ImageList.Count;
+
+                    await Task.Run(() => ImportCOCOData(selectedFile));
+
+                    NotifyManager.CreateMessage()
+                        .Accent("#161616")
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("Success")
+                        .HasMessage($"COCO标注文件导入成功：{System.IO.Path.GetFileName(selectedFile)}")
+                        .Dismiss().WithDelay(5000, t => { })
+                        .Queue();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"导入COCO标注失败: {ex.Message}");
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Error")
+                    .HasMessage($"导入失败：{ex.Message}")
+                    .Dismiss().WithDelay(6000, t => { })
+                    .Queue();
+            }
+            finally
+            {
+                IsLoading = false;
+                ProgressState = "就绪";
+            }
         }
 
         /// <summary>
@@ -911,192 +1019,6 @@ namespace AutoTrainer.ViewModels
         }
 
         /// <summary>
-        /// 导出数据到COCO格式
-        /// </summary>
-        /// <param name="savePath">保存路径</param>
-        private void ExportToCOCOFormat(string savePath)
-        {
-            var cocoDataset = new CocoDataset
-            {
-                Info = new Info
-                {
-                    Description = "AutoTrainer Dataset Annotations",
-                    Url = "https://github.com/mehaifeng/AutoTrainer",
-                    Version = "1.0",
-                    Year = DateTime.Now.Year,
-                    Contributor = "AutoTrainer",
-                    DateCreated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                },
-                Licenses = new List<License>
-                {
-                    new License
-                    {
-                        Id = 1,
-                        Name = "Unknown License",
-                        Url = ""
-                    }
-                },
-                Images = new List<COCOImage>(),
-                Annotations = new List<Annotation>(),
-                Categories = new List<Category>()
-            };
-
-            // 收集所有类别名称
-            var allClassNames = new HashSet<string>();
-            foreach (var annotations in AllImageAnnotations.Values)
-            {
-                foreach (var annotation in annotations)
-                {
-                    if (!string.IsNullOrEmpty(annotation.ClassName))
-                    {
-                        allClassNames.Add(annotation.ClassName);
-                    }
-                }
-            }
-
-            // 创建类别映射
-            var categoryIdMap = new Dictionary<string, int>();
-            int categoryId = 1;
-            foreach (var className in allClassNames)
-            {
-                categoryIdMap[className] = categoryId;
-                cocoDataset.Categories.Add(new Category
-                {
-                    Id = categoryId,
-                    Name = className,
-                    Supercategory = "object"
-                });
-                categoryId++;
-            }
-
-            // 创建图像和标注
-            int imageId = 1;
-            int annotationId = 1;
-
-            foreach (var imageItem in ImageList)
-            {
-                if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
-                    continue;
-
-                // 获取图像尺寸
-                int imageWidth = 0, imageHeight = 0;
-                try
-                {
-                    using var bitmap = new Bitmap(imageItem.FilePath);
-                    imageWidth = bitmap.PixelSize.Width;
-                    imageHeight = bitmap.PixelSize.Height;
-                }
-                catch
-                {
-                    // 如果无法读取图像尺寸，使用默认值
-                    imageWidth = 1024;
-                    imageHeight = 1024;
-                }
-
-                // 添加图像信息
-                var cocoImage = new COCOImage
-                {
-                    Id = imageId,
-                    Width = imageWidth,
-                    Height = imageHeight,
-                    FileName = imageItem.FileName
-                };
-                cocoDataset.Images.Add(cocoImage);
-
-                // 获取该图像的标注
-                var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
-                var annotations = AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
-                    ? imageAnnotations
-                    : new List<AnnotationItem>();
-
-                // 转换标注为COCO格式
-                foreach (var annotation in annotations)
-                {
-                    // 只处理矩形框和多边形标注
-                    if (annotation.AnnotationType == AnnotationToolEnum.Point)
-                        continue;
-
-                    if (string.IsNullOrEmpty(annotation.ClassName) || !categoryIdMap.ContainsKey(annotation.ClassName))
-                        continue;
-
-                    var cocoAnnotation = new Annotation
-                    {
-                        Id = annotationId,
-                        ImageId = imageId,
-                        CategoryId = categoryIdMap[annotation.ClassName],
-                        IsCrowd = 0
-                    };
-
-                    var boundingBox = annotation.GetBoundingBox();
-                    cocoAnnotation.Bbox = new List<double>
-                    {
-                        Math.Round(boundingBox.X, 2),
-                        Math.Round(boundingBox.Y, 2),
-                        Math.Round(boundingBox.Width, 2),
-                        Math.Round(boundingBox.Height, 2)
-                    };
-                    cocoAnnotation.Area = Math.Round(boundingBox.Width * boundingBox.Height, 2);
-
-                    // 处理分割数据
-                    if (annotation.AnnotationType == AnnotationToolEnum.Polygon && annotation is PolygonModel polygon)
-                    {
-                        // 多边形分割
-                        var segmentation = new List<double>();
-                        foreach (var point in polygon.Points)
-                        {
-                            segmentation.Add(Math.Round(point.X, 2));
-                            segmentation.Add(Math.Round(point.Y, 2));
-                        }
-
-                        if (segmentation.Count > 0)
-                        {
-                            cocoAnnotation.Segmentation = new Segmentation
-                            {
-                                Polygons = new List<List<double>> { segmentation }
-                            };
-                        }
-                    }
-                    else
-                    {
-                        // 矩形框分割 - 使用边界框作为多边形
-                        var rectSegmentation = new List<double>
-                        {
-                            Math.Round(boundingBox.X, 2),
-                            Math.Round(boundingBox.Y, 2),
-                            Math.Round(boundingBox.X + boundingBox.Width, 2),
-                            Math.Round(boundingBox.Y, 2),
-                            Math.Round(boundingBox.X + boundingBox.Width, 2),
-                            Math.Round(boundingBox.Y + boundingBox.Height, 2),
-                            Math.Round(boundingBox.X, 2),
-                            Math.Round(boundingBox.Y + boundingBox.Height, 2)
-                        };
-
-                        cocoAnnotation.Segmentation = new Segmentation
-                        {
-                            Polygons = new List<List<double>> { rectSegmentation }
-                        };
-                    }
-
-                    cocoDataset.Annotations.Add(cocoAnnotation);
-                    annotationId++;
-                }
-
-                imageId++;
-            }
-
-            // 保存为JSON文件
-            var jsonSettings = new JsonSerializerSettings
-            {
-                Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore,
-                Converters = new List<JsonConverter> { new SegmentationConverter() }
-            };
-
-            var json = JsonConvert.SerializeObject(cocoDataset, jsonSettings);
-            File.WriteAllText(savePath, json);
-        }
-
-        /// <summary>
         /// 裁剪数据集并分类保存
         /// </summary>
         /// <returns></returns>
@@ -1644,6 +1566,532 @@ namespace AutoTrainer.ViewModels
         partial void OnCurrentImageIndexChanged(int value)
         {
             IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
+        }
+
+        /// <summary>
+        /// 导出数据到COCO格式
+        /// </summary>
+        /// <param name="savePath">保存路径</param>
+        private void ExportToCOCOFormat(string savePath)
+        {
+            var cocoDataset = new CocoDataset
+            {
+                Info = new Info
+                {
+                    Description = "AutoTrainer Dataset Annotations",
+                    Url = "https://github.com/mehaifeng/AutoTrainer",
+                    Version = "1.0",
+                    Year = DateTime.Now.Year,
+                    Contributor = "AutoTrainer",
+                    DateCreated = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                },
+                Licenses = new List<License>
+                {
+                    new License
+                    {
+                        Id = 1,
+                        Name = "MIT",
+                        Url = ""
+                    }
+                },
+                Images = new List<COCOImage>(),
+                Annotations = new List<Annotation>(),
+                Categories = new List<Category>()
+            };
+
+            // 收集所有类别名称
+            var allClassNames = new HashSet<string>();
+            foreach (var annotations in AllImageAnnotations.Values)
+            {
+                foreach (var annotation in annotations)
+                {
+                    if (!string.IsNullOrEmpty(annotation.ClassName))
+                    {
+                        allClassNames.Add(annotation.ClassName);
+                    }
+                }
+            }
+
+            // 创建类别映射
+            var categoryIdMap = new Dictionary<string, int>();
+            int categoryId = 1;
+            foreach (var className in allClassNames)
+            {
+                categoryIdMap[className] = categoryId;
+                cocoDataset.Categories.Add(new Category
+                {
+                    Id = categoryId,
+                    Name = className,
+                    Supercategory = "object"
+                });
+                categoryId++;
+            }
+
+            // 创建图像和标注
+            int imageId = 1;
+            int annotationId = 1;
+
+            foreach (var imageItem in ImageList)
+            {
+                if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
+                    continue;
+
+                // 获取图像尺寸
+                int imageWidth = 0, imageHeight = 0;
+                try
+                {
+                    using var bitmap = new Bitmap(imageItem.FilePath);
+                    imageWidth = bitmap.PixelSize.Width;
+                    imageHeight = bitmap.PixelSize.Height;
+                }
+                catch
+                {
+                    // 如果无法读取图像尺寸，使用默认值
+                    imageWidth = 1024;
+                    imageHeight = 1024;
+                }
+
+                // 添加图像信息
+                var cocoImage = new COCOImage
+                {
+                    Id = imageId,
+                    Width = imageWidth,
+                    Height = imageHeight,
+                    FileName = imageItem.FileName
+                };
+                cocoDataset.Images.Add(cocoImage);
+
+                // 获取该图像的标注
+                var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                var annotations = AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
+                    ? imageAnnotations
+                    : new List<AnnotationItem>();
+
+                // 转换标注为COCO格式
+                foreach (var annotation in annotations)
+                {
+                    // 只处理矩形框和多边形标注
+                    if (annotation.AnnotationType == AnnotationToolEnum.Point)
+                        continue;
+
+                    if (string.IsNullOrEmpty(annotation.ClassName) || !categoryIdMap.ContainsKey(annotation.ClassName))
+                        continue;
+
+                    var cocoAnnotation = new Annotation
+                    {
+                        Id = annotationId,
+                        ImageId = imageId,
+                        CategoryId = categoryIdMap[annotation.ClassName],
+                        IsCrowd = 0
+                    };
+
+                    // 根据标注类型正确处理bbox和segmentation
+                    if (annotation.AnnotationType == AnnotationToolEnum.Rectangle && annotation is RectangleModel rectModel)
+                    {
+                        // 矩形框标注：使用实际矩形坐标和尺寸作为bbox
+                        cocoAnnotation.Bbox =
+                        [
+                            Math.Round(rectModel.X, 2),
+                            Math.Round(rectModel.Y, 2),
+                            Math.Round(rectModel.Width, 2),
+                            Math.Round(rectModel.Height, 2)
+                        ];
+                        cocoAnnotation.Area = Math.Round(rectModel.Width * rectModel.Height, 2);
+
+                        // 将矩形框转换为多边形点作为segmentation
+                        var rectSegmentation = new List<double>
+                        {
+                            Math.Round(rectModel.X, 2),
+                            Math.Round(rectModel.Y, 2),
+                            Math.Round(rectModel.X + rectModel.Width, 2),
+                            Math.Round(rectModel.Y, 2),
+                            Math.Round(rectModel.X + rectModel.Width, 2),
+                            Math.Round(rectModel.Y + rectModel.Height, 2),
+                            Math.Round(rectModel.X, 2),
+                            Math.Round(rectModel.Y + rectModel.Height, 2)
+                        };
+
+                        cocoAnnotation.Segmentation = new Segmentation
+                        {
+                            Polygons = [rectSegmentation]
+                        };
+                    }
+                    else if (annotation.AnnotationType == AnnotationToolEnum.Polygon && annotation is PolygonModel polygon)
+                    {
+                        // 多边形标注：bbox设为空数组，segmentation使用实际顶点
+                        cocoAnnotation.Bbox = [];
+
+                        // 多边形分割：使用实际顶点坐标
+                        var segmentation = new List<double>();
+                        foreach (var point in polygon.Points)
+                        {
+                            segmentation.Add(Math.Round(point.X, 2));
+                            segmentation.Add(Math.Round(point.Y, 2));
+                        }
+
+                        if (segmentation.Count > 0)
+                        {
+                            cocoAnnotation.Segmentation = new Segmentation
+                            {
+                                Polygons = new List<List<double>> { segmentation }
+                            };
+
+                            // 计算多边形面积作为area
+                            cocoAnnotation.Area = Math.Round(CalculatePolygonArea([.. polygon.Points]), 2);
+                        }
+                        else
+                        {
+                            // 如果多边形没有有效点，设为空数组
+                            cocoAnnotation.Segmentation = new Segmentation
+                            {
+                                Polygons = new List<List<double>>()
+                            };
+                            cocoAnnotation.Area = 0;
+                        }
+                    }
+                    else if (annotation.AnnotationType == AnnotationToolEnum.Point && annotation is PointModel)
+                    {
+                        //TODO 以后支持点标注
+                        continue;
+                    }
+
+                    cocoDataset.Annotations.Add(cocoAnnotation);
+                    annotationId++;
+                }
+                imageId++;
+            }
+
+            // 保存为JSON文件
+            var jsonSettings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+                Converters = new List<JsonConverter> { new SegmentationConverter() }
+            };
+
+            var json = JsonConvert.SerializeObject(cocoDataset, jsonSettings);
+            File.WriteAllText(savePath, json);
+        }
+
+        /// <summary>
+        /// 导入COCO数据
+        /// </summary>
+        /// <param name="filePath">COCO文件路径</param>
+        private void ImportCOCOData(string filePath)
+        {
+            try
+            {
+                // 读取并解析COCO文件
+                var jsonContent = File.ReadAllText(filePath);
+                var settings = new JsonSerializerSettings
+                {
+                    Converters = { new SegmentationConverter() },
+                    MissingMemberHandling = MissingMemberHandling.Ignore
+                };
+                var cocoDataset = JsonConvert.DeserializeObject<CocoDataset>(jsonContent, settings);
+
+                if (cocoDataset?.Annotations == null || cocoDataset?.Images == null || cocoDataset?.Categories == null)
+                {
+                    throw new InvalidOperationException("无效的COCO文件格式");
+                }
+
+                // 存储COCO数据，用于模式切换时重新处理
+                _lastImportedCocoDataset = cocoDataset;
+
+                // 创建图像ID到文件名的映射
+                var imageIdMap = new Dictionary<int, string>();
+                var categoryIdMap = new Dictionary<int, string>();
+
+                // 构建图像映射
+                foreach (var image in cocoDataset.Images)
+                {
+                    imageIdMap[image.Id] = image.FileName;
+                }
+
+                // 构建类别映射
+                foreach (var category in cocoDataset.Categories)
+                {
+                    categoryIdMap[category.Id] = category.Name;
+
+                    // 添加新类别到类别列表
+                    if (!ClassNames.Contains(category.Name))
+                    {
+                        Dispatcher.UIThread.Invoke(() => ClassNames.Add(category.Name));
+                    }
+                }
+
+                // 按图像分组标注
+                var annotationsByImage = new Dictionary<string, List<Annotation>>();
+                foreach (var annotation in cocoDataset.Annotations)
+                {
+                    if (!imageIdMap.ContainsKey(annotation.ImageId))
+                        continue;
+
+                    var fileName = imageIdMap[annotation.ImageId];
+                    if (!annotationsByImage.ContainsKey(fileName))
+                    {
+                        annotationsByImage[fileName] = new List<Annotation>();
+                    }
+                    annotationsByImage[fileName].Add(annotation);
+                }
+
+                int processedCount = 0;
+                AllImageAnnotations.Clear();
+
+                // 处理每个图像的标注
+                foreach (var imageItem in ImageList)
+                {
+                    var fileName = imageItem.FileName;
+
+                    if (annotationsByImage.TryGetValue(fileName, out var cocoAnnotations))
+                    {
+                        var annotationItems = new List<AnnotationItem>();
+
+                        foreach (var cocoAnnotation in cocoAnnotations)
+                        {
+                            if (!categoryIdMap.ContainsKey(cocoAnnotation.CategoryId))
+                                continue;
+
+                            var className = categoryIdMap[cocoAnnotation.CategoryId];
+                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className);
+
+                            if (annotationItem != null)
+                            {
+                                annotationItems.Add(annotationItem);
+                            }
+                        }
+
+                        AllImageAnnotations[fileName] = annotationItems;
+                    }
+
+                    processedCount++;
+                    Dispatcher.UIThread.InvokeAsync(() => ProgressValue = processedCount);
+                }
+
+                // 重新加载当前图像的标注
+                Dispatcher.UIThread.Invoke(() =>
+                {
+                    LoadAnnotationsForCurrentImage();
+                    UpdateStatistics();
+                });
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"解析COCO文件失败: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// 重新处理COCO标注数据（用于模式切换）
+        /// </summary>
+        private void ReprocessAnnotationsFromCOCOData()
+        {
+            if (_lastImportedCocoDataset == null)
+            {
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Warning")
+                    .HasMessage("没有已导入的COCO标注数据")
+                    .Dismiss().WithDelay(3000, t => { })
+                    .Queue();
+                return;
+            }
+
+            try
+            {
+                // 创建图像ID到文件名的映射
+                var imageIdMap = new Dictionary<int, string>();
+                var categoryIdMap = new Dictionary<int, string>();
+
+                // 重新构建映射
+                foreach (var image in _lastImportedCocoDataset.Images)
+                {
+                    imageIdMap[image.Id] = image.FileName;
+                }
+
+                foreach (var category in _lastImportedCocoDataset.Categories)
+                {
+                    categoryIdMap[category.Id] = category.Name;
+                }
+
+                // 按图像分组标注
+                var annotationsByImage = new Dictionary<string, List<Annotation>>();
+                foreach (var annotation in _lastImportedCocoDataset.Annotations)
+                {
+                    if (!imageIdMap.ContainsKey(annotation.ImageId))
+                        continue;
+
+                    var fileName = imageIdMap[annotation.ImageId];
+                    if (!annotationsByImage.ContainsKey(fileName))
+                    {
+                        annotationsByImage[fileName] = new List<Annotation>();
+                    }
+                    annotationsByImage[fileName].Add(annotation);
+                }
+
+                AllImageAnnotations.Clear();
+
+                // 按新模式重新处理每个图像的标注
+                foreach (var imageItem in ImageList)
+                {
+                    var fileName = imageItem.FileName;
+
+                    if (annotationsByImage.TryGetValue(fileName, out var cocoAnnotations))
+                    {
+                        var annotationItems = new List<AnnotationItem>();
+
+                        foreach (var cocoAnnotation in cocoAnnotations)
+                        {
+                            if (!categoryIdMap.ContainsKey(cocoAnnotation.CategoryId))
+                                continue;
+
+                            var className = categoryIdMap[cocoAnnotation.CategoryId];
+                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className);
+
+                            if (annotationItem != null)
+                            {
+                                annotationItems.Add(annotationItem);
+                            }
+                        }
+
+                        AllImageAnnotations[fileName] = annotationItems;
+                    }
+                }
+
+                // 重新加载当前图像的标注
+                Dispatcher.UIThread.Invoke(() =>
+                {
+                    LoadAnnotationsForCurrentImage();
+                    UpdateStatistics();
+                });
+
+                NotifyManager.CreateMessage()
+                    .Accent("#161616")
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Success")
+                    .HasMessage($"已按{GetModeDescription()}重新处理标注")
+                    .Dismiss().WithDelay(3000, t => { })
+                    .Queue();
+            }
+            catch (Exception ex)
+            {
+                NotifyManager.CreateMessage()
+                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
+                    .Background("#e5e4e2")
+                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                    .HasBadge("Error")
+                    .HasMessage($"重新处理标注失败: {ex.Message}")
+                    .Dismiss().WithDelay(5000, t => { })
+                    .Queue();
+            }
+        }
+
+        /// <summary>
+        /// 获取当前模式的描述
+        /// </summary>
+        /// <returns>模式描述文本</returns>
+        private string GetModeDescription()
+        {
+            return IsCheckDetectionRectType ? "识别框标签模式" : "实例分割标签模式";
+        }
+
+        /// <summary>
+        /// 将COCO标注转换为内部标注模型
+        /// </summary>
+        /// <param name="cocoAnnotation">COCO标注对象</param>
+        /// <param name="className">类别名称</param>
+        /// <returns>内部标注模型</returns>
+        private AnnotationItem? ConvertCOCOAnnotationToInternal(Annotation cocoAnnotation, string className)
+        {
+            try
+            {
+                AnnotationItem annotationItem;
+
+                if (IsCheckDetectionRectType)
+                {
+                    // 使用检测框模式：使用bbox数据
+                    if (cocoAnnotation.Bbox == null || cocoAnnotation.Bbox.Count < 4)
+                        return null;
+
+                    var x = cocoAnnotation.Bbox[0];
+                    var y = cocoAnnotation.Bbox[1];
+                    var width = cocoAnnotation.Bbox[2];
+                    var height = cocoAnnotation.Bbox[3];
+
+                    annotationItem = new RectangleModel
+                    {
+                        X = x,
+                        Y = y,
+                        Width = width,
+                        Height = height,
+                        ClassName = className
+                    };
+                }
+                else
+                {
+                    // 使用实例分割模式：仅使用segmentation数据
+                    if (cocoAnnotation.Segmentation?.Polygons == null || cocoAnnotation.Segmentation.Polygons.Count == 0)
+                    {
+                        // 实例分割模式下，没有分割数据则跳过此标注
+                        return null;
+                    }
+
+                    // 使用第一个多边形
+                    var polygonData = cocoAnnotation.Segmentation.Polygons[0];
+                    if (polygonData.Count < 6 || polygonData.Count % 2 != 0)
+                    {
+                        // 多边形数据无效，跳过此标注
+                        return null;
+                    }
+
+                    // 创建多边形标注
+                    var points = new ObservableCollection<Avalonia.Point>();
+                    for (int i = 0; i < polygonData.Count; i += 2)
+                    {
+                        points.Add(new Avalonia.Point(polygonData[i], polygonData[i + 1]));
+                    }
+
+                    annotationItem = new PolygonModel
+                    {
+                        Points = [..points],
+                        ClassName = className
+                    };
+                }
+
+                return annotationItem;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"转换COCO标注失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 计算多边形面积
+        /// </summary>
+        /// <param name="points">多边形顶点集合</param>
+        /// <returns>多边形面积</returns>
+        private static double CalculatePolygonArea(ObservableCollection<Avalonia.Point> points)
+        {
+            if (points == null || points.Count < 3)
+                return 0;
+
+            double area = 0;
+            int n = points.Count;
+
+            // 用鞋带公式计算多边形面积
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                area += points[i].X * points[j].Y;
+                area -= points[j].X * points[i].Y;
+            }
+
+            return Math.Abs(area / 2.0);
         }
         #endregion
     }
