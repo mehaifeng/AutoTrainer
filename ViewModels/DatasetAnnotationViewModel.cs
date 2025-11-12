@@ -344,6 +344,14 @@ namespace AutoTrainer.ViewModels
                     Imagefolder = folders[0].TryGetLocalPath() ?? string.Empty;
                     await LoadImagesFromFolder(selectedFolder.Path);
                     TrainDatasetPath = Imagefolder;
+                    if (App.TrainModel?.TaskType == "classification")
+                    {
+                        App.TrainModel.ClassifyTrainImagesPath = TrainDatasetPath;
+                    }
+                    else if(App.TrainModel?.TaskType == "detection")
+                    {
+                        App.TrainModel.TrainImagesPath = TrainDatasetPath;
+                    }
                 }
             }
             catch (Exception ex)
@@ -1133,7 +1141,7 @@ namespace AutoTrainer.ViewModels
                             Debug.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
-                    App.TrainModel.TrainDataPath = baseOutputPath;
+                    App.TrainModel.ClassifyTrainImagesPath = baseOutputPath;
                     Dispatcher.UIThread.Invoke(() =>
                     {
                         NotifyManager.CreateMessage()
@@ -1223,7 +1231,7 @@ namespace AutoTrainer.ViewModels
                     }
                 });
 
-                App.TrainModel.TrainDataPath = baseOutputPath;
+                App.TrainModel.ClassifyTrainImagesPath = baseOutputPath;
                 App.TrainModel.NumClasses = Directory.GetDirectories(baseOutputPath).Length;
                 NotifyManager.CreateMessage()
                     .Accent("#161616")

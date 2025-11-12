@@ -29,6 +29,12 @@
     <None Update="Configs\Requirements.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="PyScripts\DetectionModelHelper.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\DetectionTrainer.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="PyScripts\ImageClassifier.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

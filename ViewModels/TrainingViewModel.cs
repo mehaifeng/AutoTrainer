@@ -47,7 +47,9 @@ namespace AutoTrainer.ViewModels
         }
 
         #region 可绑定属性
-
+        /// <summary>
+        /// 图表线段
+        /// </summary>
         [ObservableProperty]
         private ObservableCollection<ISeries>? series;
         /// <summary>
@@ -70,12 +72,24 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private ObservableCollection<ObservableValue>? validationLossValues;
+        /// <summary>
+        /// 是否显示下一步
+        /// </summary>
         [ObservableProperty]
         private bool isShowNextPage = false;
+        /// <summary>
+        /// 模型配置参数
+        /// </summary>
         [ObservableProperty]
         private string? modelParamStr;
+        /// <summary>
+        /// 训练执行输出
+        /// </summary>
         [ObservableProperty]
         private string? pyOutput;
+        /// <summary>
+        /// 每轮状态
+        /// </summary>
         [ObservableProperty]
         private EpochState epochState = new();
 
@@ -112,8 +126,11 @@ namespace AutoTrainer.ViewModels
                     return;
                 }
 
-                Log.Debug("为模型加载参数: {Model}", modelParam.PretrainedModel);
+                Log.Debug("为模型加载参数: {Model}, 任务类型: {TaskType}", modelParam.PretrainedModel, modelParam.TaskType);
 
+                // 通用参数（所有任务类型都显示）
+                sb.AppendLine("=== 通用训练参数 ===");
+                sb.AppendLine("任务类型: " + (modelParam.TaskType == "classification" ? "图像分类" : "目标检测"));
                 sb.AppendLine("模型: " + modelParam.PretrainedModel);
                 sb.AppendLine("学习率: " + modelParam.LearningRate);
                 sb.AppendLine("优化器: " + modelParam.Optimizer);
@@ -122,21 +139,83 @@ namespace AutoTrainer.ViewModels
                 sb.AppendLine("批量大小: " + modelParam.BatchSize);
                 sb.AppendLine("训练轮数: " + modelParam.Epochs);
                 sb.AppendLine("早停轮数: " + modelParam.EarlyStoppingRounds);
-                sb.AppendLine("验证集比例: " + modelParam.ValidationSplit);
-                sb.AppendLine("训练数据路径: " + modelParam.TrainDataPath);
-                sb.AppendLine("是否使用随机水平翻转: " + modelParam.RandomHorizonFlipChecked);
-                sb.AppendLine("是否使用随机垂直翻转: " + modelParam.RandomVerticalFlipChecked);
-                sb.AppendLine("是否使用随机旋转: " + modelParam.RandomRotationChecked);
-                sb.AppendLine("是否使用随机亮度: " + modelParam.RandomBrightnessChecked);
-                sb.AppendLine("是否使用随机对比度: " + modelParam.RandomContrastChecked);
-                sb.AppendLine("验证数据路径: " + modelParam.ValDataPath);
+                sb.AppendLine("早停阈值: " + modelParam.EarlyStoppingDelta);
+                sb.AppendLine("本地权重路径: " + (string.IsNullOrEmpty(modelParam.LocalWeightsPath) ? "无" : modelParam.LocalWeightsPath));
+                sb.AppendLine("");
+
+                if (modelParam.TaskType == "classification")
+                {
+                    // 分类任务专用参数
+                    sb.AppendLine("=== 分类任务专用参数 ===");
+                    sb.AppendLine("验证集比例: " + modelParam.ClassifyValidImagesSplit);
+                    sb.AppendLine("训练数据路径: " + modelParam.ClassifyTrainImagesPath);
+                    sb.AppendLine("验证数据路径: " + modelParam.ClassifyValidImagesPath);
+
+                    // 数据增强参数
+                    sb.AppendLine("数据增强设置:");
+                    sb.AppendLine("  - 随机水平翻转: " + (modelParam.RandomHorizonFlipChecked ? "启用" : "禁用"));
+                    sb.AppendLine("  - 随机垂直翻转: " + (modelParam.RandomVerticalFlipChecked ? "启用" : "禁用"));
+                    sb.AppendLine("  - 随机旋转: " + (modelParam.RandomRotationChecked ? "启用" : "禁用"));
+                    sb.AppendLine("  - 随机缩放: " + (modelParam.RandomZoomChecked ? "启用" : "禁用"));
+                    sb.AppendLine("  - 随机亮度: " + (modelParam.RandomBrightnessChecked ? "启用" : "禁用"));
+                    sb.AppendLine("  - 随机对比度: " + (modelParam.RandomContrastChecked ? "启用" : "禁用"));
+
+                    // 损失函数配置
+                    if (modelParam.LossFunction != null)
+                    {
+                        sb.AppendLine("损失函数配置:");
+                        sb.AppendLine("  - 类型: " + modelParam.LossFunction.type);
+                        if (modelParam.LossFunction.args != null)
+                        {
+                            if (modelParam.LossFunction.args.reduction != null)
+                                sb.AppendLine("  - 计算方式: " + modelParam.LossFunction.args.reduction);
+                            if (modelParam.LossFunction.args.label_smoothing.HasValue)
+                                sb.AppendLine("  - 标签平滑: " + modelParam.LossFunction.args.label_smoothing);
+                            if (modelParam.LossFunction.args.Beta.HasValue)
+                                sb.AppendLine("  - Beta参数: " + modelParam.LossFunction.args.Beta);
+                        }
+                    }
+                }
+                else if (modelParam.TaskType == "detection")
+                {
+                    // 检测任务专用参数
+                    sb.AppendLine("=== 检测任务专用参数 ===");
+                    sb.AppendLine("标注格式: " + modelParam.AnnotationFormat);
+                    sb.AppendLine("训练图像路径: " + modelParam.TrainImagesPath);
+                    sb.AppendLine("训练标注文件: " + modelParam.TrainAnnotationPath);
+                    sb.AppendLine("验证图像路径: " + modelParam.ValImagesPath);
+                    sb.AppendLine("验证标注文件: " + modelParam.ValAnnotationPath);
+
+                    // 检测损失函数配置
+                    if (modelParam.DetectionLoss != null)
+                    {
+                        sb.AppendLine("检测损失函数配置:");
+                        sb.AppendLine("  - RPN分类权重: " + modelParam.DetectionLoss.RpnClassificationWeight);
+                        sb.AppendLine("  - RPN回归权重: " + modelParam.DetectionLoss.RpnBoxRegressionWeight);
+                        sb.AppendLine("  - ROI分类权重: " + modelParam.DetectionLoss.RoIClassificationWeight);
+                        sb.AppendLine("  - ROI回归权重: " + modelParam.DetectionLoss.RoIBoxRegressionWeight);
+
+                        if (modelParam.DetectionLoss.FocalLossAlpha.HasValue)
+                            sb.AppendLine("  - Focal Loss Alpha: " + modelParam.DetectionLoss.FocalLossAlpha);
+                        if (modelParam.DetectionLoss.FocalLossGamma.HasValue)
+                            sb.AppendLine("  - Focal Loss Gamma: " + modelParam.DetectionLoss.FocalLossGamma);
+
+                        sb.AppendLine("  - IoU损失类型: " + modelParam.DetectionLoss.IouLossType);
+                        sb.AppendLine("  - 掩码权重: " + modelParam.DetectionLoss.MaskWeight);
+                        sb.AppendLine("  - 关键点权重: " + modelParam.DetectionLoss.KeypointWeight);
+                    }
+                }
+
+                // 通用输出参数
+                sb.AppendLine("=== 输出配置 ===");
                 sb.AppendLine("模型保存路径: " + modelParam.ModelOutputPath);
                 sb.AppendLine("训练日志输出路径: " + modelParam.PyTrainLogOutputPath);
+
                 EpochState.TotalEpochs = modelParam.Epochs;
                 ModelParamStr = sb.ToString();
 
-                Log.Information("训练参数加载成功。轮数: {Epochs}, 批量大小: {BatchSize}, 模型: {Model}",
-                    modelParam.Epochs, modelParam.BatchSize, modelParam.PretrainedModel);
+                Log.Information("训练参数加载成功。任务类型: {TaskType}, 轮数: {Epochs}, 批量大小: {BatchSize}, 模型: {Model}",
+                    modelParam.TaskType, modelParam.Epochs, modelParam.BatchSize, modelParam.PretrainedModel);
             }
             catch (Exception ex)
             {
@@ -160,69 +239,15 @@ namespace AutoTrainer.ViewModels
                     return;
                 }
 
-                ScanningIndex = 0;
-                IsShowNextPage = false;
-                cancellationTokenSource = new();
-
-                Log.Debug("初始化图表和输出信息");
-                #region 初始化图标和输出信息
-                await Task.Run(() =>
+                // 根据任务类型选择不同的训练流程
+                if (App.TrainModel.TaskType == "detection")
                 {
-                    try
-                    {
-                        Log.Debug("开始图像增强过程");
-                        ImageEnhancement();
-                        Log.Debug("图像增强成功完成");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "图像增强失败");
-                        throw;
-                    }
-                });
-
-                PyOutput += "\n图像增强结束";
-                InitialPlot();
-                PyOutput = string.Empty;
-                #endregion
-
-                var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
-                App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
-                Log.Information("训练日志文件创建于: {LogPath}", currentPyLogfile);
-
-                Log.Debug("保存训练配置到 ModelParam.json");
-                var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-                await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
-                Log.Debug("训练配置保存成功");
-
-                var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelTrainer.py");
-                var configPath = Path.Combine(Environment.CurrentDirectory, "Configs", "ModelParam.json");
-                var arguments = $"--config {configPath}";
-
-                Log.Information("启动Python训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
-
-                _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
-                isPyRunning = true;
-
-                var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
-
-                if (result.ExitCode != 0)
-                {
-                    var errorMessage = result.Error ?? "Unknown error occurred during training";
-                    Log.Error("Python训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
-                    await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                    await cancellationTokenSource.CancelAsync();
-                    return;
+                    await StartDetectionTraining();
                 }
-
-                Log.Information("Python训练脚本成功完成");
-                isPyRunning = false;
-
-                Log.Debug("读取最终训练输出");
-                await ReadPyOutputAtMeantime();
-
-                IsShowNextPage = true;
-                Log.Information("训练过程成功完成，显示下一页");
+                else
+                {
+                    await StartClassificationTraining();
+                }
             }
             catch (Exception ex)
             {
@@ -230,6 +255,138 @@ namespace AutoTrainer.ViewModels
                 isPyRunning = false;
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
             }
+        }
+
+        /// <summary>
+        /// 开始分类训练流程
+        /// </summary>
+        private async Task StartClassificationTraining()
+        {
+            Log.Information("开始分类训练流程");
+
+            ScanningIndex = 0;
+            IsShowNextPage = false;
+            cancellationTokenSource = new();
+
+            Log.Debug("初始化图表和输出信息");
+            #region 初始化图标和输出信息
+            await Task.Run(() =>
+            {
+                try
+                {
+                    Log.Debug("开始图像增强过程");
+                    ImageEnhancement();
+                    Log.Debug("图像增强成功完成");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "图像增强失败");
+                    throw;
+                }
+            });
+
+            PyOutput += "\n图像增强结束";
+            InitialPlot();
+            PyOutput = string.Empty;
+            #endregion
+
+            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
+            Log.Information("分类训练日志文件创建于: {LogPath}", currentPyLogfile);
+
+            Log.Debug("保存训练配置到 ModelParam.json");
+            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
+            Log.Debug("训练配置保存成功");
+
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelTrainer.py");
+            var configPath = Path.Combine(Environment.CurrentDirectory, "Configs", "ModelParam.json");
+            var arguments = $"--config {configPath}";
+
+            Log.Information("启动Python分类训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+
+            _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
+            isPyRunning = true;
+
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = result.Error ?? "Unknown error occurred during training";
+                Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
+                await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await cancellationTokenSource.CancelAsync();
+                return;
+            }
+
+            Log.Information("Python分类训练脚本成功完成");
+            isPyRunning = false;
+
+            Log.Debug("读取最终训练输出");
+            await ReadPyOutputAtMeantime();
+
+            IsShowNextPage = true;
+            Log.Information("分类训练过程成功完成，显示下一页");
+        }
+
+        /// <summary>
+        /// 开始检测训练流程
+        /// </summary>
+        private async Task StartDetectionTraining()
+        {
+            Log.Information("开始检测训练流程");
+
+            ScanningIndex = 0;
+            IsShowNextPage = false;
+            cancellationTokenSource = new();
+
+            // 验证检测任务必需的路径
+            if (string.IsNullOrEmpty(App.TrainModel.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.TrainAnnotationPath))
+            {
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                return;
+            }
+
+            InitialPlot();
+            PyOutput = string.Empty;
+
+            // 创建检测训练日志文件
+            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "DetectionLog" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
+            Log.Information("检测训练日志文件创建于: {LogPath}", currentPyLogfile);
+
+            // 保存检测配置
+            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            var configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
+            await File.WriteAllTextAsync(configPath, jsonStr);
+            Log.Debug("检测训练配置保存成功");
+
+            // 启动检测训练脚本
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "DetectionTrainer.py");
+            var arguments = $"--config {configPath}";
+
+            Log.Information("启动Python检测训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+
+            _ = Task.Run(() => ScanningTheDetectionPyOutput(cancellationTokenSource.Token));
+            isPyRunning = true;
+
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = result.Error ?? "Unknown error occurred during detection training";
+                Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await cancellationTokenSource.CancelAsync();
+                return;
+            }
+
+            Log.Information("Python检测训练脚本成功完成");
+            isPyRunning = false;
+
+            await ReadDetectionPyOutputAtMeantime();
+            IsShowNextPage = true;
+            Log.Information("检测训练过程成功完成，显示下一页");
         }
         [RelayCommand]
         private async Task GotoNextPage(UserControl o)
@@ -291,7 +448,7 @@ namespace AutoTrainer.ViewModels
                 Log.Information("启用图像增强: {Augmentations}", string.Join(", ", enabledAugmentations));
                 PyOutput += "\n正在图像增强...";
                 //先读取训练数据，然后增强图像，生成新的训练数据
-                var dataSetPath = App.TrainModel.TrainDataPath;
+                var dataSetPath = App.TrainModel.ClassifyTrainImagesPath;
                 if (dataSetPath != null)
                 {
                     Log.Debug("为数据集开始图像增强: {DataSetPath}", dataSetPath);
@@ -329,10 +486,9 @@ namespace AutoTrainer.ViewModels
                             }
                         }
                     }
-
                     Log.Information("图像增强完成。处理了 {TotalImages} 张图像，跨越 {ClassCount} 个类",
                         totalImagesProcessed, dataSetClassify.Length);
-                    App.TrainModel.TrainDataPath = augemnetDataFolder;
+                    App.TrainModel.ClassifyTrainImagesPath = augemnetDataFolder;
                     Log.Debug("更新训练数据路径为: {NewPath}", augemnetDataFolder);
                 }
                 else
@@ -347,11 +503,13 @@ namespace AutoTrainer.ViewModels
             }
         }
         /// <summary>
-        /// 初始化图表线条
+        /// 初始化图表线条和进度
         /// </summary>
         private void InitialPlot()
         {
-            Log.Debug("Initializing training chart series");
+            Log.Debug("初始化图表 - Initializing training chart series");
+            EpochState.CurrentEpoch = 0;
+            EpochState.TotalEpochs = App.TrainModel.Epochs;
             try
             {
                 TrainAccValues = [];
@@ -592,6 +750,183 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Log.Error(ex, "Unexpected error while processing training log from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Py文件执行时，处理检测训练的各种任务
+        /// </summary>
+        /// <returns></returns>
+        private async Task ScanningTheDetectionPyOutput(CancellationToken token)
+        {
+            Log.Information("Starting Python detection training output monitoring");
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var logPath = App.TrainModel?.PyTrainLogOutputPath;
+                        if (string.IsNullOrEmpty(logPath))
+                        {
+                            Log.Warning("Detection training log path is null or empty, waiting...");
+                            await Task.Delay(3000, CancellationToken.None);
+                            continue;
+                        }
+
+                        if (!File.Exists(logPath))
+                        {
+                            Log.Debug("Detection training log file not found yet: {LogPath}", logPath);
+                            await Task.Delay(3000, CancellationToken.None);
+                            continue;
+                        }
+
+                        Log.Debug("Detection training log file found, reading output");
+                        await ReadDetectionPyOutputAtMeantime();
+                        await Task.Delay(3000, CancellationToken.None);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Log.Information("Python detection training output monitoring cancelled");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Error occurred while monitoring Python detection training process");
+                        await Task.Delay(3000, CancellationToken.None);
+                    }
+                }
+            }
+            finally
+            {
+                Log.Information("Python detection training output monitoring stopped");
+            }
+        }
+
+        /// <summary>
+        /// 读取检测训练Py脚本输出的json，绘图，输出和控制进度条
+        /// </summary>
+        private async Task ReadDetectionPyOutputAtMeantime()
+        {
+            var logFilePath = App.TrainModel?.PyTrainLogOutputPath;
+
+            if (string.IsNullOrEmpty(logFilePath))
+            {
+                Log.Error("Cannot read Python detection output: PyTrainLogOutputPath is null or empty");
+                return;
+            }
+
+            Log.Debug("Waiting for detection training log file to be created: {LogPath}", logFilePath);
+
+            var reTryCounter = 0;
+            while (true)
+            {
+                if (reTryCounter > 3)
+                {
+                    Log.Error("Detection training log file could not be created after {RetryCount} attempts: {LogPath}", reTryCounter, logFilePath);
+                    await MessageBoxManager.GetMessageBoxStandard("检测训练失败", $"DetectionTrainer.py无法创建训练日志\n{logFilePath}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowAsync();
+                    return;
+                }
+
+                if (!File.Exists(logFilePath))
+                {
+                    await Task.Delay(1000);
+                    reTryCounter++;
+                    Log.Debug("Waiting for detection training log file, attempt {Attempt}", reTryCounter);
+                }
+                else
+                {
+                    Log.Information("Detection training log file found after {Attempt} attempts", reTryCounter);
+                    break;
+                }
+            }
+
+            try
+            {
+                string jsonStr;
+                using (var fileStream = new FileStream(App.TrainModel.PyTrainLogOutputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var streamReader = new StreamReader(fileStream, Encoding.UTF8))
+                {
+                    jsonStr = await streamReader.ReadToEndAsync();
+                }
+                Log.Debug("Read detection training log content, length: {Length} characters", jsonStr.Length);
+
+                var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
+
+                if (pyExecuteOutput is { Entries.Count: > 0 })
+                {
+                    if (ScanningIndex >= pyExecuteOutput.Entries.Count)
+                    {
+                        Log.Debug("No new entries to process. ScanningIndex: {Index}, TotalEntries: {Count}", ScanningIndex, pyExecuteOutput.Entries.Count);
+                        return;
+                    }
+
+                    Log.Debug("Processing {NewEntries} new detection training log entries", pyExecuteOutput.Entries.Count - ScanningIndex);
+
+                    for (var i = ScanningIndex; i < pyExecuteOutput.Entries.Count; i++)
+                    {
+                        var entry = pyExecuteOutput.Entries[i];
+                        Log.Debug("Processing entry {EntryIndex}: Type={Type}, Epoch={Epoch}, Message={Message}",
+                            i, entry.Type, entry.Epoch, entry.Message?.Substring(0, Math.Min(50, entry.Message?.Length ?? 0)));
+
+                        // 处理检测特有的验证消息
+                        if (string.Equals(entry.Type, "DetectionValidation", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (ValidationLossValues != null)
+                            {
+                                var trainLoss = entry.Metrics?.TrainLoss;
+                                var valLoss = entry.Metrics?.ValidationLoss;
+
+                                // 检测任务主要关注损失值
+                                TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
+                                ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
+                                EpochState.CurrentEpoch = entry.Epoch;
+
+                                Log.Information("Detection Epoch {Epoch} metrics - Train Loss: {TrainLoss:F4}, Val Loss: {ValLoss:F4}",
+                                    entry.Epoch, trainLoss, valLoss);
+                            }
+                            else
+                            {
+                                Log.Warning("Chart data series are null, cannot update detection validation metrics for epoch {Epoch}", entry.Epoch);
+                            }
+                        }
+
+                        // 打印输出信息
+                        if (!string.IsNullOrEmpty(entry.Message))
+                        {
+                            PyOutput += entry.Message + "\r\n";
+                        }
+                        ScanningIndex++;
+                    }
+
+                    Log.Debug("Updated ScanningIndex to {Index}, processing complete", ScanningIndex);
+                }
+                else
+                {
+                    Log.Warning("Detection training log is empty or malformed: {LogPath}", App.TrainModel.PyTrainLogOutputPath);
+                }
+
+                if (!isPyRunning && EpochState.CurrentEpoch < EpochState.TotalEpochs)
+                {
+                    var oldTotal = EpochState.TotalEpochs;
+                    EpochState.TotalEpochs = EpochState.CurrentEpoch;
+                    Log.Information("Detection training completed early. Updated total epochs from {OldTotal} to {NewTotal}", oldTotal, EpochState.TotalEpochs);
+                }
+            }
+            catch (JsonException ex)
+            {
+                Log.Error(ex, "Failed to parse detection training log JSON from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
+                throw;
+            }
+            catch (IOException ex)
+            {
+                Log.Error(ex, "Failed to read detection training log file at {LogPath}", App.TrainModel.PyTrainLogOutputPath);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Unexpected error while processing detection training log from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
                 throw;
             }
         }

@@ -21,6 +21,11 @@ namespace AutoTrainer.Models
 
     public class TrainModel
     {
+        // 任务类型
+        [JsonProperty("task_type")]
+        public string TaskType { get; set; } = "classification"; // "classification" or "detection"
+
+        // 通用配置
         [JsonProperty("learning_rate")]
         public float LearningRate { get; set; }
 
@@ -32,9 +37,6 @@ namespace AutoTrainer.Models
 
         [JsonProperty("optimizer")]
         public string? Optimizer { get; set; }
-
-        [JsonProperty("validation_split")]
-        public float ValidationSplit { get; set; }
 
         [JsonProperty("lr_scheduler")]
         public string? LrScheduler { get; set; }
@@ -59,15 +61,43 @@ namespace AutoTrainer.Models
         [JsonProperty("local_weights_path")]
         public string? LocalWeightsPath { get; set; }
 
+        #region 分类任务专用
         [JsonProperty("train_data_path")]
-        public string? TrainDataPath { get; set; }
+        public string? ClassifyTrainImagesPath { get; set; }
 
         [JsonProperty("val_data_path")]
-        public string? ValDataPath { get; set; }
+        public string? ClassifyValidImagesPath { get; set; }
+
+        [JsonProperty("validation_split")]
+        public float ClassifyValidImagesSplit { get; set; }
+        #endregion
+
+        #region 检测任务专用
+        [JsonProperty("train_images_path")]
+        public string? TrainImagesPath { get; set; } // 检测任务使用
+
+        [JsonProperty("val_images_path")]
+        public string? ValImagesPath { get; set; } // 检测任务使用
+
+        [JsonProperty("train_annotation_path")]
+        public string? TrainAnnotationPath { get; set; } // 检测任务使用
+
+        [JsonProperty("val_annotation_path")]
+        public string? ValAnnotationPath { get; set; } // 检测任务使用
+
+        [JsonProperty("annotation_format")]
+        public string? AnnotationFormat { get; set; } = "coco"; // "coco", "yolo", "pascal_voc"
+        #endregion
+
+        #region 通用参数
         [JsonProperty("num_classes")]
-        public int NumClasses { get; set; }
+        public int NumClasses { get; set; } // 分类：类别数；检测：类别数+背景
+
         [JsonProperty("mutation_data_path")]
         public string? MutationDataPath { get; set; }
+        #endregion
+
+        #region 数据增强参数（分类任务使用）
         [JsonProperty("random_horizon_flip_checked")]
         public bool RandomHorizonFlipChecked { get; set; }
         [JsonProperty("random_vertical_flip_checked")]
@@ -80,8 +110,15 @@ namespace AutoTrainer.Models
         public bool RandomContrastChecked { get; set; }
         [JsonProperty("random_zoom_checked")]
         public bool RandomZoomChecked { get; set; }
+        #endregion
+
+        // 损失函数配置
         [JsonProperty("loss_function_config")]
-        public LossFunctionModel LossFunction { get; set; } = new();
+        public LossFunctionModel LossFunction { get; set; } = new(); // 分类任务使用
+
+        // 检测任务损失函数配置
+        [JsonProperty("detection_loss_config")]
+        public DetectionLossConfig DetectionLoss { get; set; } = new(); // 检测任务使用
     }
 
     public class Status
@@ -132,5 +169,36 @@ namespace AutoTrainer.Models
     {
         [ObservableProperty] private int? currentEpoch;
         [ObservableProperty] private int? totalEpochs;
+    }
+
+    // 检测损失函数配置类
+    public class DetectionLossConfig
+    {
+        [JsonProperty("rpn_cls_weight")]
+        public float RpnClassificationWeight { get; set; } = 1.0f;
+
+        [JsonProperty("rpn_bbox_weight")]
+        public float RpnBoxRegressionWeight { get; set; } = 1.0f;
+
+        [JsonProperty("roi_cls_weight")]
+        public float RoIClassificationWeight { get; set; } = 1.0f;
+
+        [JsonProperty("roi_bbox_weight")]
+        public float RoIBoxRegressionWeight { get; set; } = 1.0f;
+
+        [JsonProperty("focal_loss_alpha")]
+        public float? FocalLossAlpha { get; set; } // RetinaNet专用
+
+        [JsonProperty("focal_loss_gamma")]
+        public float? FocalLossGamma { get; set; } = 2.0f; // RetinaNet专用
+
+        [JsonProperty("iou_loss_type")]
+        public string IouLossType { get; set; } = "iou"; // "iou", "giou", "diou", "ciou"
+
+        [JsonProperty("mask_weight")]
+        public float MaskWeight { get; set; } = 1.0f; // Mask R-CNN专用
+
+        [JsonProperty("keypoint_weight")]
+        public float KeypointWeight { get; set; } = 1.0f; // Keypoint R-CNN专用
     }
 }

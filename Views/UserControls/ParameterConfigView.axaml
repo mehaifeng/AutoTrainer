@@ -5,8 +5,6 @@
 			 xmlns:vm="using:AutoTrainer.ViewModels"
 			 xmlns:converters="using:AutoTrainer.Converters"
 			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
              mc:Ignorable="d"
 			 Padding="5"
 			 d:DesignWidth="1200"
@@ -14,6 +12,11 @@
 			 x:Name="ParameterPage"
 			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">
+	<Interaction.Behaviors>
+		<EventTriggerBehavior EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadedCommand}"/>
+		</EventTriggerBehavior>
+	</Interaction.Behaviors>
 	<UserControl.Resources>
 		<converters:LossFunctionUIConverter x:Key="StringEqualsConverter"/>
 	</UserControl.Resources>
@@ -83,152 +86,352 @@
 					Text="基础参数"
 					FontWeight="Bold"/>
 					<ScrollViewer Grid.Row="1">
-						<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-							<StackPanel Grid.Row="0" Margin="0,0,0,20">
-								<TextBlock Text="训练集目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<Grid ColumnDefinitions="*,45,45">
-									<SelectableTextBlock
-										x:Name="TrainDir_Tb"
-										Margin="0,5,0,0"
-										Text="{Binding TrainSetPath,Mode=TwoWay}"/>
-									<Button
-										Grid.Column="1"
-										Margin="0,0,10,0"
-										Background="Transparent"
-										Command="{Binding EditPathCommand}"
-										CommandParameter="{Binding ElementName=TrainDir_Tb}">
-										<iconPacks:PackIconMaterial
-											Kind="Pencil"
-											Cursor="Hand"
-											Width="15"
-											Height="15"/>
-									</Button>
-									<Button
-										Grid.Column="2"
-										Command="{Binding ClearPathCommand}"
-										CommandParameter="{Binding ElementName=TrainDir_Tb}"
-										Background="Transparent">
-										<iconPacks:PackIconMaterial
-											Kind="Close"
-											Cursor="Hand"
-											Width="15"
-											Height="15"/>
-									</Button>
-								</Grid>
-							</StackPanel>
-							<StackPanel Grid.Row="1" Margin="0,0,0,20">	
-								<TextBlock Text="验证集目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<Grid ColumnDefinitions="*,45,45">
-									<SelectableTextBlock
-										x:Name="ValDataSetDir_tb"
-										Margin="0,5,0,0"
-										Text="{Binding ValidationSetPath,Mode=TwoWay}"/>
-									<Button
-										Grid.Column="1"
-										Margin="0,0,10,0"
-										Background="Transparent"
-										Command="{Binding EditPathCommand}"
-										CommandParameter="{Binding ElementName=ValDataSetDir_tb}">
-										<iconPacks:PackIconMaterial
-											Kind="Pencil"
-											Cursor="Hand"
-											Width="15"
-											Height="15"/>
-									</Button>
-									<Button
-										Grid.Column="2"
-										Background="Transparent"
-										Command="{Binding ClearPathCommand}"
-										CommandParameter="{Binding ElementName=ValDataSetDir_tb}">
-										<iconPacks:PackIconMaterial
-											Kind="Close"
-											Cursor="Hand"
-											Width="15"
-											Height="15"/>
-									</Button>
-								</Grid>
-							</StackPanel>
-							<StackPanel Grid.Row="2" Margin="0,0,0,20">
-								<TextBlock Text="学习率" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<ComboBox
-									ItemsSource="{Binding LearningRates}"
-									SelectedItem="{Binding SelectedLearningRate}"/>
-							</StackPanel>
-							<StackPanel Grid.Row="3" Margin="0,0,0,20">
-								<TextBlock Text="Batch Size" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<ComboBox
-									ItemsSource="{Binding BatchSizes}"
-									SelectedItem="{Binding SelectedBatchSize}"/>
-							</StackPanel>
-							<StackPanel
-								Grid.Row="4"
-								Margin="0,0,0,20"
-								Orientation="Vertical">
-								<TextBlock Text="训练轮数" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<NumericUpDown
-									Increment="1"
-									Text="1"
-									Value="{Binding Epochs}"
-									Watermark="训练轮数"/>
-							</StackPanel>
-							<StackPanel Grid.Row="5" Margin="0,0,0,20">
-								<TextBlock Text="优化器" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<ComboBox
-									ItemsSource="{Binding Optimizers}"
-									SelectedItem="{Binding SelectedOptimizer}"/>
-							</StackPanel>
-							<StackPanel Grid.Row="6" Margin="0,0,0,20" IsEnabled="{Binding IsEnableValSetRate}">
-								<TextBlock Text="验证集比例" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-								<ComboBox
-									ItemsSource="{Binding ValidationSetRates}"
-									SelectedItem="{Binding SelectedValidationSetRate}"
-									SelectedIndex="1"/>
-							</StackPanel>
-							<Grid
-								Grid.Row="7"
-								RowDefinitions="Auto,Auto">
-								<TextBlock
-									Width="65"
-									FontWeight="Bold"
-									TextAlignment="Center"
-									VerticalAlignment="Center"
-									HorizontalAlignment="Left"
-									Text="数据增强"/>
-								<Border
-									Grid.Row="1"
-									CornerRadius="5"
-									BorderThickness="1"
-									Padding="8"
-									BorderBrush="LightGray">
-									<StackPanel Orientation="Vertical">
-										<CheckBox
-											Margin="0,0,0,0"
-											IsChecked="{Binding RandomHorizonFlipChecked}"
-											Content="随机水平翻转"/>
-										<CheckBox
-											Margin="0,5,0,0"
-											IsChecked="{Binding RandomVerticalFlipChecked}"
-											Content="随机垂直翻转"/>
-										<CheckBox
-											Margin="0,5,0,0"
-											IsChecked="{Binding RandomRotationChecked}"
-											Content="随机旋转"/>
-										<CheckBox
-											Margin="0,5,0,0"
-											IsChecked="{Binding RandomZoomChecked}"
-											Content="随机缩放"/>
-										<CheckBox
-											Margin="0,5,0,0"
-											IsChecked="{Binding RandomBrightnessChecked}"
-											Content="随机亮度"/>
-										<CheckBox
-											Margin="0,5,0,0"
-											IsChecked="{Binding RandomContrastChecked}"
-											Content="随机对比度"/>
+						<StackPanel Orientation="Vertical">
+							<!-- 通用训练参数 -->
+							<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,20">
+								<StackPanel Orientation="Vertical">
+									<TextBlock
+										Text="通用训练参数"
+										FontSize="14"
+										FontWeight="Bold"
+										Margin="0,0,0,15"/>
+
+									<!-- 基础训练参数 -->
+									<Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,*">
+										<!-- 学习率 -->
+										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,20">
+											<TextBlock Text="学习率" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<ComboBox
+												ItemsSource="{Binding LearningRates}"
+												SelectedItem="{Binding SelectedLearningRate}"/>
+										</StackPanel>
+
+										<!-- Batch Size -->
+										<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,20">
+											<TextBlock Text="Batch Size" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<ComboBox
+												ItemsSource="{Binding BatchSizes}"
+												SelectedItem="{Binding SelectedBatchSize}"/>
+										</StackPanel>
+
+										<!-- 训练轮数 -->
+										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,20">
+											<TextBlock Text="训练轮数" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<NumericUpDown
+												Increment="1"
+												Text="1"
+												Value="{Binding Epochs}"
+												Watermark="训练轮数"/>
+										</StackPanel>
+
+										<!-- 优化器 -->
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,20">
+											<TextBlock Text="优化器" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<ComboBox
+												ItemsSource="{Binding Optimizers}"
+												SelectedItem="{Binding SelectedOptimizer}"/>
+										</StackPanel>
+
+										<!-- 验证集比例（仅分类任务显示） -->
+										<StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,20" IsVisible="{Binding !IsDetectionTask}">
+											<TextBlock Text="验证集比例" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<ComboBox
+												ItemsSource="{Binding ValidationSetRates}"
+												SelectedItem="{Binding SelectedValidationSetRate}"
+												SelectedIndex="1"/>
+										</StackPanel>
+									</Grid>
+								</StackPanel>
+							</Border>
+
+							<!-- 分类任务专用参数 -->
+							<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,20"
+							        IsVisible="{Binding !IsDetectionTask}">
+								<StackPanel Orientation="Vertical">
+									<TextBlock
+										Text="分类任务专用参数"
+										FontSize="14"
+										FontWeight="Bold"
+										Margin="0,0,0,15"/>
+
+									<!-- 数据集路径 -->
+									<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
+											<TextBlock Text="训练集目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="TrainDir_Tb"
+													Tag="Directory"
+													Margin="0,5,0,0"
+													Text="{Binding TrainSetPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=TrainDir_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=TrainDir_Tb}"
+													Background="Transparent">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+
+										<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
+											<TextBlock Text="验证集目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="ValDataSetDir_tb"
+													Tag="Directory"
+													Margin="0,5,0,0"
+													Text="{Binding ValidationSetPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=ValDataSetDir_tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=ValDataSetDir_tb}"
+													Background="Transparent">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+									</Grid>
+
+									<!-- 数据增强参数 -->
+									<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="8">
+										<StackPanel Orientation="Vertical">
+											<TextBlock Text="数据增强" FontWeight="Bold" Margin="0,0,0,10"/>
+											<Grid ColumnDefinitions="*,*">
+												<StackPanel Grid.Column="0" Margin="0,0,10,0">
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomHorizonFlipChecked}" Content="随机水平翻转"/>
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomVerticalFlipChecked}" Content="随机垂直翻转"/>
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomRotationChecked}" Content="随机旋转"/>
+												</StackPanel>
+												<StackPanel Grid.Column="1">
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomZoomChecked}" Content="随机缩放"/>
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomBrightnessChecked}" Content="随机亮度"/>
+													<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomContrastChecked}" Content="随机对比度"/>
+												</StackPanel>
+											</Grid>
+										</StackPanel>
+									</Border>
+								</StackPanel>
+							</Border>
+
+							<!-- 检测任务专用参数 -->
+							<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Padding="10" Margin="0,0,0,20"
+							        IsVisible="{Binding IsDetectionTask}">
+								<StackPanel Orientation="Vertical">
+									<TextBlock
+										Text="检测任务专用参数"
+										FontSize="14"
+										FontWeight="Bold"
+										Margin="0,0,0,15"/>
+
+									<!-- 标注格式选择 -->
+									<StackPanel Margin="0,0,0,15">
+										<TextBlock Text="标注格式" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+										<ComboBox ItemsSource="{Binding AnnotationFormats}" SelectedItem="{Binding SelectedAnnotationFormat}"/>
 									</StackPanel>
-								</Border>
-							</Grid>
-					</Grid>
+
+									<!-- 数据集路径配置 -->
+									<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+										<!-- 训练图像路径 -->
+										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
+											<TextBlock Text="训练图像目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="TrainImages_Tb"
+													Tag="Directory"
+													Margin="0,5,0,0"
+													Text="{Binding TrainImagesPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=TrainImages_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Background="Transparent"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=TrainImages_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+
+										<!-- 训练标注文件路径 -->
+										<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
+											<TextBlock Text="训练标注文件" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="TrainAnnotation_Tb"
+													Tag="File"
+													Margin="0,5,0,0"
+													Text="{Binding TrainAnnotationPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=TrainAnnotation_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Background="Transparent"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=TrainAnnotation_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+
+										<!-- 验证图像路径 -->
+										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
+											<TextBlock Text="验证图像目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="ValImages_Tb"
+													Tag="Directory"
+													Margin="0,5,0,0"
+													Text="{Binding ValImagesPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=ValImages_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Background="Transparent"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=ValImages_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+
+										<!-- 验证标注文件路径 -->
+										<StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,0">
+											<TextBlock Text="验证标注文件" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<Grid ColumnDefinitions="*,45,45">
+												<SelectableTextBlock
+													x:Name="ValAnnotation_Tb"
+													Tag="File"
+													Margin="0,5,0,0"
+													Text="{Binding ValAnnotationPath,Mode=TwoWay}"/>
+												<Button
+													Grid.Column="1"
+													Margin="0,0,10,0"
+													Background="Transparent"
+													Command="{Binding EditPathCommand}"
+													CommandParameter="{Binding ElementName=ValAnnotation_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Pencil"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+												<Button
+													Grid.Column="2"
+													Background="Transparent"
+													Command="{Binding ClearPathCommand}"
+													CommandParameter="{Binding ElementName=ValAnnotation_Tb}">
+													<iconPacks:PackIconMaterial
+														Kind="Close"
+														Cursor="Hand"
+														Width="15"
+														Height="15"/>
+												</Button>
+											</Grid>
+										</StackPanel>
+									</Grid>
+
+									<!-- 检测损失函数参数 -->
+									<StackPanel Margin="0,10,0,0">
+										<TextBlock Text="检测损失函数参数" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+										<Grid ColumnDefinitions="*,*">
+											<StackPanel Grid.Column="0" Margin="0,0,10,0">
+												<TextBlock Text="RPN分类权重" Margin="0,0,0,3" FontSize="10"/>
+												<NumericUpDown Value="{Binding RpnClassificationWeight}" FormatString="F2" Width="120" HorizontalAlignment="Left"/>
+											</StackPanel>
+											<StackPanel Grid.Column="1" Margin="0,0,0,0">
+												<TextBlock Text="RPN回归权重" Margin="0,0,0,3" FontSize="10"/>
+												<NumericUpDown Value="{Binding RpnBoxRegressionWeight}" FormatString="F2" Width="120" HorizontalAlignment="Left"/>
+											</StackPanel>
+										</Grid>
+										<Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+											<StackPanel Grid.Column="0" Margin="0,0,10,0">
+												<TextBlock Text="ROI分类权重" Margin="0,0,0,3" FontSize="10"/>
+												<NumericUpDown Value="{Binding RoiClassificationWeight}" FormatString="F2" Width="120" HorizontalAlignment="Left"/>
+											</StackPanel>
+											<StackPanel Grid.Column="1">
+												<TextBlock Text="ROI回归权重" Margin="0,0,0,3" FontSize="10"/>
+												<NumericUpDown Value="{Binding RoiBoxRegressionWeight}" FormatString="F2" Width="120" HorizontalAlignment="Left"/>
+											</StackPanel>
+										</Grid>
+									</StackPanel>
+								</StackPanel>
+							</Border>
+						</StackPanel>
 				</ScrollViewer>
 			</Grid>
 			<Grid
