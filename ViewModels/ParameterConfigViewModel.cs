@@ -1,5 +1,8 @@
 ﻿using AutoTrainer.Models;
+using AutoTrainer.Views;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -209,6 +212,16 @@ namespace AutoTrainer.ViewModels
         }
         #region 可绑定属性
         /// <summary>
+        /// 训练集地址
+        /// </summary>
+        [ObservableProperty]
+        private string trainSetPath;
+        /// <summary>
+        /// 验证集地址
+        /// </summary>
+        [ObservableProperty]
+        private string validationSetPath;
+        /// <summary>
         /// 学习率集合
         /// </summary>
         [ObservableProperty]
@@ -251,6 +264,11 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private string selectedOptimizer;
+        /// <summary>
+        /// 是否显示验证集比例设置
+        /// </summary>
+        [ObservableProperty]
+        private bool isEnableValSetRate;
         /// <summary>
         /// 验证集比例集合
         /// </summary>
@@ -387,7 +405,42 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 命令
-
+        [RelayCommand]
+        private async Task EditPath(SelectableTextBlock selectableText)
+        {
+            var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow as SelectTrainingTypeView
+                : null;
+            if (mainWindow != null)
+            {
+                var toplevel = TopLevel.GetTopLevel(mainWindow);
+                if (toplevel != null)
+                {
+                    var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions()
+                    {
+                        AllowMultiple = false,
+                        Title = "选择目录",
+                    });
+                    if (folders.Count > 0)
+                    {
+                        selectableText.Text = folders[0].TryGetLocalPath();
+                    }
+                    if (!string.IsNullOrEmpty(ValidationSetPath))
+                    {
+                        IsEnableValSetRate = false;
+                    }
+                }
+            }
+        }
+        [RelayCommand]
+        private void ClearPath(SelectableTextBlock selectableText)
+        {
+            selectableText.Text = string.Empty;
+            if (string.IsNullOrEmpty(ValidationSetPath))
+            {
+                IsEnableValSetRate = true;
+            }
+        }
         /// <summary>
         /// 跳转到下一个选项卡
         /// </summary>
