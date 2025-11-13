@@ -203,9 +203,6 @@ namespace AutoTrainer.ViewModels
         public DatasetAnnotationViewModel(Canvas canvas)
         {
             ImageCanvas = canvas;
-            // 初始化默认类别
-            ClassNames.Add("默认类别");
-            SelectedClassName = ClassNames.FirstOrDefault() ?? string.Empty;
             OnAnnotationSelected += SelectedAnnvationChanged;
             // 监听属性变化
             PropertyChanged += DatasetAnnotationViewModel_PropertyChanged;
@@ -1564,7 +1561,10 @@ namespace AutoTrainer.ViewModels
         /// <param name="value"></param>
         partial void OnIsApplyAsTemplateChanged(bool value)
         {
-            ImageList[CurrentImageIndex].AsCroppingTemplate = value;
+            if (ImageList.Count > 0)
+            {
+                ImageList[CurrentImageIndex].AsCroppingTemplate = value;
+            }
         }
 
         /// <summary>

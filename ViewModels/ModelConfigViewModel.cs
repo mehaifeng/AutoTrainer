@@ -175,9 +175,13 @@ namespace AutoTrainer.ViewModels
                     var pythonPaths = result.Output.Split(splitChart);
                     foreach (var path in pythonPaths)
                     {
-                        if (path.Contains("WindowsApps") || string.IsNullOrEmpty(path))
+                        //if (path.Contains("WindowsApps") || string.IsNullOrEmpty(path))
+                        //{
+                        //    continue; // 跳过WindowsApps中的Python路径
+                        //}
+                        if (string.IsNullOrEmpty(path))
                         {
-                            continue; // 跳过WindowsApps中的Python路径
+                            continue;
                         }
                         else
                         {
@@ -466,7 +470,8 @@ namespace AutoTrainer.ViewModels
                 // 清空之前的选择
                 SelectModel = null;
                 SelectModelIntroduce = null;
-
+                //隐藏本地模型选择，下一步按钮，模型介绍页面
+                IsVisibleIntroduce = false;
                 // 如果Python环境已配置，重新获取模型列表
                 if (!string.IsNullOrEmpty(PythonVenvPath))
                 {
@@ -491,20 +496,15 @@ namespace AutoTrainer.ViewModels
         {
             try
             {
-                // 在UI线程中设置加载状态
-                await Dispatcher.UIThread.InvokeAsync(() => IsTaskTypeChanging = true);
-
-                // 获取模型列表
+                IsLoadingModelList = true;
                 await GetModels();
-
-                // 在UI线程中恢复加载状态
-                await Dispatcher.UIThread.InvokeAsync(() => IsTaskTypeChanging = false);
+                IsLoadingModelList = false;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"GetModelsWithLoadingState failed: {ex.Message}");
                 // 确保在异常情况下也恢复加载状态
-                await Dispatcher.UIThread.InvokeAsync(() => IsTaskTypeChanging = false);
+                IsLoadingModelList = false;
             }
         }
 

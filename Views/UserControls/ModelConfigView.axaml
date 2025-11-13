@@ -216,60 +216,32 @@
 								<RowDefinition Height="70"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
-							<Grid Grid.Row="0"
-								  Margin="10,5,0,10">
+							<Grid 
+								Grid.Row="0"
+								Margin="0,5,0,10">
 								<Grid.ColumnDefinitions>
-									<ColumnDefinition/>
-									<ColumnDefinition/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
 									<ColumnDefinition/>
 									<ColumnDefinition/>
 									<ColumnDefinition/>
 								</Grid.ColumnDefinitions>
 								<!--任务类型选择-->
 								<Grid Grid.Column="0">
-									<Grid.RowDefinitions>
-										<RowDefinition Height="Auto"/>
-										<RowDefinition Height="Auto"/>
-									</Grid.RowDefinitions>
-									<TextBlock Grid.Row="0" Text="任务类型" FontSize="12" FontWeight="SemiBold"/>
-									<Grid Grid.Row="1">
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="120"/>
-											<ColumnDefinition Width="Auto"/>
-										</Grid.ColumnDefinitions>
-										<ComboBox
-											Grid.Column="0"
-											IsEnabled="{Binding !IsTaskTypeChanging}"
-											HorizontalAlignment="Left"
-											VerticalAlignment="Bottom"
-											SelectedItem="{Binding SelectedTaskType}"
-											ItemsSource="{Binding TaskTypes}"
-											DisplayMemberBinding="{Binding Name}">
-										</ComboBox>
-										<!--任务切换加载指示器-->
-										<StackPanel
-											Grid.Column="1"
-											Orientation="Horizontal"
-											VerticalAlignment="Center"
-											Margin="10,0,0,0"
-											IsVisible="{Binding IsTaskTypeChanging}">
-											<iconPacks:PackIconMaterial
-												Kind="Loading"
-												Width="16"
-												Height="16"
-												Classes="spinning"
-												RenderTransformOrigin="8,8"/>
-											<TextBlock
-												Text="加载中..."
-												Margin="5,0,0,0"
-												VerticalAlignment="Center"
-												FontSize="12"/>
-										</StackPanel>
-									</Grid>
+									<TextBlock Text="任务类型" FontSize="12" FontWeight="SemiBold"/>
+									<ComboBox
+										IsEnabled="{Binding !IsTaskTypeChanging}"
+										HorizontalAlignment="Left"
+										VerticalAlignment="Bottom"
+										SelectedItem="{Binding SelectedTaskType}"
+										ItemsSource="{Binding TaskTypes}"
+										DisplayMemberBinding="{Binding Name}">
+									</ComboBox>
 								</Grid>
 								<!--选择预训练模型Combobox-->
-								<Grid Grid.Column="1">
-									<TextBlock Text="选择预训练模型" FontSize="12" FontWeight="SemiBold"/>
+								<Grid Grid.Column="1" Margin="10,0,0,0">
+									<TextBlock
+										Text="选择预训练模型" FontSize="12" FontWeight="SemiBold"/>
 									<ComboBox
 										IsEnabled="{Binding !IsTaskTypeChanging}"
 										Width="200"
@@ -282,9 +254,9 @@
 												<InvokeCommandAction Command="{Binding SelectModelToShowCommand}"/>
 											</EventTriggerBehavior>
 										</Interaction.Behaviors>
-									</ComboBox>
+									</ComboBox>	
 								</Grid>
-								<!--Select Local Weight-->
+								<!--选择本地模型 Select Local Weight-->
 								<Button
 									Grid.Column="2"
 									IsVisible="{Binding IsVisibleIntroduce}"
@@ -292,7 +264,7 @@
 									HorizontalAlignment="Left"
 									Command="{Binding SelectLocalModelCommand}"
 									Content="选择本地权重"
-									Margin="10,10,0,0"/>
+									Margin="10,0,0,0"/>
 								<TextBlock
 									Grid.Column="3"
 									IsVisible="{Binding IsVisibleIntroduce}"
@@ -300,14 +272,13 @@
 									FontSize="20"
 									VerticalAlignment="Center"
 									Margin="10,10,0,0"/>
-								<!--Next Step-->
+								<!--下一步 Next Step-->
 								<Button
 									Grid.Column="4"
-									Margin="0,10,0,0"
 									Command="{Binding GoToNextTabCommand}"
 									CommandParameter="{Binding ElementName=ModelTabItem}"
 									HorizontalAlignment="Right"
-									VerticalAlignment="Center"
+									VerticalAlignment="Bottom"
 									IsVisible="{Binding IsVisibleIntroduce}">
 									<StackPanel Orientation="Horizontal">
 										<TextBlock
@@ -323,7 +294,7 @@
 									</StackPanel>
 								</Button>
 							</Grid>
-							<!--Load PreTrained Model Information ProgressBar-->
+							<!--用于加载预训练模型进度条 Load PreTrained Model Information ProgressBar-->
 							<ProgressBar
 								Grid.Row="1"
 								Margin="0,30,0,0"

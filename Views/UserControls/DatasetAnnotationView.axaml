@@ -31,8 +31,6 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Height" Value="16"/>
 			<Setter Property="Width" Value="16"/>
-			<Setter Property="Foreground" Value="Black"/>
-			<Setter Property="Background" Value="{x:Null}"/>
 		</Style>
 	</UserControl.Styles>
     <UserControl.Resources>
@@ -158,7 +156,6 @@
                     <Expander Header="数据管理" IsExpanded="True" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="8">
                             <Button
-                                Classes="light"
                                 Command="{Binding ImportImageFolderCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
@@ -167,7 +164,6 @@
 								</StackPanel>
 							</Button>
                             <Button
-                                Classes="light"
                                 Command="{Binding ImportClassesAnnotationsCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
@@ -176,7 +172,6 @@
 								</StackPanel>
 							</Button>
                             <Button
-                                Classes="light"
                                 Command="{Binding ImportCOCOFileCommand}"
                                 CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
@@ -185,7 +180,6 @@
 								</StackPanel>
 							</Button>
                             <Button
-                                Classes="light"
                                 Command="{Binding ExportCOCOFileCommand}"
 								CommandParameter="{Binding ElementName=DataAnnotationView}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
@@ -317,7 +311,6 @@
                         <Button
                             Width="60"
                             Height="30"
-                            Classes="light"
                             Command="{Binding SaveCurrentAnnotationCommand}"
                             ToolTip.Tip="保存当前标注或分类">
                             <StackPanel Orientation="Horizontal" Spacing="5">
@@ -597,7 +590,7 @@
                                             Grid.Column="1"
                                             Width="20"
                                             Height="20"
-                                            Classes="light"
+                                            
                                             Content="×"
                                             Command="{Binding $parent[ListBox].DataContext.RemoveImageClassCommand}"
                                             CommandParameter="{Binding .}"
@@ -665,7 +658,7 @@
 							</Button>
 							<Button
 								Width="150"
-								Classes="light"
+								
 								Command="{Binding BatchCreateDatasetCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="TextBoxPlusOutline" />
@@ -674,7 +667,7 @@
                             </Button>
 							<Button
 								Width="150"
-                                Classes="light"
+                                
                                 Command="{Binding CroppingImgAsDataSetCommand}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="Crop" IsVisible="{Binding IsShowCroppingText}"/>
