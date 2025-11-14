@@ -15,11 +15,11 @@
 			 x:Name="TrainTabItem"
 			 x:DataType="vm:TrainingViewModel"
              x:Class="AutoTrainer.TrainingView">
-	<i:Interaction.Behaviors>
-		<ia:EventTriggerBehavior EventName="Loaded">
-			<ia:InvokeCommandAction Command="{Binding LoadParamInfoCommand}"/>
-		</ia:EventTriggerBehavior>
-	</i:Interaction.Behaviors>	
+	<Interaction.Behaviors>
+		<EventTriggerBehavior EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadParamInfoCommand}"/>
+		</EventTriggerBehavior>
+	</Interaction.Behaviors>
 	<Grid ColumnDefinitions=".3*,.7*">
 		<Grid 
 			Grid.Column="0"

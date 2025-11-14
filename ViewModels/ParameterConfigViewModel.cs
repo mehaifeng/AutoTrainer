@@ -1,5 +1,8 @@
 ﻿using AutoTrainer.Models;
+using AutoTrainer.Views;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,6 +50,14 @@ namespace AutoTrainer.ViewModels
             {
                 IsVisibleNextStep = false;
             }
+
+            // 检查任务类型变化
+            if (e.PropertyName == nameof(App.TrainModel.TaskType))
+            {
+                UpdateUIForTaskType();
+                return;
+            }
+
             if (e.PropertyName == "SelectedLossFunction" || e.PropertyName == "Weight" ||
                 e.PropertyName == "SelectedReduction" || e.PropertyName == "LabelSmoothing" ||
                 e.PropertyName == "Pos_weight" || e.PropertyName == "Beta" || e.PropertyName == "KLDivLoss_Reductions")
@@ -209,6 +220,16 @@ namespace AutoTrainer.ViewModels
         }
         #region 可绑定属性
         /// <summary>
+        /// 训练集地址
+        /// </summary>
+        [ObservableProperty]
+        private string? trainSetPath;
+        /// <summary>
+        /// 验证集地址
+        /// </summary>
+        [ObservableProperty]
+        private string? validationSetPath;
+        /// <summary>
         /// 学习率集合
         /// </summary>
         [ObservableProperty]
@@ -251,6 +272,11 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private string selectedOptimizer;
+        /// <summary>
+        /// 是否显示验证集比例设置
+        /// </summary>
+        [ObservableProperty]
+        private bool isEnableValSetRate;
         /// <summary>
         /// 验证集比例集合
         /// </summary>
@@ -384,10 +410,169 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private bool randomZoomChecked = false;
+
+        // 检测任务特有属性
+        /// <summary>
+        /// 训练图像路径
+        /// </summary>
+        [ObservableProperty]
+        private string trainImagesPath;
+
+        /// <summary>
+        /// 验证图像路径
+        /// </summary>
+        [ObservableProperty]
+        private string valImagesPath;
+
+        /// <summary>
+        /// 训练标注文件路径
+        /// </summary>
+        [ObservableProperty]
+        private string trainAnnotationPath;
+
+        /// <summary>
+        /// 验证标注文件路径
+        /// </summary>
+        [ObservableProperty]
+        private string valAnnotationPath;
+
+        /// <summary>
+        /// 标注格式选择
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<string> annotationFormats = new() { "coco", "yolo", "pascal_voc" };
+
+        [ObservableProperty]
+        private string selectedAnnotationFormat = "coco";
+
+        // 检测损失函数权重配置
+        [ObservableProperty]
+        private float rpnClassificationWeight = 1.0f;
+
+        [ObservableProperty]
+        private float rpnBoxRegressionWeight = 1.0f;
+
+        [ObservableProperty]
+        private float roiClassificationWeight = 1.0f;
+
+        [ObservableProperty]
+        private float roiBoxRegressionWeight = 1.0f;
+
+        [ObservableProperty]
+        private float? focalLossAlpha = 0.25f; // RetinaNet专用
+
+        [ObservableProperty]
+        private float? focalLossGamma = 2.0f; // RetinaNet专用
+
+        [ObservableProperty]
+        private string iouLossType = "iou"; // "iou", "giou", "diou", "ciou"
+
+        [ObservableProperty]
+        private float maskWeight = 1.0f; // Mask R-CNN专用
+
+        [ObservableProperty]
+        private float keypointWeight = 1.0f; // Keypoint R-CNN专用
+
+        // UI控制属性
+        [ObservableProperty]
+        private bool isDetectionTask = false;
+
+        [ObservableProperty]
+        private bool isShowDetectionParameters = false;
+
+        [ObservableProperty]
+        private bool isShowFocalLossParameters = false; // RetinaNet专用
+
+        [ObservableProperty]
+        private bool isShowMaskParameters = false; // Mask R-CNN专用
+
+        [ObservableProperty]
+        private bool isShowKeypointParameters = false; // Keypoint R-CNN专用
         #endregion
 
         #region 命令
+        [RelayCommand]
+        private void Loaded()
+        {
+            if (App.TrainModel.TaskType == "classification")
+            {
+                TrainSetPath = App.TrainModel?.ClassifyTrainImagesPath;
+                ValidationSetPath = App.TrainModel?.ClassifyValidImagesPath;
+            }
+            else if(App.TrainModel?.TaskType == "detection")
+            {
+                TrainSetPath = App.TrainModel?.TrainImagesPath;
+                ValidationSetPath = App.TrainModel?.ValImagesPath;
+                if (App.TrainModel != null)
+                {
+                    IsDetectionTask = App.TrainModel.TaskType == "detection";
+                    UpdateUIForTaskType();
+                }
+            }
+        }
+        [RelayCommand]
+        private async Task EditPath(SelectableTextBlock selectableText)
+        {
+            var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                ? desktop.MainWindow as SelectTrainingTypeView
+                : null;
+            if (mainWindow != null)
+            {
+                var toplevel = TopLevel.GetTopLevel(mainWindow);
+                if (toplevel != null)
+                {
+                    // 根据控件的Tag属性判断是选择目录还是文件
+                    var pathType = selectableText.Tag as string;
+                    var isDirectory = true; // 默认为目录选择
 
+                    if (!string.IsNullOrEmpty(pathType))
+                    {
+                        isDirectory = pathType.Equals("Directory", StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    if (isDirectory)
+                    {
+                        // 选择目录
+                        var folders = await toplevel.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions()
+                        {
+                            AllowMultiple = false,
+                            Title = "选择目录",
+                        });
+                        if (folders.Count > 0)
+                        {
+                            selectableText.Text = folders[0].TryGetLocalPath();
+                        }
+                    }
+                    else
+                    {
+                        // 选择文件
+                        var files = await toplevel.StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions()
+                        {
+                            AllowMultiple = false,
+                            Title = "选择文件",
+                        });
+                        if (files.Count > 0)
+                        {
+                            selectableText.Text = files[0].TryGetLocalPath();
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(ValidationSetPath))
+                    {
+                        IsEnableValSetRate = false;
+                    }
+                }
+            }
+        }
+        [RelayCommand]
+        private void ClearPath(SelectableTextBlock selectableText)
+        {
+            selectableText.Text = string.Empty;
+            if (string.IsNullOrEmpty(ValidationSetPath))
+            {
+                IsEnableValSetRate = true;
+            }
+        }
         /// <summary>
         /// 跳转到下一个选项卡
         /// </summary>
@@ -432,6 +617,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task SaveConfig()
         {
+            // 保存通用配置
             App.TrainModel.LearningRate = SelectedLearningRate;
             App.TrainModel.LrScheduler = SelectedStrategy;
             App.TrainModel.WeightDecay = WeightDecay;
@@ -440,33 +626,99 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.Epochs = Epochs;
             App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
             App.TrainModel.EarlyStoppingDelta = EarlyStopDelta;
-            App.TrainModel.ValidationSplit = SelectedValidationSetRate;
-            App.TrainModel.RandomHorizonFlipChecked = RandomHorizonFlipChecked;
-            App.TrainModel.RandomVerticalFlipChecked = RandomVerticalFlipChecked;
-            App.TrainModel.RandomRotationChecked = RandomRotationChecked;
-            App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
-            App.TrainModel.RandomContrastChecked = RandomContrastChecked;
-            App.TrainModel.RandomZoomChecked = RandomZoomChecked;
-            if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight)) 
+
+            // 根据任务类型保存特定配置
+            if (IsDetectionTask)
             {
+                // 检测任务配置
+                App.TrainModel.TrainImagesPath = TrainImagesPath;
+                App.TrainModel.ValImagesPath = ValImagesPath;
+                App.TrainModel.TrainAnnotationPath = TrainAnnotationPath;
+                App.TrainModel.ValAnnotationPath = ValAnnotationPath;
+                App.TrainModel.AnnotationFormat = SelectedAnnotationFormat;
+
+                // 检测损失函数配置
+                App.TrainModel.DetectionLoss = new DetectionLossConfig
+                {
+                    RpnClassificationWeight = RpnClassificationWeight,
+                    RpnBoxRegressionWeight = RpnBoxRegressionWeight,
+                    RoIClassificationWeight = RoiClassificationWeight,
+                    RoIBoxRegressionWeight = RoiBoxRegressionWeight,
+                    FocalLossAlpha = FocalLossAlpha,
+                    FocalLossGamma = FocalLossGamma,
+                    IouLossType = IouLossType,
+                    MaskWeight = MaskWeight,
+                    KeypointWeight = KeypointWeight
+                };
+            }
+            else
+            {
+                // 分类任务配置
+                App.TrainModel.ClassifyValidImagesSplit = SelectedValidationSetRate;
+                App.TrainModel.ClassifyTrainImagesPath = TrainSetPath;
+                App.TrainModel.ClassifyValidImagesPath = ValidationSetPath;
+                App.TrainModel.RandomHorizonFlipChecked = RandomHorizonFlipChecked;
+                App.TrainModel.RandomVerticalFlipChecked = RandomVerticalFlipChecked;
+                App.TrainModel.RandomRotationChecked = RandomRotationChecked;
+                App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
+                App.TrainModel.RandomContrastChecked = RandomContrastChecked;
+                App.TrainModel.RandomZoomChecked = RandomZoomChecked;
+
+                // 分类损失函数配置
                 App.TrainModel.LossFunction = new LossFunctionModel
                 {
                     type = SelectedLossFunction,
                     args = new Params
                     {
-                        weight = GetWeightArray(Weight),
-                        pos_weight = GetWeightArray(Pos_weight),
+                        weight = !string.IsNullOrEmpty(Weight) ? GetWeightArray(Weight) : null,
+                        pos_weight = !string.IsNullOrEmpty(Pos_weight) ? GetWeightArray(Pos_weight) : null,
                         label_smoothing = LabelSmoothing,
                         Beta = Beta,
                         reduction = SelectedReduction
                     }
                 };
             }
+
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);
             string configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
             await File.WriteAllTextAsync(configPath, jsonStr);
             IsVisibleNextStep = true;
         }
+
+        /// <summary>
+        /// 根据任务类型更新UI显示
+        /// </summary>
+        private void UpdateUIForTaskType()
+        {
+            IsDetectionTask = App.TrainModel?.TaskType == "detection";
+            IsShowDetectionParameters = IsDetectionTask;
+
+            if (IsDetectionTask)
+            {
+                // 检测任务的UI调整
+                UpdateDetectionModelSpecificUI();
+            }
+        }
+
+        /// <summary>
+        /// 根据检测模型类型更新特定UI
+        /// </summary>
+        private void UpdateDetectionModelSpecificUI()
+        {
+            if (App.TrainModel?.PretrainedModel == null) return;
+
+            var modelName = App.TrainModel.PretrainedModel.ToLower();
+
+            // RetinaNet 显示 Focal Loss 参数
+            IsShowFocalLossParameters = modelName.Contains("retinanet");
+
+            // Mask R-CNN 显示掩码参数
+            IsShowMaskParameters = modelName.Contains("maskrcnn");
+
+            // Keypoint R-CNN 显示关键点参数
+            IsShowKeypointParameters = modelName.Contains("keypointrcnn");
+        }
+
         #endregion
 
     }

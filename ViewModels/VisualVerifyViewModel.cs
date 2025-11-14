@@ -44,9 +44,8 @@ namespace AutoTrainer.ViewModels
             ModelSingleQualityTable = [new ModelSingleQuality() { ClassName = "0", Accuracy = 0, F1_score = 0, Precision = 0, Recall=0}];
             ModelMacroQualityTable = [new ModelMacroQuality() { Accuracy = 0, MacroPrecision = 0, MacroRecall = 0, MacroF1 = 0 }];
         }
-        /// <summary>
-        /// 是否选择创建变异数据集作为验证集
-        /// </summary>
+
+        #region 可绑定属性
         [ObservableProperty]
         private bool isSelectCreateMutationValidData = true;
         [ObservableProperty]
@@ -79,7 +78,9 @@ namespace AutoTrainer.ViewModels
         private bool isSpinning = false;
         [ObservableProperty]
         private int validationImageRate = 15;
+        #endregion
 
+        #region 命令
         /// <summary>
         /// 选择包含验证数据的文件夹
         /// </summary>
@@ -105,7 +106,7 @@ namespace AutoTrainer.ViewModels
                     var path = selectedFolder.Path.LocalPath;
                     if(Directory.Exists(path))
                     {
-                        App.TrainModel.ValDataPath = path;
+                        App.TrainModel.ClassifyValidImagesPath = path;
                         App.TrainModel.NumClasses = Directory.GetDirectories(path).Length;
                         ValidDatasFolderPath = path;
                         IsSpinning = true;
@@ -216,7 +217,7 @@ namespace AutoTrainer.ViewModels
                 IsSpinning = false;
             }
         }
-
+        #endregion
 
         #region 函数
         /// <summary>
@@ -267,7 +268,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         public void LoadMutationData()
         {
-            var dataSetPath = App.TrainModel.TrainDataPath;
+            var dataSetPath = App.TrainModel.ClassifyTrainImagesPath;
             if (!IsSelectCreateMutationValidData)
             {
                 return;
@@ -281,7 +282,7 @@ namespace AutoTrainer.ViewModels
             if (typeClasses.Length > 0)
             {
                 App.TrainModel.NumClasses = typeClasses.Length;
-                App.TrainModel.TrainDataPath = dataSetPath;
+                App.TrainModel.ClassifyTrainImagesPath = dataSetPath;
                 var files = new List<string>();
                 Dictionary<string,int> classNameToIndexDic = [];
                 for (int i = 0;i< typeClasses.Length;i++)

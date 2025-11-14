@@ -32,6 +32,15 @@ namespace AutoTrainer.ViewModels
             ModelList = [];
             GetRequirementPackages();
             Requirements = string.Join("\r\n", requireApps);
+
+            // 初始化任务类型
+            TaskTypes = new ObservableCollection<TaskTypeInfo>
+            {
+                new TaskTypeInfo { Name = "图像分类", Value = "classification" },
+                new TaskTypeInfo { Name = "目标检测", Value = "detection" }
+            };
+
+            SelectedTaskType = TaskTypes[0]; // 默认选择分类
             Task.Run(GetPython);
         }
         #endregion
@@ -116,7 +125,19 @@ namespace AutoTrainer.ViewModels
         private bool isScanningVenv = false;
         [ObservableProperty]
         private string? scanningFolder = string.Empty;
-        #endregion
+
+        // 任务类型选择相关
+        [ObservableProperty]
+        private ObservableCollection<TaskTypeInfo> taskTypes = new();
+
+        [ObservableProperty]
+        private TaskTypeInfo? selectedTaskType;
+
+        // 任务类型切换状态
+        [ObservableProperty]
+        private bool isTaskTypeChanging = false;
+
+            #endregion
 
         #region 函数
         private void GetRequirementPackages()
@@ -154,9 +175,13 @@ namespace AutoTrainer.ViewModels
                     var pythonPaths = result.Output.Split(splitChart);
                     foreach (var path in pythonPaths)
                     {
-                        if (path.Contains("WindowsApps") || string.IsNullOrEmpty(path))
+                        //if (path.Contains("WindowsApps") || string.IsNullOrEmpty(path))
+                        //{
+                        //    continue; // 跳过WindowsApps中的Python路径
+                        //}
+                        if (string.IsNullOrEmpty(path))
                         {
-                            continue; // 跳过WindowsApps中的Python路径
+                            continue;
                         }
                         else
                         {
@@ -189,32 +214,92 @@ namespace AutoTrainer.ViewModels
         {
             if (!string.IsNullOrEmpty(PythonVenvPath))
             {
-                ModelList = new ObservableCollection<string>();
+                // 确保在UI线程中初始化ModelList
+                Dispatcher.UIThread.Post(() => ModelList = new ObservableCollection<string>());
                 StringBuilder sb = new StringBuilder();
                 var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
                 sb.Append(activateFile);
                 sb.Append(" && ");
-                sb.Append($"python {modelHelperScript} list");
+
+                // 根据任务类型选择对应的helper脚本和参数
+                var helperScript = SelectedTaskType?.Value == "detection" ? "DetectionModelHelper.py" : "ModelHelper.py";
+                var scriptPath = Path.Combine(Environment.CurrentDirectory, "PyScripts", helperScript);
+
+                // DetectionModelHelper.py 支持 --task 参数，但 ModelHelper.py 不支持
+                if (SelectedTaskType?.Value == "detection")
+                {
+                    sb.Append($"python {scriptPath} list --task detection");
+                }
+                else
+                {
+                    sb.Append($"python {scriptPath} list --format simple");
+                }
                 var command = sb.ToString();
                 var result = await CliWrapHelper.ExecuteLine(command);
+
+                // 调试信息
+                System.Diagnostics.Debug.WriteLine($"GetModels command: {command}");
+                System.Diagnostics.Debug.WriteLine($"GetModels exit code: {result.ExitCode}");
+                System.Diagnostics.Debug.WriteLine($"GetModels output: {result.Output}");
+                System.Diagnostics.Debug.WriteLine($"GetModels error: {result.Error}");
+
                 if (result.ExitCode == 0)
                 {
-                    if (!string.IsNullOrEmpty(result.Output))
+                    if (!string.IsNullOrEmpty(result.Output) && result.Output.Contains("###Models###"))
                     {
-                        if (result.Output.Contains("###Models###"))
+                        var modelsSection = result.Output.Split("###Models###")[1].Trim();
+                        var modelLines = modelsSection.Split(App.LineBreak, StringSplitOptions.RemoveEmptyEntries);
+
+                        foreach (var line in modelLines)
                         {
-                            var modelNames = result.Output.Split("###Models###")[1].TrimStart().TrimEnd().Split(App.LineBreak);
-                            for (int i = 0; i < modelNames.Length; i++)
+                            var trimmedLine = line.Trim();
+                            if (!string.IsNullOrEmpty(trimmedLine))
                             {
-                                var name = modelNames[i].ToLower();
-                                if (name.StartsWith("resnet") || name.StartsWith("efficientnet") || name.StartsWith("mobilenet") || name.StartsWith("densenet") || name.StartsWith("vgg"))
+                                // 解析模型名称，移除任务类型标记 [classification] 或 [detection]
+                                var modelName = trimmedLine;
+                                var bracketIndex = trimmedLine.LastIndexOf('[');
+                                if (bracketIndex > 0)
                                 {
-                                    ModelList.Add(name);
+                                    modelName = trimmedLine.Substring(0, bracketIndex).Trim();
+                                }
+
+                                if (!string.IsNullOrEmpty(modelName))
+                                {
+                                    // 确保在UI线程中更新ObservableCollection
+                                    Dispatcher.UIThread.Post(() => ModelList.Add(modelName));
+                                }
+                            }
+                        }
+
+                        System.Diagnostics.Debug.WriteLine($"GetModels found {ModelList.Count} models");
+                    }
+                    else
+                    {
+                        // 如果没有找到模型标记，尝试简单分割
+                        if (!string.IsNullOrEmpty(result.Output))
+                        {
+                            var lines = result.Output.Split(App.LineBreak, StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var line in lines)
+                            {
+                                var trimmedLine = line.Trim();
+                                if (!string.IsNullOrEmpty(trimmedLine) && !trimmedLine.Contains("###"))
+                                {
+                                    // 确保在UI线程中更新ObservableCollection
+                                    Dispatcher.UIThread.Post(() => ModelList.Add(trimmedLine));
                                 }
                             }
                         }
                     }
                 }
+                else
+                {
+                    // 如果脚本执行失败，记录错误
+                    System.Diagnostics.Debug.WriteLine($"GetModels failed with error: {result.Error}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("GetModels: PythonVenvPath is null or empty");
             }
         }
         /// <summary>
@@ -371,6 +456,58 @@ namespace AutoTrainer.ViewModels
             sb.AppendLine(data);
             Outputs = sb.ToString();
         }
+  
+        /// <summary>
+        /// 任务类型变更时的处理
+        /// </summary>
+        partial void OnSelectedTaskTypeChanged(TaskTypeInfo? value)
+        {
+            if (value != null)
+            {
+                // 更新全局配置
+                App.TrainModel.TaskType = value.Value;
+
+                // 清空之前的选择
+                SelectModel = null;
+                SelectModelIntroduce = null;
+                //隐藏本地模型选择，下一步按钮，模型介绍页面
+                IsVisibleIntroduce = false;
+                // 如果Python环境已配置，重新获取模型列表
+                if (!string.IsNullOrEmpty(PythonVenvPath))
+                {
+                    Task.Run(async () =>
+                    {
+                        await GetModelsWithLoadingState();
+                    }).ContinueWith(t =>
+                    {
+                        if (t.IsFaulted)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"GetModels failed: {t.Exception?.Message}");
+                        }
+                    }, TaskScheduler.Default);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 带加载状态的模型获取
+        /// </summary>
+        private async Task GetModelsWithLoadingState()
+        {
+            try
+            {
+                IsLoadingModelList = true;
+                await GetModels();
+                IsLoadingModelList = false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetModelsWithLoadingState failed: {ex.Message}");
+                // 确保在异常情况下也恢复加载状态
+                IsLoadingModelList = false;
+            }
+        }
+
         #endregion
 
         #region 命令
@@ -549,29 +686,37 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task SelectModelToShow()
         {
-            if (!string.IsNullOrEmpty(SelectModel))
+            if (!string.IsNullOrEmpty(SelectModel) && SelectedTaskType != null)
             {
                 IsLoadingModelList = true;
+
+                // 设置模型信息到全局配置
                 App.TrainModel.PretrainedModel = SelectModel;
+
+                // 根据任务类型选择不同的辅助脚本
+                var helperScript = SelectedTaskType.Value == "detection" ? "DetectionModelHelper.py" : "ModelHelper.py";
+                var fullHelperPath = Path.Combine(Environment.CurrentDirectory, "PyScripts", helperScript);
+
                 StringBuilder sb = new StringBuilder();
                 var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
                 sb.Append(activateFile);
                 sb.Append(" && ");
-                sb.Append($"python {modelHelperScript} info {SelectModel}");
+                sb.Append($"python {fullHelperPath} info {SelectModel}");
+
                 var command = sb.ToString();
                 var result = await CliWrapHelper.ExecuteLine(command);
-                IsLoadingModelList = false;
-                if (result.ExitCode == 0)
+
+                if (result.ExitCode == 0 && !string.IsNullOrEmpty(result.Output))
                 {
-                    if (!string.IsNullOrEmpty(result.Output))
+                    if (result.Output.Contains("###ModelInfo###"))
                     {
-                        if (result.Output.Contains("###ModelInfo###"))
-                        {
-                            SelectModelIntroduce = result.Output.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
-                            IsVisibleIntroduce = true;
-                        }
+                        var scriptModelInfo = result.Output.Split("###ModelInfo###")[1].TrimStart().TrimEnd();
+                        SelectModelIntroduce = scriptModelInfo;
+                        IsVisibleIntroduce = true;
                     }
                 }
+
+                IsLoadingModelList = false;
             }
         }
         /// <summary>
@@ -634,6 +779,13 @@ namespace AutoTrainer.ViewModels
             public bool IsMatch { get; set; }
             public List<string>? MissingPackages { get; set; }
             public string? Message { get; set; }
+        }
+
+        // 任务类型信息
+        public class TaskTypeInfo
+        {
+            public string Name { get; set; }
+            public string Value { get; set; }
         }
     }
 }
