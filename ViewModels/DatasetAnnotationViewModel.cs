@@ -49,10 +49,11 @@ namespace AutoTrainer.ViewModels
         // 是否有选中的标注
         public bool HasSelectedAnnotation => SelectedAnnotation != null;
         public bool HasNoSelectedAnnotation => !HasSelectedAnnotation;
-        // 图片文件夹
-        public string Imagefolder = string.Empty;
-        // 标注文件名
-        public string AnnotationFileName = "AnnotationConfig.json";
+        // 导入图片集路径
+        public string? Imagesfolder = string.Empty;
+        public string? COCOAnnotationPath { get; set; }
+        // 默认标注文件名
+        public string? DefaultCocoAnnotationFileName = "AnnotationConfig.COCO.json";
         // 存储所有图片的标注数据
         public Dictionary<string, List<AnnotationItem>> AllImageAnnotations = [];
         // 存储上次导入的COCO数据，用于模式切换时重新处理
@@ -338,9 +339,9 @@ namespace AutoTrainer.ViewModels
                 if (folders?.Count > 0)
                 {
                     var selectedFolder = folders[0];
-                    Imagefolder = folders[0].TryGetLocalPath() ?? string.Empty;
+                    Imagesfolder = folders[0].TryGetLocalPath() ?? string.Empty;
                     await LoadImagesFromFolder(selectedFolder.Path);
-                    TrainDatasetPath = Imagefolder;
+                    TrainDatasetPath = Imagesfolder;
                     if (App.TrainModel?.TaskType == "classification")
                     {
                         App.TrainModel.ClassifyTrainImagesPath = TrainDatasetPath;
@@ -354,7 +355,11 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"导入目录图像失败: {ex.Message}");
-                // Consider adding user notification
+                Log.Error($"导入目录图像失败: {ex.Message}");
+            }
+            finally
+            {
+                App.TrainModel.TrainImagesPath = Imagesfolder;
             }
         }
 
@@ -395,22 +400,22 @@ namespace AutoTrainer.ViewModels
 
                 if (files?.Count > 0)
                 {
-                    var selectedFile = files[0].TryGetLocalPath();
-                    if (string.IsNullOrEmpty(selectedFile)) return;
+                    COCOAnnotationPath = files[0].TryGetLocalPath();
+                    if (string.IsNullOrEmpty(COCOAnnotationPath)) return;
 
                     IsLoading = true;
                     ProgressState = "正在导入COCO标注文件...";
                     ProgressValue = 0;
                     ProgressMax = ImageList.Count;
 
-                    await Task.Run(() => ImportCOCOData(selectedFile));
+                    await Task.Run(() => ImportCOCOData(COCOAnnotationPath));
 
                     NotifyManager.CreateMessage()
                         .Accent("#161616")
                         .Background("#e5e4e2")
                         .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
                         .HasBadge("Success")
-                        .HasMessage($"COCO标注文件导入成功：{System.IO.Path.GetFileName(selectedFile)}")
+                        .HasMessage($"COCO标注文件导入成功：{System.IO.Path.GetFileName(COCOAnnotationPath)}")
                         .Dismiss().WithDelay(5000, t => { })
                         .Queue();
                 }
@@ -429,6 +434,7 @@ namespace AutoTrainer.ViewModels
             }
             finally
             {
+                App.TrainModel.TrainAnnotationPath = COCOAnnotationPath;
                 IsLoading = false;
                 ProgressState = "就绪";
             }
@@ -749,7 +755,7 @@ namespace AutoTrainer.ViewModels
                 {
                     return;
                 }
-                var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
+                var annotationPath = System.IO.Path.Combine(Imagesfolder??string.Empty, DefaultCocoAnnotationFileName??string.Empty);
                 AllImageAnnotations.SaveToFile(annotationPath);
                 NotifyManager.CreateMessage()
                     .Accent("#161616")
@@ -1384,7 +1390,7 @@ namespace AutoTrainer.ViewModels
             else
             {
                 // 如果没有标注数据，再看看本地是否有保存的标注文件
-                var annotationPath = System.IO.Path.Combine(Imagefolder, AnnotationFileName);
+                var annotationPath = System.IO.Path.Combine(Imagesfolder??string.Empty, COCOAnnotationPath??string.Empty);
                 if (File.Exists(annotationPath))
                 {
                     try
@@ -1462,8 +1468,6 @@ namespace AutoTrainer.ViewModels
         {
             IsLoading = true;
             ProgressState = "正在扫描文件路径...";
-            ImageList.Clear();
-            AllImageAnnotations.Clear(); // Also clear annotations from previous folder
 
             try
             {
@@ -1482,19 +1486,25 @@ namespace AutoTrainer.ViewModels
                         .Select(path => new ImageItem { FilePath = path, FileName = System.IO.Path.GetFileName(path) })
                         .ToList();
                 });
-
-
+                if(ImageList.Count > 0)
+                {
+                    var msgBox = MessageBoxManager.GetMessageBoxStandard("文件覆盖警告", "此操作会覆盖当前工作图片，未保存的内容将丢失，是否继续？", MsBox.Avalonia.Enums.ButtonEnum.YesNo);
+                    var result = await msgBox.ShowAsync();
+                    if (result == MsBox.Avalonia.Enums.ButtonResult.No)
+                    {
+                        return;
+                    }
+                }
+                AllImageAnnotations.Clear();
                 ProgressState = "正在加载图片列表...";
                 ImageList = new ObservableCollection<ImageItem>(imageItems);
 
-                if (ImageList.Any())
+                if (ImageList.Count > 0)
                 {
-                    // Set the first image as current, but don't load its main bitmap yet
                     CurrentImageIndex = 0;
                 }
-
-                // Asynchronously load thumbnails for the initial view
-                _ = LoadThumbnailsInRange(0, 30); // Load first 30 thumbnails in background
+                //先加载前30张图片在内存
+                _ = LoadThumbnailsInRange(0, 30);
             }
             catch (Exception ex)
             {
@@ -1573,7 +1583,10 @@ namespace AutoTrainer.ViewModels
         /// <param name="value"></param>
         partial void OnCurrentImageIndexChanged(int value)
         {
-            IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
+            if (ImageList.Count > 0 && value >= 0)
+            {
+                IsApplyAsTemplate = ImageList[value].AsCroppingTemplate;
+            }
         }
 
         /// <summary>

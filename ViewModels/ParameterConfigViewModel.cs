@@ -416,25 +416,25 @@ namespace AutoTrainer.ViewModels
         /// 训练图像路径
         /// </summary>
         [ObservableProperty]
-        private string trainImagesPath;
+        private string? trainImagesPath;
 
         /// <summary>
         /// 验证图像路径
         /// </summary>
         [ObservableProperty]
-        private string valImagesPath;
+        private string? valImagesPath;
 
         /// <summary>
         /// 训练标注文件路径
         /// </summary>
         [ObservableProperty]
-        private string trainAnnotationPath;
+        private string? trainAnnotationPath;
 
         /// <summary>
         /// 验证标注文件路径
         /// </summary>
         [ObservableProperty]
-        private string valAnnotationPath;
+        private string? valAnnotationPath;
 
         /// <summary>
         /// 标注格式选择
@@ -494,6 +494,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void Loaded()
         {
+            UpdateUIForTaskType();
             if (App.TrainModel.TaskType == "classification")
             {
                 TrainSetPath = App.TrainModel?.ClassifyTrainImagesPath;
@@ -501,12 +502,13 @@ namespace AutoTrainer.ViewModels
             }
             else if(App.TrainModel?.TaskType == "detection")
             {
-                TrainSetPath = App.TrainModel?.TrainImagesPath;
-                ValidationSetPath = App.TrainModel?.ValImagesPath;
+                TrainImagesPath = App.TrainModel?.TrainImagesPath;
+                ValImagesPath = App.TrainModel?.ValImagesPath;
+                TrainAnnotationPath = App.TrainModel?.TrainAnnotationPath;
+                ValAnnotationPath = App.TrainModel?.ValAnnotationPath;
                 if (App.TrainModel != null)
                 {
                     IsDetectionTask = App.TrainModel.TaskType == "detection";
-                    UpdateUIForTaskType();
                 }
             }
         }
