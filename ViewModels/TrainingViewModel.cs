@@ -28,7 +28,8 @@ namespace AutoTrainer.ViewModels
     public partial class TrainingViewModel : ViewModelBase
     {
         private bool isPyRunning = false;
-        private CancellationTokenSource cancellationTokenSource;
+        private readonly CancellationTokenSource cancellationTokenSource = new();
+        private readonly CancellationTokenSource _refreshCts = new();
         private int ScanningIndex = 0;
         public TrainingViewModel()
         {
@@ -36,8 +37,10 @@ namespace AutoTrainer.ViewModels
             try
             {
                 InitialPlot();
-                cancellationTokenSource = new();
                 Log.Debug("TrainingViewModel 初始化成功完成");
+
+                // 启动硬件监控循环
+                _ = RefreshSystemInfo();
             }
             catch (Exception ex)
             {
@@ -92,6 +95,21 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private EpochState epochState = new();
+        /// <summary>
+        /// CPU占用率
+        /// </summary>
+        [ObservableProperty]
+        private string cPURate;
+        /// <summary>
+        /// GPU占用率
+        /// </summary>
+        [ObservableProperty]
+        private string gPURate;
+        /// <summary>
+        /// RAM占用率
+        /// </summary>
+        [ObservableProperty]
+        private string rAMRate;
 
         public ICartesianAxis[] XAxes { get; set; } = [
             new Axis
@@ -110,7 +128,9 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 命令
-
+        /// <summary>
+        /// 加载训练参数信息
+        /// </summary>
         [RelayCommand]
         private void LoadParamInfo()
         {
@@ -256,138 +276,11 @@ namespace AutoTrainer.ViewModels
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
             }
         }
-
         /// <summary>
-        /// 开始分类训练流程
+        /// 转到下一页
         /// </summary>
-        private async Task StartClassificationTraining()
-        {
-            Log.Information("开始分类训练流程");
-
-            ScanningIndex = 0;
-            IsShowNextPage = false;
-            cancellationTokenSource = new();
-
-            Log.Debug("初始化图表和输出信息");
-            #region 初始化图标和输出信息
-            await Task.Run(() =>
-            {
-                try
-                {
-                    Log.Debug("开始图像增强过程");
-                    ImageEnhancement();
-                    Log.Debug("图像增强成功完成");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "图像增强失败");
-                    throw;
-                }
-            });
-
-            PyOutput += "\n图像增强结束";
-            InitialPlot();
-            PyOutput = string.Empty;
-            #endregion
-
-            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
-            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
-            Log.Information("分类训练日志文件创建于: {LogPath}", currentPyLogfile);
-
-            Log.Debug("保存训练配置到 ModelParam.json");
-            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
-            Log.Debug("训练配置保存成功");
-
-            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelTrainer.py");
-            var configPath = Path.Combine(Environment.CurrentDirectory, "Configs", "ModelParam.json");
-            var arguments = $"--config {configPath}";
-
-            Log.Information("启动Python分类训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
-
-            _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
-            isPyRunning = true;
-
-            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
-
-            if (result.ExitCode != 0)
-            {
-                var errorMessage = result.Error ?? "Unknown error occurred during training";
-                Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
-                await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                await cancellationTokenSource.CancelAsync();
-                return;
-            }
-
-            Log.Information("Python分类训练脚本成功完成");
-            isPyRunning = false;
-
-            Log.Debug("读取最终训练输出");
-            await ReadPyOutputAtMeantime();
-
-            IsShowNextPage = true;
-            Log.Information("分类训练过程成功完成，显示下一页");
-        }
-
-        /// <summary>
-        /// 开始检测训练流程
-        /// </summary>
-        private async Task StartDetectionTraining()
-        {
-            Log.Information("开始检测训练流程");
-
-            ScanningIndex = 0;
-            IsShowNextPage = false;
-            cancellationTokenSource = new();
-
-            // 验证检测任务必需的路径
-            if (string.IsNullOrEmpty(App.TrainModel.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.TrainAnnotationPath))
-            {
-                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                return;
-            }
-
-            InitialPlot();
-            PyOutput = string.Empty;
-
-            // 创建检测训练日志文件
-            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "DetectionLog" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
-            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
-            Log.Information("检测训练日志文件创建于: {LogPath}", currentPyLogfile);
-
-            // 保存检测配置
-            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
-            var configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
-            await File.WriteAllTextAsync(configPath, jsonStr);
-            Log.Debug("检测训练配置保存成功");
-
-            // 启动检测训练脚本
-            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "DetectionTrainer.py");
-            var arguments = $"--config {configPath}";
-
-            Log.Information("启动Python检测训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
-
-            _ = Task.Run(() => ScanningTheDetectionPyOutput(cancellationTokenSource.Token));
-            isPyRunning = true;
-
-            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
-
-            if (result.ExitCode != 0)
-            {
-                var errorMessage = result.Error ?? "Unknown error occurred during detection training";
-                Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
-                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                await cancellationTokenSource.CancelAsync();
-                return;
-            }
-
-            Log.Information("Python检测训练脚本成功完成");
-            isPyRunning = false;
-
-            await ReadDetectionPyOutputAtMeantime();
-            IsShowNextPage = true;
-            Log.Information("检测训练过程成功完成，显示下一页");
-        }
+        /// <param name="o"></param>
+        /// <returns></returns>
         [RelayCommand]
         private async Task GotoNextPage(UserControl o)
         {
@@ -413,6 +306,130 @@ namespace AutoTrainer.ViewModels
         #endregion
 
         #region 函数
+        /// <summary>
+        /// 刷新系统硬件信息，CPU,GPU,RAM
+        /// </summary>
+        /// <returns></returns>
+        private async Task RefreshSystemInfo()
+        {
+            while (true)
+            {
+                const int intervalMs = 3000; // 3 秒刷新一次
+
+                while (!_refreshCts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        // 并行获取三项指标，减少总耗时
+                        var cpuTask = GetCpuRateAsync();
+                        var gpuTask = GetGpuRateAsync();
+                        var ramTask = GetRamRateAsync();
+
+                        await Task.WhenAll(cpuTask, gpuTask, ramTask);
+
+                        // 写入 ObservableProperty（UI 自动更新）
+                        CPURate = (await cpuTask).ToString() + "%";
+                        GPURate = (await gpuTask).ToString() + "%";
+                        RAMRate = (await ramTask).ToString() + "%";
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "获取系统信息时出现异常，继续下一次循环");
+                    }
+
+                    // 等待下一轮
+                    try
+                    {
+                        await Task.Delay(intervalMs, _refreshCts.Token);
+                    }
+                    catch (TaskCanceledException) { break; }
+                }
+            }
+        }
+        /// <summary>
+        /// 获取CPU占用率
+        /// </summary>
+        /// <returns></returns>
+        private static async Task<int> GetCpuRateAsync()
+        {
+            // Windows: PowerShell Get-Counter (实时 CPU %)
+            // Linux/macOS: 使用 top -bn1
+            string cmd;
+            if (OperatingSystem.IsWindows())
+            {
+                cmd = @"powershell.exe -Command ""(Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue""";
+            }
+            else
+            {
+                cmd = @"top -bn1 | grep '%Cpu' | awk '{print $2}' | cut -d',' -f1";  // 只取 user %，避免逗号
+            }
+
+            var result = await CliWrapHelper.ExecuteLine(cmd);
+            if (result.ExitCode != 0) return 0;
+
+            string output = result.Output?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(output)) return 0;
+
+            // Windows: 直接浮点数，如 12.345
+            // Linux/macOS: 12.3
+            if (float.TryParse(output, out var percent))
+                return (int)Math.Round(percent);
+
+            return 0;
+        }
+        /// <summary>
+        /// 获取RAM占用率
+        /// </summary>
+        /// <returns></returns>
+        private static async Task<int> GetRamRateAsync()
+        {
+            string cmd;
+            if (OperatingSystem.IsWindows())
+            {
+                // PowerShell: 计算 (Total - Free) / Total * 100
+                cmd = @"powershell.exe -Command ""$total = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory; $free = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory * 1KB; [math]::Round(100 * (1 - $free / $total), 0)""";
+            }
+            else
+            {
+                // Linux/macOS: free -m，计算 used / total * 100
+                cmd = @"free -m | awk 'NR==2{printf ""%d"", $3*100/$2}'";
+            }
+
+            var result = await CliWrapHelper.ExecuteLine(cmd);
+            if (result.ExitCode != 0) return 0;
+
+            string output = result.Output?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(output)) return 0;
+
+            if (int.TryParse(output, out var percent))
+                return Math.Max(0, Math.Min(100, percent));  // 限制 0-100
+
+            return 0;
+        }
+        /// <summary>
+        /// 获取GPU占用率
+        /// </summary>
+        /// <returns></returns>
+        private static async Task<int> GetGpuRateAsync()
+        {
+            // 只在检测到 nvidia-smi 时尝试
+            string checkCmd = OperatingSystem.IsWindows()
+                ? "where nvidia-smi"
+                : "which nvidia-smi";
+
+            var check = await CliWrapHelper.ExecuteLine(checkCmd);
+            if (check.ExitCode != 0) return -1; // -1 表示不支持
+
+            string cmd = @"nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits";
+            var result = await CliWrapHelper.ExecuteLine(cmd);
+            if (result.ExitCode != 0) return -1;
+
+            var line = result.Output?.Trim();
+            if (int.TryParse(line, out var percent))
+                return percent;
+
+            return -1;
+        }
         /// <summary>
         /// 图像增强
         /// </summary>
@@ -501,6 +518,134 @@ namespace AutoTrainer.ViewModels
                 Log.Error(ex, "图像增强失败");
                 throw;
             }
+        }
+        /// <summary>
+        /// 开始分类训练流程
+        /// </summary>
+        private async Task StartClassificationTraining()
+        {
+            Log.Information("开始分类训练流程");
+
+            ScanningIndex = 0;
+            IsShowNextPage = false;
+
+            Log.Debug("初始化图表和输出信息");
+            #region 初始化图标和输出信息
+            await Task.Run(() =>
+            {
+                try
+                {
+                    Log.Debug("开始图像增强过程");
+                    ImageEnhancement();
+                    Log.Debug("图像增强成功完成");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "图像增强失败");
+                    throw;
+                }
+            });
+
+            PyOutput += "\n图像增强结束";
+            InitialPlot();
+            PyOutput = string.Empty;
+            #endregion
+
+            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
+            Log.Information("分类训练日志文件创建于: {LogPath}", currentPyLogfile);
+
+            Log.Debug("保存训练配置到 ModelParam.json");
+            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
+            Log.Debug("训练配置保存成功");
+
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelTrainer.py");
+            var configPath = Path.Combine(Environment.CurrentDirectory, "Configs", "ModelParam.json");
+            var arguments = $"--config {configPath}";
+
+            Log.Information("启动Python分类训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+
+            _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
+            isPyRunning = true;
+
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = result.Error ?? "Unknown error occurred during training";
+                Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
+                await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await cancellationTokenSource.CancelAsync();
+                return;
+            }
+
+            Log.Information("Python分类训练脚本成功完成");
+            isPyRunning = false;
+
+            Log.Debug("读取最终训练输出");
+            await ReadPyOutputAtMeantime();
+
+            IsShowNextPage = true;
+            Log.Information("分类训练过程成功完成，显示下一页");
+        }
+        /// <summary>
+        /// 开始检测训练流程
+        /// </summary>
+        private async Task StartDetectionTraining()
+        {
+            Log.Information("开始检测训练流程");
+
+            ScanningIndex = 0;
+            IsShowNextPage = false;
+
+            // 验证检测任务必需的路径
+            if (string.IsNullOrEmpty(App.TrainModel.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.TrainAnnotationPath))
+            {
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                return;
+            }
+
+            InitialPlot();
+            PyOutput = string.Empty;
+
+            // 创建检测训练日志文件
+            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "DetectionLog" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
+            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
+            Log.Information("检测训练日志文件创建于: {LogPath}", currentPyLogfile);
+
+            // 保存检测配置
+            var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
+            var configPath = Path.Combine(App.ConfigFolderPath, "ModelParam.json");
+            await File.WriteAllTextAsync(configPath, jsonStr);
+            Log.Debug("检测训练配置保存成功");
+
+            // 启动检测训练脚本
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "DetectionTrainer.py");
+            var arguments = $"--config {configPath}";
+
+            Log.Information("启动Python检测训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+
+            _ = Task.Run(() => ScanningTheDetectionPyOutput(cancellationTokenSource.Token));
+            isPyRunning = true;
+
+            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+
+            if (result.ExitCode != 0)
+            {
+                var errorMessage = result.Error ?? "Unknown error occurred during detection training";
+                Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await cancellationTokenSource.CancelAsync();
+                return;
+            }
+
+            Log.Information("Python检测训练脚本成功完成");
+            isPyRunning = false;
+
+            await ReadDetectionPyOutputAtMeantime();
+            IsShowNextPage = true;
+            Log.Information("检测训练过程成功完成，显示下一页");
         }
         /// <summary>
         /// 初始化图表线条和进度

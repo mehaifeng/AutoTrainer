@@ -86,6 +86,8 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private string? pythonVenvPath;
         [ObservableProperty]
+        private ObservableCollection<string> pythonVenvPaths;
+        [ObservableProperty]
         private string? pipApps;
         [ObservableProperty]
         private string? requirements;
@@ -337,6 +339,8 @@ namespace AutoTrainer.ViewModels
                         if (IsVenvDirectory(dir))
                         {
                             sb.AppendLine($"找到虚拟环境：{dir}");
+                            PythonVenvPaths.Add(dir);
+                            PythonVenvPath ??= dir;
                             Outputs = sb.ToString();
                         }
                         ScanDirectory(dir).Wait();
@@ -375,6 +379,11 @@ namespace AutoTrainer.ViewModels
                 return false;
             }
         }
+        /// <summary>
+        /// 处理包名
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
         private PackageInfo ParsePackageLine(string line)
         {
             // 处理空行或无效输入
@@ -395,6 +404,12 @@ namespace AutoTrainer.ViewModels
                 Version = parts.Length > 1 ? parts[1].Trim() : string.Empty
             };
         }
+        /// <summary>
+        /// 检查需求包是否安装
+        /// </summary>
+        /// <param name="installedPackagesStr"></param>
+        /// <param name="requiredPackages"></param>
+        /// <returns></returns>
         public CheckResult CheckPackages(string installedPackagesStr, IEnumerable<string> requiredPackages)
         {
             var result = new CheckResult
@@ -448,6 +463,10 @@ namespace AutoTrainer.ViewModels
                 };
             }
         }
+        /// <summary>
+        /// 内容输出
+        /// </summary>
+        /// <param name="data"></param>
         private void HandleOutput(string data)
         {
             // 实时处理每行输出
@@ -456,7 +475,6 @@ namespace AutoTrainer.ViewModels
             sb.AppendLine(data);
             Outputs = sb.ToString();
         }
-  
         /// <summary>
         /// 任务类型变更时的处理
         /// </summary>
@@ -488,7 +506,6 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
-
         /// <summary>
         /// 带加载状态的模型获取
         /// </summary>
@@ -529,6 +546,7 @@ namespace AutoTrainer.ViewModels
                 {
                     try
                     {
+                        PythonVenvPaths = [];
                         await ScanDirectory(drive);
                     }
                     catch (Exception ex)

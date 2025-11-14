@@ -153,6 +153,11 @@ class COCODetectionDataset(Dataset):
         self.images = self.coco_data['images']
         self.annotations = self.coco_data['annotations']
 
+        # COCO的category_id需要连续,映射到1, 2, 3...
+        categories = sorted(self.coco_data['categories'], key=lambda x: x['id'])
+        self.category_id_map = {cat['id']: idx + 1 for idx, cat in enumerate(categories)}
+        print(f"类别ID映射: {self.category_id_map}")
+
         # 构建图像ID到标注的映射
         from collections import defaultdict
         self.img_to_anns = defaultdict(list)
@@ -209,7 +214,7 @@ class COCODetectionDataset(Dataset):
                 continue
 
             boxes.append([xmin, ymin, xmax, ymax])
-            labels.append(ann['category_id'])
+            labels.append(self.category_id_map[ann['category_id']])  # 使用映射后的ID
             area.append(ann['area'] if 'area' in ann else (xmax - xmin) * (ymax - ymin))
             iscrowd.append(ann.get('iscrowd', 0))
 
@@ -271,27 +276,40 @@ class DetectionTrainer:
         """获取优化器 - 降低学习率"""
         # 检测任务推荐更小的学习率
         base_lr = self.config.get('learning_rate', 0.005)
-        adjusted_lr = min(base_lr, 0.005)  # 上限0.005
+        # MobileNet模型需要更小的学习率
+        if 'mobilenet' in self.config['pretrained_model'].lower():
+            adjusted_lr = min(base_lr, 0.0005)  # MobileNet用0.0005
+        else:
+            adjusted_lr = min(base_lr, 0.005)   # ResNet可以用0.005
         
         if adjusted_lr != base_lr:
             print(f"警告: 学习率从 {base_lr} 调整为 {adjusted_lr} (检测任务推荐)")
             self.logger.log_entry("Info", f"学习率调整: {base_lr} -> {adjusted_lr}")
         
         optimizer_class = getattr(torch.optim, self.config['optimizer'])
-        return optimizer_class(
-            self.model.parameters(),
-            lr=adjusted_lr,
-            weight_decay=self.config.get('weight_decay', 0.0005)
-        )
+        # SGD需要添加momentum
+        if self.config['optimizer'] == 'SGD':
+            return optimizer_class(
+                self.model.parameters(),
+                lr=adjusted_lr,
+                momentum=0.9,  # 添加momentum
+                weight_decay=self.config.get('weight_decay', 0.0005)
+            )
+        else:
+            return optimizer_class(
+                self.model.parameters(),
+                lr=adjusted_lr,
+                weight_decay=self.config.get('weight_decay', 0.0005)
+            )
 
     def _get_scheduler(self):
         if self.config['lr_scheduler'] == 'StepLR':
             return torch.optim.lr_scheduler.StepLR(
-                self.optimizer, step_size=3, gamma=0.1
+                self.optimizer, step_size=5, gamma=0.5  # 改为5轮衰减50%,更温和
             )
         elif self.config['lr_scheduler'] == 'ReduceLROnPlateau':
             return torch.optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer, mode='min', patience=3, factor=0.1
+                self.optimizer, mode='min', patience=3, factor=0.5  # factor改为0.5
             )
         return None
 
@@ -434,7 +452,13 @@ class DetectionTrainer:
     @torch.no_grad()
     def evaluate(self, val_loader: DataLoader):
         """评估模型"""
-        self.model.train()  # 关键修复: 验证时也需要train模式来获取loss
+        self.model.train()
+
+        # 冻结BatchNorm层的统计信息更新
+        for module in self.model.modules():
+            if isinstance(module, torch.nn.BatchNorm2d):
+                module.eval()  # BatchNorm用eval模式
+
         total_loss = 0
         num_batches = len(val_loader)
         valid_batches = 0

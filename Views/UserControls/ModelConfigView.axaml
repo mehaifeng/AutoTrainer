@@ -44,25 +44,27 @@
 						<RowDefinition Height=".6*"/>
 						<RowDefinition Height=".4*"/>
 					</Grid.RowDefinitions>
-					<!--python path-->
+					<!--python路径 python path-->
 					<StackPanel Grid.Row="0" Margin="5">
 						<TextBlock Text="Python路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 						<TextBox
+							HorizontalAlignment="Stretch"
 							IsEnabled="{Binding IsEnablePythonConfigView}"
-							Classes="outline"
 							Text="{Binding PythonPath}"
 							Watermark="Python可执行文件路径" />
 					</StackPanel>
-					<!--python venv path-->
+					<!--python虚拟环境 python venv path-->
 					<StackPanel Grid.Row="1" Margin="5">
 						<TextBlock Text="Venv路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-						<TextBox
+						<ComboBox
+							IsEditable="True"
+							HorizontalAlignment="Stretch"
 							IsEnabled="{Binding IsEnablePythonConfigView}"
-							Classes="outline"
-							Text="{Binding PythonVenvPath}"
-							Watermark="虚拟环境路径" />
+							SelectedItem="{Binding PythonVenvPath}"
+							ItemsSource="{Binding PythonVenvPaths}"
+							ToolTip.Tip="虚拟环境路径"/>
 					</StackPanel>
-					<!--Global-Venv-CreateVenv-->
+					<!--全局环境选择；虚拟环境搜索和创建 Global-Venv-CreateVenv-->
 					<StackPanel
 						Grid.Row="2"
 						IsEnabled="{Binding IsEnablePythonConfigView}"

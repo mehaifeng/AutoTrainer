@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
 			 xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:model="using:AutoTrainer.Models"
@@ -20,10 +21,10 @@
 			<InvokeCommandAction Command="{Binding LoadParamInfoCommand}"/>
 		</EventTriggerBehavior>
 	</Interaction.Behaviors>
-	<Grid ColumnDefinitions=".3*,.7*">
+	<Grid ColumnDefinitions=".3*,.65*">
 		<Grid 
 			Grid.Column="0"
-			RowDefinitions=".3*,.7*"
+			RowDefinitions=".3*,.65*,0.05*"
 			Margin="0,0,10,0">
 			<TextBox 
 				Grid.Row="0" 
@@ -33,6 +34,7 @@
 				UseFloatingWatermark="False" 
 				Text="{Binding ModelParamStr}">
 			</TextBox>
+			<!--输出 output-->
 			<TextBox
 				x:Name="PyOutput_Tb"
 				Grid.Row="1"
@@ -43,6 +45,20 @@
 				TextChanged="PyOutput_Tb_TextChanged"
 				UseFloatingWatermark="False" 
 				Text="{Binding PyOutput}"/>
+			<Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+				<StackPanel Orientation="Horizontal" ToolTip.Tip="CPU占用率">
+					<iconPacks:PackIconMaterial Kind="Cpu64Bit" VerticalAlignment="Center"/>
+					<TextBlock Margin="5,0,0,0" Text="{Binding CPURate}"/>
+				</StackPanel>
+				<StackPanel Grid.Column="1" Margin="20,0,0,0" Orientation="Horizontal" ToolTip.Tip="GPU占用率">
+					<iconPacks:PackIconMaterial Kind="ExpansionCard" VerticalAlignment="Center"/>
+					<TextBlock Margin="5,0,0,0" Text="{Binding GPURate}"/>
+				</StackPanel>
+				<StackPanel Grid.Column="2" Margin="20,0,0,0" Orientation="Horizontal" ToolTip.Tip="RAM占用率">
+					<iconPacks:PackIconMaterial Kind="Memory" VerticalAlignment="Center"/>
+					<TextBlock Margin="5,0,0,0" Text="{Binding RAMRate}"/>
+				</StackPanel>
+			</Grid>
 		</Grid>
 		<Grid 
 			Grid.Column="1"
@@ -52,25 +68,22 @@
 				<Button
 					Grid.Row="0"
 					Margin="10,0,10,0"
-					Width="120"
 					IsVisible="{Binding IsShowNextPage}"
 					Command="{Binding GotoNextPageCommand}"
 					CommandParameter="{Binding ElementName=TrainTabItem}"
 					HorizontalAlignment="Right"
-					VerticalAlignment="Center"
-					Background="#FF080808"
-					Foreground="White"
-					BorderThickness="0"
-					CornerRadius="16"
-					Padding="16,8"
-					FontWeight="SemiBold">
+					VerticalAlignment="Bottom">
 					<StackPanel Orientation="Horizontal">
-						<Path Width="24" Height="24" Data="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z" Fill="White" VerticalAlignment="Center"/>
 						<TextBlock
-							Margin="10,0,0,0"
+							Margin="0,0,10,0"
 							FontSize="16"
 							VerticalAlignment="Center"
 							Text="下一步"/>
+						<iconPacks:PackIconMaterial
+							Width="16"
+							Height="16"
+							VerticalAlignment="Center"
+							Kind="ChevronRight" />
 					</StackPanel>
 				</Button>
 			</Grid>
