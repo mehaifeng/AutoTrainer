@@ -102,6 +102,7 @@
 										Kind="Loading" 
 										Width="10"
 										Height="10"
+										HorizontalAlignment="Center"
 										Classes="spinning"
 										RenderTransformOrigin="10,10"
 										IsVisible="{Binding IsScanningVenv}"/>
@@ -129,6 +130,7 @@
 										Width="10"
 										Height="10"
 										Classes="spinning"
+										HorizontalAlignment="Center"
 										RenderTransformOrigin="10,10"
 										IsVisible="{Binding !IsEnablePythonConfigView}"/>
 								</Panel>
@@ -355,6 +357,7 @@
 									Classes="spinning"
 									Kind="Loading"
 									RenderTransformOrigin="10,10"
+									HorizontalAlignment="Center"
 									IsVisible="{Binding IsExcutingPyScript}">
 								</iconPacks:PackIconMaterial>
 							</Panel>

@@ -35,9 +35,6 @@
     <None Update="PyScripts\DetectionTrainer.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="PyScripts\ImageClassifier.py">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="PyScripts\ModelConverter.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

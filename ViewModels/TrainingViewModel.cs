@@ -39,7 +39,7 @@ namespace AutoTrainer.ViewModels
                 InitialPlot();
                 Log.Debug("TrainingViewModel 初始化成功完成");
 
-                // 启动硬件监控循环
+                // 启动性能监控循环
                 _ = RefreshSystemInfo();
             }
             catch (Exception ex)

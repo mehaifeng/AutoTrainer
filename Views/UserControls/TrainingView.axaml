@@ -45,18 +45,18 @@
 				TextChanged="PyOutput_Tb_TextChanged"
 				UseFloatingWatermark="False" 
 				Text="{Binding PyOutput}"/>
-			<Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+			<Grid Grid.Row="2" ColumnDefinitions="*,*,*" VerticalAlignment="Center">
 				<StackPanel Orientation="Horizontal" ToolTip.Tip="CPU占用率">
-					<iconPacks:PackIconMaterial Kind="Cpu64Bit" VerticalAlignment="Center"/>
-					<TextBlock Margin="5,0,0,0" Text="{Binding CPURate}"/>
+					<TextBlock Text="CPU利用率:"/>
+					<TextBlock Margin="5,0,5,0" Text="{Binding CPURate}"/>
 				</StackPanel>
-				<StackPanel Grid.Column="1" Margin="20,0,0,0" Orientation="Horizontal" ToolTip.Tip="GPU占用率">
-					<iconPacks:PackIconMaterial Kind="ExpansionCard" VerticalAlignment="Center"/>
-					<TextBlock Margin="5,0,0,0" Text="{Binding GPURate}"/>
+				<StackPanel Grid.Column="1" Orientation="Horizontal" ToolTip.Tip="GPU占用率">
+					<TextBlock Text="GPU利用率:"/>
+					<TextBlock Margin="5,0,5,0" Text="{Binding GPURate}"/>
 				</StackPanel>
-				<StackPanel Grid.Column="2" Margin="20,0,0,0" Orientation="Horizontal" ToolTip.Tip="RAM占用率">
-					<iconPacks:PackIconMaterial Kind="Memory" VerticalAlignment="Center"/>
-					<TextBlock Margin="5,0,0,0" Text="{Binding RAMRate}"/>
+				<StackPanel Grid.Column="2" Orientation="Horizontal" ToolTip.Tip="RAM占用率">
+					<TextBlock Text="RAM利用率:"/>
+					<TextBlock Margin="5,0,5,0" Text="{Binding RAMRate}"/>
 				</StackPanel>
 			</Grid>
 		</Grid>

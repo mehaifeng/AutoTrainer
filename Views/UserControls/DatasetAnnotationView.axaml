@@ -53,7 +53,7 @@
             Grid.Column="0"
             BorderThickness="0,0,1,0">
             <ScrollViewer>
-                <StackPanel Margin="5" Spacing="10">
+                <StackPanel Margin="10" Spacing="10">
                     <!--  标注模式选择  -->
                     <Expander Header="标注模式" IsExpanded="True" HorizontalAlignment="Stretch">
                         <StackPanel Spacing="8">
@@ -217,7 +217,7 @@
             <!--  顶部工具栏  -->
             <Border
                 Grid.Row="0">
-                <Grid Margin="10,0">
+                <Grid Margin="10,10,10,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -324,6 +324,10 @@
             <!--  图像显示区域  -->
             <Border
                 x:Name="ImageBorder"
+				BorderBrush="LightGray"
+				BorderThickness="1"
+				CornerRadius="5"
+				Margin="5"
                 Grid.Row="1">
                 <paz:ZoomBorder
                     x:Name="ImageZoomBorder"
@@ -394,7 +398,8 @@
                         HorizontalScrollBarVisibility="Auto"
                         VerticalScrollBarVisibility="Disabled">
                         <ListBox
-                            Margin="10,0,10,5"
+                            Margin="10,0,10,10"
+							CornerRadius="5"
                             ItemsSource="{Binding ImageList}"
                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -436,7 +441,6 @@
                                                         Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"
                                                         Fill="White"/>
                                                 </Border>
-
                                                 <!--  选中遮罩  -->
                                                 <Border
                                                     Background="Blue"
@@ -458,7 +462,7 @@
             Grid.Column="2"
             BorderThickness="1,0,0,0">
             <ScrollViewer>
-                <StackPanel Margin="5" Spacing="10">
+                <StackPanel Margin="10" Spacing="10">
 
                     <!-- 训练集路径 -->
 					<StackPanel Orientation="Vertical" Spacing="8">
