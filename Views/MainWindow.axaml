@@ -30,7 +30,7 @@
 				<local:TrainingView/>
 			</TabItem>
 			<TabItem Header="进阶验证" IsEnabled="{Binding IsEnableValidTab}">
-				
+				<local:ValidModelPerformanceView/>
 			</TabItem>
 			<TabItem Header="导出" IsEnabled="{Binding IsEnableExportTab}">
 				<local:ConvertToExportView/>
