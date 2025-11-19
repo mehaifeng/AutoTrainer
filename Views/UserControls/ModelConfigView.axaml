@@ -4,12 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:vm="using:AutoTrainer.ViewModels"
 			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:app="clr-namespace:AutoTrainer"
 			 mc:Ignorable="d"
 			 d:DesignWidth="1200"
 			 d:DesignHeight="850"
 			 x:Name="ModelTabItem"
              x:Class="AutoTrainer.ModelConfigView"
-			 x:DataType="vm:ModelConfigViewModel">
+			 x:DataType="vm:ModelConfigViewModel"
+             DataContext="{x:Static app:App.ModelConfigVM}">
 	<UserControl.Styles>
 		<Style Selector="iconPacks|PackIconMaterial.spinning">
 			<Style.Animations>
@@ -59,8 +61,10 @@
 						<ComboBox
 							IsEditable="True"
 							HorizontalAlignment="Stretch"
+							VerticalContentAlignment="Center"
 							IsEnabled="{Binding IsEnablePythonConfigView}"
-							SelectedItem="{Binding PythonVenvPath}"
+							Text="{Binding PythonVenvPath}" 
+							SelectedItem="{Binding PythonVenvPath,UpdateSourceTrigger=PropertyChanged}"
 							ItemsSource="{Binding PythonVenvPaths}"
 							ToolTip.Tip="虚拟环境路径"/>
 					</StackPanel>
@@ -100,6 +104,7 @@
 									<!-- Loading图标 -->
 									<iconPacks:PackIconMaterial 
 										Kind="Loading" 
+										Margin="0,0,10,0"
 										Width="10"
 										Height="10"
 										HorizontalAlignment="Center"
@@ -121,12 +126,13 @@
 								<Panel>
 									<!-- 默认文本 -->
 									<StackPanel Orientation="Horizontal" IsVisible="{Binding IsEnablePythonConfigView}">
-										<iconPacks:PackIconMaterial Kind="Plus" Width="16" Height="16"/>
+										<iconPacks:PackIconMaterial Kind="PlusCircleOutline" />
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
 								<!-- Loading图标 -->
 									<iconPacks:PackIconMaterial
 										Kind="Loading"
+										Margin="0,0,10,0"
 										Width="10"
 										Height="10"
 										Classes="spinning"
@@ -193,7 +199,7 @@
 						IsVisible="{Binding IsVisibleInstallMissing}"
 						Command="{Binding InstallMissingAppCommand}"
 						Classes="outline"
-						Content="Install Missing Apps"
+						Content="安装缺失的软件包"
 						Foreground="Red"/>
 					<ProgressBar
 						Margin="0,0,0,10"
@@ -354,6 +360,7 @@
 								<iconPacks:PackIconMaterial
 									Width="10"
 									Height="10"
+									Margin="0,0,10,0"
 									Classes="spinning"
 									Kind="Loading"
 									RenderTransformOrigin="10,10"

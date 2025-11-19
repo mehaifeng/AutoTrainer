@@ -279,28 +279,32 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 转到下一页
         /// </summary>
-        /// <param name="o"></param>
         /// <returns></returns>
         [RelayCommand]
-        private async Task GotoNextPage(UserControl o)
+        private async Task GotoNextPage() // Removed UserControl o parameter
         {
             Log.Debug("训练完成后导航到下一页");
             try
             {
-                if (o.Parent != null && o.Parent.Parent is TabControl control)
+                if (App.TrainModel == null)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => control.SelectedIndex = 4);
-                    Log.Information("成功导航到验证页面（标签索引 4）");
+                    Log.Warning("App.TrainModel 为空，无法设置验证页面初始状态");
+                    await MessageBoxManager.GetMessageBoxStandard("错误", "训练模型配置为空，无法导航到验证页面").ShowWindowAsync();
+                    return;
                 }
-                else
-                {
-                    Log.Warning("找不到用于导航的TabControl，父级结构: {Parent}", o.Parent?.GetType().Name);
-                }
+
+                // Pass training results to ValidationViewModel
+                await App.ValidationVM.SetInitialStateFromTraining(App.TrainModel);
+                Log.Information("成功设置验证页面初始状态");
+
+                // Navigate to the validation tab
+                App.MainVM.SelectTabIndex = 4; // Assuming index 4 is the ValidModelPerformanceView tab
+                Log.Information("成功导航到验证页面（标签索引 4）");
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "导航到下一页失败");
-                throw;
+                await MessageBoxManager.GetMessageBoxStandard("严重错误", $"导航到验证页面失败: {ex.Message}").ShowWindowAsync();
             }
         }
         #endregion
@@ -654,7 +658,7 @@ namespace AutoTrainer.ViewModels
         {
             Log.Debug("初始化图表 - Initializing training chart series");
             EpochState.CurrentEpoch = 0;
-            EpochState.TotalEpochs = App.TrainModel.Epochs;
+            EpochState.TotalEpochs = App.TrainModel?.Epochs;
             try
             {
                 TrainAccValues = [];

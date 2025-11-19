@@ -3,239 +3,261 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
-			 xmlns:viewmodel="using:AutoTrainer.ViewModels"
-			 mc:Ignorable="d" 
-			 d:DesignWidth="1200"
-			 d:DesignHeight="850"
-             x:Class="AutoTrainer.ValidModelPerformanceView"
-			 x:DataType="{x:Type viewmodel:ValidModelPerformanceViewModel}">
-	<Grid ColumnDefinitions =".3*,.7*">
-		<!--任务类型，模型选择，开始验证-->
-		<Grid Margin="10" RowDefinitions="Auto,*">
-			<Expander Header="任务配置" IsExpanded="True" Margin="0,0,0,10" HorizontalAlignment="Stretch">
-				<Grid RowDefinitions="*,*,*,50">
-					<!--任务类型-->
-					<StackPanel Grid.Row="0" Orientation="Vertical">
-						<Label Content="任务类型"/>
-						<StackPanel Orientation="Horizontal">
-							<RadioButton
-								Content="目标分类"
-								IsChecked="{Binding IsCheckedClassifyMode}"
-								Margin="0,0,20,0"/>
-							<RadioButton
-								Content="目标检测"
-								IsChecked="{Binding !IsCheckedClassifyMode}"/>
-						</StackPanel>
-					</StackPanel>
-					<!--模型权重-->
-					<StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,10,0,0">
-						<Label Content="当前模型权重"/>
-						<TextBox Text="ResNet50_v2_Epoch_45.pt"/>
-					</StackPanel>
-					<!--验证目录-->
-					<StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,10,0,0">
-						<Label Content="验证集目录"/>
-						<Grid ColumnDefinitions="*,45">
-							<TextBox Text="{Binding ValidDatasetPath}"/>
-							<Button 
-								Grid.Column="1" 
-								Margin="8,0,0,0" 
-								VerticalAlignment="Stretch"
-								Command="{Binding SelectValidDatasetPathCommand}">
-								<iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" VerticalAlignment="Center"/>
-							</Button>
-						</Grid>
-					</StackPanel>
-					<!--验证开始-->
-					<Button Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-						<StackPanel Orientation="Horizontal">
-							<TextBlock Text="开始验证"/>
-							<iconPacks:PackIconMaterial Kind="Play" Margin="10,0,0,0" Width="16" Height="16" VerticalAlignment="Center" />
-						</StackPanel>
-					</Button>
-				</Grid>
-			</Expander>
-			<Expander Grid.Row="1" Header="验证集预览" IsExpanded="True" HorizontalAlignment="Stretch" VerticalAlignment="Top">
-				<ScrollViewer>
-					<ItemsControl ItemsSource="{Binding ValidDatasetImagePreviews}">
-						<ItemsControl.ItemsPanel>
-							<ItemsPanelTemplate>
-									<WrapPanel/>
-							</ItemsPanelTemplate>
-						</ItemsControl.ItemsPanel>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<Button Width="90" Height="90" Margin="5" Padding="0"
-										Background="White"
-										CornerRadius="5">
-									<Image 
-										Source="{Binding .}" 
-										Stretch="UniformToFill"/>
-									<Button.Styles>
-										<Style Selector="Button:pointerover">
-											<Setter Property="Background" Value="Black"/>
-											<Setter Property="Opacity" Value="0.5"/>
-										</Style>
-										<Style Selector="Button">
-											<Setter Property="Background" Value="Transparent"/>
-										</Style>
-									</Button.Styles>
-								</Button>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</ScrollViewer>
-			</Expander>
-		</Grid>
-		<!--结果呈现-->
-		<Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="10">
-			<!--模型性能指标(分类模型和目标检测模型两个模板)-->
-			<StackPanel Grid.Row="0" Orientation="Vertical">
-				<TextBlock Text="模型性能指标" FontSize="18" FontWeight="Bold"/>
-				<Border Margin="0,10,0,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
-					<Grid>
-						<!--分类模型性能指标（与目标检测模型性能指标 的可见性是互斥的）-->
-						<Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding IsCheckedClassifyMode}">
-							<UniformGrid Rows="1" Columns="4">
-								<Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="Accuracy" HorizontalAlignment="Center"/>
-										<TextBlock Text="98%" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="Recall" HorizontalAlignment="Center"/>
-										<TextBlock Text="99%" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="F1 Score" HorizontalAlignment="Center"/>
-										<TextBlock Text="97.8" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical" VerticalAlignment="Center">
-										<TextBlock Text="Time" HorizontalAlignment="Center"/>
-										<TextBlock Text="5.3s" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-							</UniformGrid>
-							<Border Grid.Row="1" Height="300" Margin="10" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
-								<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="图表展示区域，显示混淆矩阵图"/>
-							</Border>
-						</Grid>
-						<!--目标检测模型性能指标-->
-						<Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding !IsCheckedClassifyMode}">
-							<UniformGrid Rows="0" Columns="5">
-								<Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="mAP@.5" HorizontalAlignment="Center"/>
-										<TextBlock Text="98%" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="mAP@.5:.95" HorizontalAlignment="Center"/>
-										<TextBlock Text="99%" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical"  VerticalAlignment="Center">
-										<TextBlock Text="Precision" HorizontalAlignment="Center"/>
-										<TextBlock Text="97.8" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical" VerticalAlignment="Center">
-										<TextBlock Text="Recall" HorizontalAlignment="Center"/>
-										<TextBlock Text="99%" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-								<Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-									<StackPanel Orientation="Vertical" VerticalAlignment="Center">
-										<TextBlock Text="Time" HorizontalAlignment="Center"/>
-										<TextBlock Text="5.3s" HorizontalAlignment="Center"/>
-									</StackPanel>
-								</Border>
-							</UniformGrid>
-							<Border Grid.Row="1" Height="300" Margin="10" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
-								<TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="图表展示区域，mAP/PR曲线图"/>
-							</Border>
-						</Grid>
-					</Grid>
-				</Border>
-			</StackPanel>
-			<StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,10,0,0">
-				<TextBlock Text="推理结果可视化" FontSize="18" FontWeight="Bold"/>
-				<!--分类模型可见 可见性和目标检测推理结果可视化互斥-->
-				<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Margin="0,10,0,0" IsVisible="{Binding IsCheckedClassifyMode}">
-					<ScrollViewer>
-						<ItemsControl>
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<StackPanel Orientation="Vertical" Spacing="10" Margin="10"/>
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<Grid RowDefinitions="40,Auto">
-										<TextBlock Grid.Row="0" Text="ClassName"/>
-										<ListBox Grid.Row="1">
-											<ItemsControl>
-												<ItemsControl.ItemsPanel>
-													<ItemsPanelTemplate>
-														<VirtualizingStackPanel Orientation="Horizontal"/>
-													</ItemsPanelTemplate>
-												</ItemsControl.ItemsPanel>
-												<ItemsControl.ItemTemplate>
-													<DataTemplate>
-														<Border CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
-															<Image Margin="3"/>
-														</Border>
-													</DataTemplate>
-												</ItemsControl.ItemTemplate>
-											</ItemsControl>
-										</ListBox>
-									</Grid>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
-				</Border>
-				<!--目标检测推理结果可视化-->
-				<Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="5" Margin="0,10,0,0" IsVisible="{Binding !IsCheckedClassifyMode}">
-					<ScrollViewer>
-						<ItemsControl>
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<WrapPanel Margin="10"/>
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<Border BorderBrush="LightGray" BorderThickness="1">
-										<Grid RowDefinitions="*,Auto">
-											<Image Grid.Row="0" Margin="5"/>
-											<StackPanel Grid.Row="1" Orientation="Horizontal">
-												<TextBlock Text="ID:"/>
-												<TextBlock Text="DET-001" Margin="5,0,0,0"/>
-												<TextBlock Text="|" Margin="5,0,0,0"/>
-												<TextBlock Text="目标数:" Margin="5,0,0,0"/>
-												<TextBlock Text="5" Margin="5,0,0,0"/>
-												<TextBlock Text="|:" Margin="5,0,0,0"/>
-												<TextBlock Text="置信度:" Margin="5,0,0,0"/>
-												<TextBlock Text="0.85" Margin="5,0,0,0"/>
-											</StackPanel>
-										</Grid>
-									</Border>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
-				</Border>
-			</StackPanel>
-		</Grid>
-	</Grid>
+             xmlns:viewmodel="using:AutoTrainer.ViewModels"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:app="clr-namespace:AutoTrainer"
+             mc:Ignorable="d"
+             d:DesignWidth="1200"
+             d:DesignHeight="850"
+             x:Class="AutoTrainer.Views.UserControls.ValidModelPerformanceView"
+             x:DataType="{x:Type viewmodel:ValidModelPerformanceViewModel}"
+             DataContext="{x:Static app:App.ValidationVM}">
+    <Grid ColumnDefinitions=".3*,.7*">
+        <!--任务类型，模型选择，开始验证-->
+        <Grid Margin="10" RowDefinitions="Auto,*">
+            <Expander Header="任务配置" IsExpanded="True" Margin="0,0,0,10" HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,60">
+                    <!--任务类型-->
+                    <StackPanel Grid.Row="0" Orientation="Vertical">
+                        <Label Content="任务类型"/>
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton
+                                Content="目标分类"
+                                IsChecked="{Binding IsCheckedClassifyMode}"
+                                Margin="0,0,20,0"/>
+                            <RadioButton
+                                Content="目标检测"
+                                IsChecked="{Binding !IsCheckedClassifyMode}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <!--模型权重-->
+                    <StackPanel Grid.Row="1" Orientation="Vertical" Margin="0,10,0,0">
+                        <Label Content="当前模型权重"/>
+                        <Grid ColumnDefinitions="*,45">
+                            <TextBox Text="{Binding ModelWeightsPath}"/>
+                            <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Stretch"
+                                    Command="{Binding SelectWeightsFileCommand}">
+                                <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                    <!--验证目录-->
+                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,10,0,0">
+                        <Label Content="验证集目录"/>
+                        <Grid ColumnDefinitions="*,45">
+                            <TextBox Text="{Binding ValidDatasetPath}"/>
+                            <Button
+                                Grid.Column="1"
+                                Margin="8,0,0,0"
+                                VerticalAlignment="Stretch"
+                                Command="{Binding SelectValidDatasetPathCommand}">
+                                <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                    <!--COCO标注文件-->
+                    <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,10,0,0" IsVisible="{Binding !IsCheckedClassifyMode}">
+                        <Label Content="COCO标注文件"/>
+                        <Grid ColumnDefinitions="*,45">
+                            <TextBox Text="{Binding CocoAnnotationPath}"/>
+                            <Button Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Stretch"
+                                    Command="{Binding SelectCocoFileCommand}">
+                                <iconPacks:PackIconMaterial Kind="DotsHorizontal" Width="16" Height="16" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                    <!--验证开始-->
+                    <Button Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Command="{Binding StartVerificationCommand}"
+                            IsEnabled="{Binding !IsVerifying}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="开始验证"/>
+                            <iconPacks:PackIconMaterial Kind="Play" Margin="10,0,0,0" Width="16" Height="16" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Expander>
+            <Expander Grid.Row="1" Header="验证集预览" IsExpanded="True" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding ValidDatasetImagePreviews}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="90" Height="90" Margin="5"
+                                        Background="White"
+                                        CornerRadius="5"
+                                        BorderBrush="LightGray" BorderThickness="1">
+                                    <Image
+                                        Source="{Binding .}"
+                                        Stretch="UniformToFill"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Expander>
+        </Grid>
+        <!--结果呈现-->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="10">
+            <ProgressBar IsIndeterminate="{Binding IsVerifying}" Width="100" Height="10" ZIndex="1"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0"/>
+            <!--模型性能指标-->
+            <StackPanel Grid.Row="0" Orientation="Vertical">
+                <TextBlock Text="模型性能指标" FontSize="18" FontWeight="Bold"/>
+                <Border Margin="0,10,0,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
+                    <Grid>
+                        <!--分类模型性能指标-->
+                        <Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding IsCheckedClassifyMode}">
+                            <UniformGrid Rows="1" Columns="4">
+                                <Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="Accuracy" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ClassificationMetrics.Accuracy}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="Recall" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ClassificationMetrics.Recall}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="F1 Score" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ClassificationMetrics.F1Score}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="150" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                                        <TextBlock Text="Time" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ClassificationMetrics.Time}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                            <lvc:CartesianChart Grid.Row="1" Series="{Binding ChartSeries}" XAxes="{Binding ChartAxes}" Height="300" Margin="10"/>
+                        </Grid>
+                        <!--目标检测模型性能指标-->
+                        <Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding !IsCheckedClassifyMode}">
+                            <UniformGrid Rows="1" Columns="5">
+                                <Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="mAP@.5" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetectionMetrics.Map50}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="mAP@.5:.95" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetectionMetrics.Map50_95}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical"  VerticalAlignment="Center">
+                                        <TextBlock Text="Precision" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetectionMetrics.Precision}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                                        <TextBlock Text="Recall" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetectionMetrics.Recall}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Width="120" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                                        <TextBlock Text="Time" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DetectionMetrics.Time}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                            <lvc:CartesianChart Grid.Row="1" Series="{Binding ChartSeries}" XAxes="{Binding ChartAxes}" Height="300" Margin="10"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </StackPanel>
+            <TabControl Grid.Row="1" Margin="0,10,0,0" SelectedIndex="{Binding ResultTabIndex}">
+                <TabItem Header="推理结果">
+                    <Grid>
+                        <!-- 分类模型结果 -->
+                        <ScrollViewer IsVisible="{Binding IsCheckedClassifyMode}">
+                            <ItemsControl ItemsSource="{Binding ClassifiedResults}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Vertical" Spacing="10" Margin="10"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodel:ClassifiedImageGroup">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ClassName}" FontSize="16" FontWeight="Bold"/>
+                                            <ItemsControl ItemsSource="{Binding Images}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border CornerRadius="5" BorderBrush="LightGray" BorderThickness="1" Margin="3" Width="100" Height="100">
+                                                            <Image Source="{Binding .}" Stretch="UniformToFill"/>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <!-- 目标检测结果 -->
+                        <ScrollViewer IsVisible="{Binding !IsCheckedClassifyMode}">
+                            <ItemsControl ItemsSource="{Binding DetectionResults}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Margin="10"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodel:DetectedImageResult">
+                                        <Border BorderBrush="LightGray" BorderThickness="1" Margin="5">
+                                            <Canvas Width="200" Height="200">
+                                                <Image Source="{Binding SourceImage}" Stretch="Uniform" Width="200" Height="200"/>
+                                                <ItemsControl ItemsSource="{Binding Boxes}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="viewmodel:BoundingBox">
+                                                            <Rectangle
+                                                                Canvas.Left="{Binding Rect.X}"
+                                                                Canvas.Top="{Binding Rect.Y}"
+                                                                Width="{Binding Rect.Width}"
+                                                                Height="{Binding Rect.Height}"
+                                                                Stroke="{Binding Stroke}"
+                                                                StrokeThickness="{Binding StrokeThickness}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Canvas>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="推理输出">
+                    <ScrollViewer>
+                        <TextBox Text="{Binding VerificationOutput}" IsReadOnly="True" TextWrapping="Wrap" Margin="10"/>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Grid>
 </UserControl>

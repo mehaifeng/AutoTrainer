@@ -6,7 +6,7 @@
              xmlns:themes="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
              RequestedThemeVariant="Default">
 	<Application.Styles>
-		<Style Selector="TextBox">
+		<!--<Style Selector="TextBox">
 			<Setter Property="FontFamily">
 				Source Han Sans CN Normal
 			</Setter>
@@ -25,7 +25,7 @@
 			<Setter Property="FontFamily">
 				Source Han Sans CN Normal
 			</Setter>
-		</Style>
+		</Style>-->
 		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
 		<StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
 	</Application.Styles>

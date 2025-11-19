@@ -94,7 +94,7 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isEnablePythonConfigView = true;
         [ObservableProperty]
-        private string? environmentState = "Environment State";
+        private string? environmentState = "Python环境状态";
         [ObservableProperty]
         private IBrush stateForeground = Brushes.Green;
         [ObservableProperty]
@@ -482,8 +482,11 @@ namespace AutoTrainer.ViewModels
         {
             if (value != null)
             {
-                // 更新全局配置
-                App.TrainModel.TaskType = value.Value;
+                if (App.TrainModel != null)
+                {
+                    // 更新全局配置
+                    App.TrainModel.TaskType = value.Value;
+                }
 
                 // 清空之前的选择
                 SelectModel = null;

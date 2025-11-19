@@ -15,6 +15,14 @@ namespace AutoTrainer
 {
     public partial class App : Application
     {
+        #region ViewModels
+        public static MainWindowViewModel MainVM { get; } = new();
+        public static ModelConfigViewModel ModelConfigVM { get; } = new();
+        public static TrainingViewModel TrainingVM { get; } = new();
+        public static ValidModelPerformanceViewModel ValidationVM { get; } = new();
+        #endregion
+
+
         public override void Initialize()
         {
             Log.Information("初始化 AutoTrainer 应用程序");
@@ -65,7 +73,7 @@ namespace AutoTrainer
         #region 全局变量
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
-        public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
+        public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "runs");
         public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "PyTrain");
         public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "PyClassify");
         public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "AppLogs");

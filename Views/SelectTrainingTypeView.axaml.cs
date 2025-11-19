@@ -16,7 +16,10 @@ public partial class SelectTrainingTypeView : Window
     private void ImageClassify_Train_Btn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         this.IsVisible = false;
-        MainWindow mainWindow = new MainWindow();
+        MainWindow mainWindow = new MainWindow
+        {
+            DataContext = App.MainVM
+        };
         mainWindow.Show();
     }
     private void Connect_Btn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

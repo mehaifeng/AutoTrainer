@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace AutoTrainer;
+namespace AutoTrainer.Views.UserControls;
 
 public partial class ValidModelPerformanceView : UserControl
 {

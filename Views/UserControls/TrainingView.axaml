@@ -8,6 +8,7 @@
 			 xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
 			 xmlns:model="using:AutoTrainer.Models"
 			 xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:app="clr-namespace:AutoTrainer"
              mc:Ignorable="d"
              FontFamily=""
 			 d:DesignWidth="1200"
@@ -15,7 +16,8 @@
 			 Padding="10"
 			 x:Name="TrainTabItem"
 			 x:DataType="vm:TrainingViewModel"
-             x:Class="AutoTrainer.TrainingView">
+             x:Class="AutoTrainer.TrainingView"
+             DataContext="{x:Static app:App.TrainingVM}">
 	<Interaction.Behaviors>
 		<EventTriggerBehavior EventName="Loaded">
 			<InvokeCommandAction Command="{Binding LoadParamInfoCommand}"/>
