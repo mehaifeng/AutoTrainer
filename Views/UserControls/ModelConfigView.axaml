@@ -31,7 +31,7 @@
 			<ColumnDefinition Width=".33*"/>
 			<ColumnDefinition Width=".67*"/>
 		</Grid.ColumnDefinitions>
-		<Border  Grid.Column="0" Padding="10" BorderThickness="0,0,1,0" BorderBrush="Black">
+		<Border Grid.Column="0" Padding="10" Margin="5,5,0,5" BorderThickness="1" CornerRadius="5" BorderBrush="Black">
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*"/>
@@ -98,7 +98,7 @@
 								<Panel>
 									<!-- 默认文本 -->
 									<StackPanel Orientation="Horizontal" IsVisible="{Binding !IsScanningVenv}">
-										<iconPacks:PackIconMaterial Kind="FolderSearchOutline" />
+										<iconPacks:PackIconMaterial Kind="FolderSearchOutline"  VerticalAlignment="Center"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
 									<!-- Loading图标 -->
@@ -126,7 +126,7 @@
 								<Panel>
 									<!-- 默认文本 -->
 									<StackPanel Orientation="Horizontal" IsVisible="{Binding IsEnablePythonConfigView}">
-										<iconPacks:PackIconMaterial Kind="PlusCircleOutline" />
+										<iconPacks:PackIconMaterial Kind="PlusCircleOutline" VerticalAlignment="Center"/>
 										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
 									</StackPanel>
 								<!-- Loading图标 -->
@@ -199,12 +199,13 @@
 						IsVisible="{Binding IsVisibleInstallMissing}"
 						Command="{Binding InstallMissingAppCommand}"
 						Classes="outline"
+						HorizontalContentAlignment="Center"
 						Content="安装缺失的软件包"
 						Foreground="Red"/>
 					<ProgressBar
 						Margin="0,0,0,10"
-						BorderThickness="1"
-						Foreground="White"
+						Height="10"
+						Width="35"
 						IsIndeterminate="{Binding IsRunningProgressBar}"
 						IsVisible="{Binding IsVisibleProgressBar}"/>
 				</StackPanel>
@@ -214,16 +215,18 @@
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height=".75*"/>
+					<RowDefinition Height="1"/>
 					<RowDefinition Height=".25*"/>
 				</Grid.RowDefinitions>
+				<!--选择任务类型 和 选择预训练模型 模型介绍-->
 				<Grid Grid.Row="0">
-					<Border>
+					<Border BorderBrush="Black" BorderThickness="1" Margin="5" CornerRadius="5">
 						<Grid
-							Width="{Binding ElementName=Outout_tb,Path=Width}"
-							HorizontalAlignment="Center" 
-							VerticalAlignment="Center">
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Margin="10">
 							<Grid.RowDefinitions>
-								<RowDefinition Height="70"/>
+								<RowDefinition Height="Auto"/>
 								<RowDefinition Height="*"/>
 							</Grid.RowDefinitions>
 							<Grid 
@@ -237,9 +240,14 @@
 									<ColumnDefinition/>
 								</Grid.ColumnDefinitions>
 								<!--任务类型选择-->
-								<Grid Grid.Column="0">
-									<TextBlock Text="任务类型" FontSize="12" FontWeight="SemiBold"/>
+								<Grid Grid.Column="0" RowDefinitions="Auto,Auto" >
+									<TextBlock 
+										Grid.Row="0"
+										Text="任务类型"
+										FontSize="12"
+										FontWeight="SemiBold"/>
 									<ComboBox
+										Grid.Row="1"
 										IsEnabled="{Binding !IsTaskTypeChanging}"
 										HorizontalAlignment="Left"
 										VerticalAlignment="Bottom"
@@ -249,10 +257,11 @@
 									</ComboBox>
 								</Grid>
 								<!--选择预训练模型Combobox-->
-								<Grid Grid.Column="1" Margin="10,0,0,0">
+								<Grid Grid.Column="1" RowDefinitions="Auto,Auto" Margin="10,0,0,0">
 									<TextBlock
 										Text="选择预训练模型" FontSize="12" FontWeight="SemiBold"/>
 									<ComboBox
+										Grid.Row="1"
 										IsEnabled="{Binding !IsTaskTypeChanging}"
 										Width="200"
 										HorizontalAlignment="Left"
@@ -275,6 +284,7 @@
 									Command="{Binding SelectLocalModelCommand}"
 									Content="选择本地权重"
 									Margin="10,0,0,0"/>
+								<!--选择本地模型名称 Selected Local Weight Name-->
 								<TextBlock
 									Grid.Column="3"
 									IsVisible="{Binding IsVisibleIntroduce}"
@@ -325,8 +335,9 @@
 						</Grid>
 					</Border>
 				</Grid>
+				<GridSplitter Grid.Row="1"/>
 				<!--输出文本框和执行按钮-->
-				<Border Grid.Row="1" Margin="0,5,0,0">
+				<Border Grid.Row="2">
 					<Grid>
 						<!--输出-->
 						<TextBox
