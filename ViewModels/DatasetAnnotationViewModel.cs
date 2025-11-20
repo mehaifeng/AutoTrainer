@@ -345,11 +345,13 @@ namespace AutoTrainer.ViewModels
                     TrainDatasetPath = Imagesfolder;
                     if (App.TrainModel?.TaskType == "classification")
                     {
-                        App.TrainModel.ClassifyTrainImagesPath = TrainDatasetPath;
+                        App.TrainModel.Classification ??= new ClassificationConfig();
+                        App.TrainModel.Classification.TrainDataPath = TrainDatasetPath;
                     }
                     else if(App.TrainModel?.TaskType == "detection")
                     {
-                        App.TrainModel.TrainImagesPath = TrainDatasetPath;
+                        App.TrainModel.Detection ??= new DetectionConfig();
+                        App.TrainModel.Detection.TrainImagesPath = TrainDatasetPath;
                     }
                 }
             }
@@ -360,7 +362,8 @@ namespace AutoTrainer.ViewModels
             }
             finally
             {
-                App.TrainModel.TrainImagesPath = Imagesfolder;
+                App.TrainModel.Detection ??= new DetectionConfig();
+                App.TrainModel.Detection.TrainImagesPath = Imagesfolder;
             }
         }
 
@@ -435,7 +438,8 @@ namespace AutoTrainer.ViewModels
             }
             finally
             {
-                App.TrainModel.TrainAnnotationPath = COCOAnnotationPath;
+                App.TrainModel.Detection ??= new DetectionConfig();
+                App.TrainModel.Detection.TrainAnnotationPath = COCOAnnotationPath;
                 IsLoading = false;
                 ProgressState = "就绪";
             }
@@ -1145,7 +1149,8 @@ namespace AutoTrainer.ViewModels
                             Debug.WriteLine($"Error processing image {imageItem.FilePath}: {ex.Message}");
                         }
                     }
-                    App.TrainModel.ClassifyTrainImagesPath = baseOutputPath;
+                    App.TrainModel.Classification ??= new ClassificationConfig();
+                    App.TrainModel.Classification.TrainDataPath = baseOutputPath;
                     Dispatcher.UIThread.Invoke(() =>
                     {
                         NotifyManager.CreateMessage()
@@ -1235,7 +1240,8 @@ namespace AutoTrainer.ViewModels
                     }
                 });
 
-                App.TrainModel.ClassifyTrainImagesPath = baseOutputPath;
+                App.TrainModel.Classification ??= new ClassificationConfig();
+                App.TrainModel.Classification.TrainDataPath = baseOutputPath;
                 App.TrainModel.NumClasses = Directory.GetDirectories(baseOutputPath).Length;
                 NotifyManager.CreateMessage()
                     .Accent("#161616")

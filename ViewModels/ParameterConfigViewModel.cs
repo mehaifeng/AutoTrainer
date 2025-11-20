@@ -497,15 +497,39 @@ namespace AutoTrainer.ViewModels
             UpdateUIForTaskType();
             if (App.TrainModel.TaskType == "classification")
             {
-                TrainSetPath = App.TrainModel?.ClassifyTrainImagesPath;
-                ValidationSetPath = App.TrainModel?.ClassifyValidImagesPath;
+                TrainSetPath = App.TrainModel?.Classification?.TrainDataPath;
+                ValidationSetPath = App.TrainModel?.Classification?.ValDataPath;
+
+                // Load data augmentation settings
+                if (App.TrainModel?.Classification?.DataAugmentation != null)
+                {
+                    RandomHorizonFlipChecked = App.TrainModel.Classification.DataAugmentation.RandomHorizonFlip;
+                    RandomVerticalFlipChecked = App.TrainModel.Classification.DataAugmentation.RandomVerticalFlip;
+                    RandomRotationChecked = App.TrainModel.Classification.DataAugmentation.RandomRotation;
+                    RandomBrightnessChecked = App.TrainModel.Classification.DataAugmentation.RandomBrightness;
+                    RandomContrastChecked = App.TrainModel.Classification.DataAugmentation.RandomContrast;
+                    RandomZoomChecked = App.TrainModel.Classification.DataAugmentation.RandomZoom;
+                }
+
+                // Load validation split
+                if (App.TrainModel?.Classification?.ValidationSplit > 0)
+                {
+                    SelectedValidationSetRate = App.TrainModel.Classification.ValidationSplit;
+                }
             }
             else if(App.TrainModel?.TaskType == "detection")
             {
-                TrainImagesPath = App.TrainModel?.TrainImagesPath;
-                ValImagesPath = App.TrainModel?.ValImagesPath;
-                TrainAnnotationPath = App.TrainModel?.TrainAnnotationPath;
-                ValAnnotationPath = App.TrainModel?.ValAnnotationPath;
+                TrainImagesPath = App.TrainModel?.Detection?.TrainImagesPath;
+                ValImagesPath = App.TrainModel?.Detection?.ValImagesPath;
+                TrainAnnotationPath = App.TrainModel?.Detection?.TrainAnnotationPath;
+                ValAnnotationPath = App.TrainModel?.Detection?.ValAnnotationPath;
+
+                // Load annotation format
+                if (!string.IsNullOrEmpty(App.TrainModel?.Detection?.AnnotationFormat))
+                {
+                    SelectedAnnotationFormat = App.TrainModel.Detection.AnnotationFormat;
+                }
+
                 if (App.TrainModel != null)
                 {
                     IsDetectionTask = App.TrainModel.TaskType == "detection";
@@ -632,15 +656,16 @@ namespace AutoTrainer.ViewModels
             // 根据任务类型保存特定配置
             if (IsDetectionTask)
             {
-                // 检测任务配置
-                App.TrainModel.TrainImagesPath = TrainImagesPath;
-                App.TrainModel.ValImagesPath = ValImagesPath;
-                App.TrainModel.TrainAnnotationPath = TrainAnnotationPath;
-                App.TrainModel.ValAnnotationPath = ValAnnotationPath;
-                App.TrainModel.AnnotationFormat = SelectedAnnotationFormat;
+                // 检测任务配置 - 使用新结构
+                App.TrainModel.Detection ??= new DetectionConfig();
+                App.TrainModel.Detection.TrainImagesPath = TrainImagesPath;
+                App.TrainModel.Detection.ValImagesPath = ValImagesPath;
+                App.TrainModel.Detection.TrainAnnotationPath = TrainAnnotationPath;
+                App.TrainModel.Detection.ValAnnotationPath = ValAnnotationPath;
+                App.TrainModel.Detection.AnnotationFormat = SelectedAnnotationFormat;
 
                 // 检测损失函数配置
-                App.TrainModel.DetectionLoss = new DetectionLossConfig
+                App.TrainModel.Detection.DetectionLoss = new DetectionLossConfig
                 {
                     RpnClassificationWeight = RpnClassificationWeight,
                     RpnBoxRegressionWeight = RpnBoxRegressionWeight,
@@ -655,19 +680,22 @@ namespace AutoTrainer.ViewModels
             }
             else
             {
-                // 分类任务配置
-                App.TrainModel.ClassifyValidImagesSplit = SelectedValidationSetRate;
-                App.TrainModel.ClassifyTrainImagesPath = TrainSetPath;
-                App.TrainModel.ClassifyValidImagesPath = ValidationSetPath;
-                App.TrainModel.RandomHorizonFlipChecked = RandomHorizonFlipChecked;
-                App.TrainModel.RandomVerticalFlipChecked = RandomVerticalFlipChecked;
-                App.TrainModel.RandomRotationChecked = RandomRotationChecked;
-                App.TrainModel.RandomBrightnessChecked = RandomBrightnessChecked;
-                App.TrainModel.RandomContrastChecked = RandomContrastChecked;
-                App.TrainModel.RandomZoomChecked = RandomZoomChecked;
+                // 分类任务配置 - 使用新结构
+                App.TrainModel.Classification ??= new ClassificationConfig();
+                App.TrainModel.Classification.TrainDataPath = TrainSetPath;
+                App.TrainModel.Classification.ValDataPath = ValidationSetPath;
+                App.TrainModel.Classification.ValidationSplit = SelectedValidationSetRate;
+
+                // 数据增强配置
+                App.TrainModel.Classification.DataAugmentation.RandomHorizonFlip = RandomHorizonFlipChecked;
+                App.TrainModel.Classification.DataAugmentation.RandomVerticalFlip = RandomVerticalFlipChecked;
+                App.TrainModel.Classification.DataAugmentation.RandomRotation = RandomRotationChecked;
+                App.TrainModel.Classification.DataAugmentation.RandomBrightness = RandomBrightnessChecked;
+                App.TrainModel.Classification.DataAugmentation.RandomContrast = RandomContrastChecked;
+                App.TrainModel.Classification.DataAugmentation.RandomZoom = RandomZoomChecked;
 
                 // 分类损失函数配置
-                App.TrainModel.LossFunction = new LossFunctionModel
+                App.TrainModel.Classification.LossFunction = new LossFunctionModel
                 {
                     type = SelectedLossFunction,
                     args = new Params

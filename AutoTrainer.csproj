@@ -14,18 +14,19 @@
 
   <ItemGroup>
     <AvaloniaXaml Remove="CmdHelper\**" />
+    <AvaloniaXaml Remove="Logs\**" />
     <Compile Remove="CmdHelper\**" />
+    <Compile Remove="Logs\**" />
     <EmbeddedResource Remove="CmdHelper\**" />
+    <EmbeddedResource Remove="Logs\**" />
     <None Remove="CmdHelper\**" />
+    <None Remove="Logs\**" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Assets\ImageClassify.webp" />
     <None Remove="Assets\ValuePredict.webp" />
     <None Remove="nul" />
-    <None Update="Configs\ModelParam.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Configs\Requirements.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

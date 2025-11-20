@@ -165,64 +165,72 @@ namespace AutoTrainer.ViewModels
 
                 if (modelParam.TaskType == "classification")
                 {
-                    // 分类任务专用参数
+                    // 分类任务专用参数 - 使用新结构
                     sb.AppendLine("=== 分类任务专用参数 ===");
-                    sb.AppendLine("验证集比例: " + modelParam.ClassifyValidImagesSplit);
-                    sb.AppendLine("训练数据路径: " + modelParam.ClassifyTrainImagesPath);
-                    sb.AppendLine("验证数据路径: " + modelParam.ClassifyValidImagesPath);
+                    sb.AppendLine("验证集比例: " + (modelParam.Classification?.ValidationSplit ?? 0f));
+                    sb.AppendLine("训练数据路径: " + modelParam.Classification?.TrainDataPath);
+                    sb.AppendLine("验证数据路径: " + modelParam.Classification?.ValDataPath);
 
                     // 数据增强参数
                     sb.AppendLine("数据增强设置:");
-                    sb.AppendLine("  - 随机水平翻转: " + (modelParam.RandomHorizonFlipChecked ? "启用" : "禁用"));
-                    sb.AppendLine("  - 随机垂直翻转: " + (modelParam.RandomVerticalFlipChecked ? "启用" : "禁用"));
-                    sb.AppendLine("  - 随机旋转: " + (modelParam.RandomRotationChecked ? "启用" : "禁用"));
-                    sb.AppendLine("  - 随机缩放: " + (modelParam.RandomZoomChecked ? "启用" : "禁用"));
-                    sb.AppendLine("  - 随机亮度: " + (modelParam.RandomBrightnessChecked ? "启用" : "禁用"));
-                    sb.AppendLine("  - 随机对比度: " + (modelParam.RandomContrastChecked ? "启用" : "禁用"));
+                    var dataAug = modelParam.Classification?.DataAugmentation;
+                    if (dataAug != null)
+                    {
+                        sb.AppendLine("  - 随机水平翻转: " + (dataAug.RandomHorizonFlip ? "启用" : "禁用"));
+                        sb.AppendLine("  - 随机垂直翻转: " + (dataAug.RandomVerticalFlip ? "启用" : "禁用"));
+                        sb.AppendLine("  - 随机旋转: " + (dataAug.RandomRotation ? "启用" : "禁用"));
+                        sb.AppendLine("  - 随机缩放: " + (dataAug.RandomZoom ? "启用" : "禁用"));
+                        sb.AppendLine("  - 随机亮度: " + (dataAug.RandomBrightness ? "启用" : "禁用"));
+                        sb.AppendLine("  - 随机对比度: " + (dataAug.RandomContrast ? "启用" : "禁用"));
+                    }
+                    else
+                    {
+                        sb.AppendLine("  数据增强配置未设置");
+                    }
 
-                    // 损失函数配置
-                    if (modelParam.LossFunction != null)
+                    // 损失函数配置 - 使用新结构
+                    if (modelParam.Classification?.LossFunction != null)
                     {
                         sb.AppendLine("损失函数配置:");
-                        sb.AppendLine("  - 类型: " + modelParam.LossFunction.type);
-                        if (modelParam.LossFunction.args != null)
+                        sb.AppendLine("  - 类型: " + modelParam.Classification.LossFunction.type);
+                        if (modelParam.Classification.LossFunction.args != null)
                         {
-                            if (modelParam.LossFunction.args.reduction != null)
-                                sb.AppendLine("  - 计算方式: " + modelParam.LossFunction.args.reduction);
-                            if (modelParam.LossFunction.args.label_smoothing.HasValue)
-                                sb.AppendLine("  - 标签平滑: " + modelParam.LossFunction.args.label_smoothing);
-                            if (modelParam.LossFunction.args.Beta.HasValue)
-                                sb.AppendLine("  - Beta参数: " + modelParam.LossFunction.args.Beta);
+                            if (modelParam.Classification.LossFunction.args.reduction != null)
+                                sb.AppendLine("  - 计算方式: " + modelParam.Classification.LossFunction.args.reduction);
+                            if (modelParam.Classification.LossFunction.args.label_smoothing.HasValue)
+                                sb.AppendLine("  - 标签平滑: " + modelParam.Classification.LossFunction.args.label_smoothing);
+                            if (modelParam.Classification.LossFunction.args.Beta.HasValue)
+                                sb.AppendLine("  - Beta参数: " + modelParam.Classification.LossFunction.args.Beta);
                         }
                     }
                 }
                 else if (modelParam.TaskType == "detection")
                 {
-                    // 检测任务专用参数
+                    // 检测任务专用参数 - 使用新结构
                     sb.AppendLine("=== 检测任务专用参数 ===");
-                    sb.AppendLine("标注格式: " + modelParam.AnnotationFormat);
-                    sb.AppendLine("训练图像路径: " + modelParam.TrainImagesPath);
-                    sb.AppendLine("训练标注文件: " + modelParam.TrainAnnotationPath);
-                    sb.AppendLine("验证图像路径: " + modelParam.ValImagesPath);
-                    sb.AppendLine("验证标注文件: " + modelParam.ValAnnotationPath);
+                    sb.AppendLine("标注格式: " + modelParam.Detection?.AnnotationFormat);
+                    sb.AppendLine("训练图像路径: " + modelParam.Detection?.TrainImagesPath);
+                    sb.AppendLine("训练标注文件: " + modelParam.Detection?.TrainAnnotationPath);
+                    sb.AppendLine("验证图像路径: " + modelParam.Detection?.ValImagesPath);
+                    sb.AppendLine("验证标注文件: " + modelParam.Detection?.ValAnnotationPath);
 
                     // 检测损失函数配置
-                    if (modelParam.DetectionLoss != null)
+                    if (modelParam.Detection?.DetectionLoss != null)
                     {
                         sb.AppendLine("检测损失函数配置:");
-                        sb.AppendLine("  - RPN分类权重: " + modelParam.DetectionLoss.RpnClassificationWeight);
-                        sb.AppendLine("  - RPN回归权重: " + modelParam.DetectionLoss.RpnBoxRegressionWeight);
-                        sb.AppendLine("  - ROI分类权重: " + modelParam.DetectionLoss.RoIClassificationWeight);
-                        sb.AppendLine("  - ROI回归权重: " + modelParam.DetectionLoss.RoIBoxRegressionWeight);
+                        sb.AppendLine("  - RPN分类权重: " + modelParam.Detection.DetectionLoss.RpnClassificationWeight);
+                        sb.AppendLine("  - RPN回归权重: " + modelParam.Detection.DetectionLoss.RpnBoxRegressionWeight);
+                        sb.AppendLine("  - ROI分类权重: " + modelParam.Detection.DetectionLoss.RoIClassificationWeight);
+                        sb.AppendLine("  - ROI回归权重: " + modelParam.Detection.DetectionLoss.RoIBoxRegressionWeight);
 
-                        if (modelParam.DetectionLoss.FocalLossAlpha.HasValue)
-                            sb.AppendLine("  - Focal Loss Alpha: " + modelParam.DetectionLoss.FocalLossAlpha);
-                        if (modelParam.DetectionLoss.FocalLossGamma.HasValue)
-                            sb.AppendLine("  - Focal Loss Gamma: " + modelParam.DetectionLoss.FocalLossGamma);
+                        if (modelParam.Detection.DetectionLoss.FocalLossAlpha.HasValue)
+                            sb.AppendLine("  - Focal Loss Alpha: " + modelParam.Detection.DetectionLoss.FocalLossAlpha);
+                        if (modelParam.Detection.DetectionLoss.FocalLossGamma.HasValue)
+                            sb.AppendLine("  - Focal Loss Gamma: " + modelParam.Detection.DetectionLoss.FocalLossGamma);
 
-                        sb.AppendLine("  - IoU损失类型: " + modelParam.DetectionLoss.IouLossType);
-                        sb.AppendLine("  - 掩码权重: " + modelParam.DetectionLoss.MaskWeight);
-                        sb.AppendLine("  - 关键点权重: " + modelParam.DetectionLoss.KeypointWeight);
+                        sb.AppendLine("  - IoU损失类型: " + modelParam.Detection.DetectionLoss.IouLossType);
+                        sb.AppendLine("  - 掩码权重: " + modelParam.Detection.DetectionLoss.MaskWeight);
+                        sb.AppendLine("  - 关键点权重: " + modelParam.Detection.DetectionLoss.KeypointWeight);
                     }
                 }
 
@@ -442,23 +450,24 @@ namespace AutoTrainer.ViewModels
             Log.Debug("开始图像增强过程");
             try
             {
+                var dataAug = App.TrainModel.Classification?.DataAugmentation ?? new DataAugmentationConfig();
                 bool[] checks =
                 [
-                    App.TrainModel.RandomRotationChecked,
-                    App.TrainModel.RandomZoomChecked,
-                    App.TrainModel.RandomBrightnessChecked,
-                    App.TrainModel.RandomContrastChecked,
-                    App.TrainModel.RandomHorizonFlipChecked,
-                    App.TrainModel.RandomVerticalFlipChecked
+                    dataAug.RandomRotation,
+                    dataAug.RandomZoom,
+                    dataAug.RandomBrightness,
+                    dataAug.RandomContrast,
+                    dataAug.RandomHorizonFlip,
+                    dataAug.RandomVerticalFlip
                 ];
 
                 var enabledAugmentations = new List<string>();
-                if (App.TrainModel.RandomRotationChecked) enabledAugmentations.Add("Rotation");
-                if (App.TrainModel.RandomZoomChecked) enabledAugmentations.Add("Zoom");
-                if (App.TrainModel.RandomBrightnessChecked) enabledAugmentations.Add("Brightness");
-                if (App.TrainModel.RandomContrastChecked) enabledAugmentations.Add("Contrast");
-                if (App.TrainModel.RandomHorizonFlipChecked) enabledAugmentations.Add("HorizontalFlip");
-                if (App.TrainModel.RandomVerticalFlipChecked) enabledAugmentations.Add("VerticalFlip");
+                if (dataAug.RandomRotation) enabledAugmentations.Add("Rotation");
+                if (dataAug.RandomZoom) enabledAugmentations.Add("Zoom");
+                if (dataAug.RandomBrightness) enabledAugmentations.Add("Brightness");
+                if (dataAug.RandomContrast) enabledAugmentations.Add("Contrast");
+                if (dataAug.RandomHorizonFlip) enabledAugmentations.Add("HorizontalFlip");
+                if (dataAug.RandomVerticalFlip) enabledAugmentations.Add("VerticalFlip");
 
                 if (checks.All(t => !t))
                 {
@@ -469,7 +478,7 @@ namespace AutoTrainer.ViewModels
                 Log.Information("启用图像增强: {Augmentations}", string.Join(", ", enabledAugmentations));
                 PyOutput += "\n正在图像增强...";
                 //先读取训练数据，然后增强图像，生成新的训练数据
-                var dataSetPath = App.TrainModel.ClassifyTrainImagesPath;
+                var dataSetPath = App.TrainModel.Classification?.TrainDataPath;
                 if (dataSetPath != null)
                 {
                     Log.Debug("为数据集开始图像增强: {DataSetPath}", dataSetPath);
@@ -509,7 +518,8 @@ namespace AutoTrainer.ViewModels
                     }
                     Log.Information("图像增强完成。处理了 {TotalImages} 张图像，跨越 {ClassCount} 个类",
                         totalImagesProcessed, dataSetClassify.Length);
-                    App.TrainModel.ClassifyTrainImagesPath = augemnetDataFolder;
+                    App.TrainModel.Classification ??= new ClassificationConfig();
+                    App.TrainModel.Classification.TrainDataPath = augemnetDataFolder;
                     Log.Debug("更新训练数据路径为: {NewPath}", augemnetDataFolder);
                 }
                 else
@@ -604,7 +614,7 @@ namespace AutoTrainer.ViewModels
             IsShowNextPage = false;
 
             // 验证检测任务必需的路径
-            if (string.IsNullOrEmpty(App.TrainModel.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.TrainAnnotationPath))
+            if (string.IsNullOrEmpty(App.TrainModel.Detection?.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.Detection?.TrainAnnotationPath))
             {
                 await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                 return;

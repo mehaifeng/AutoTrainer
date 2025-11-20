@@ -38,7 +38,16 @@ namespace AutoTrainer
                 {
                     ModelOutputPath = ModelOutputFolderPath,
                     PyTrainLogOutputPath = PyTrainLogsFolderPath,
-                    MutationDataPath = MutationDataPath,
+                    // Initialize the new configuration structure
+                    Classification = new ClassificationConfig
+                    {
+                        DataAugmentation = new DataAugmentationConfig(),
+                        LossFunction = new LossFunctionModel()
+                    },
+                    Detection = new DetectionConfig
+                    {
+                        DetectionLoss = new DetectionLossConfig()
+                    }
                 };
                 Log.Debug("TrainModel 初始化完成，路径 - 模型输出: {ModelOutput}, Python训练日志: {PyTrainLogs}, 变异数据: {MutationData}",
                     ModelOutputFolderPath, PyTrainLogsFolderPath, MutationDataPath);

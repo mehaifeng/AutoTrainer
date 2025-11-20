@@ -57,7 +57,8 @@ namespace AutoTrainer.ViewModels
     public partial class DetectedImageResult : ObservableObject
     {
         [ObservableProperty] private Bitmap sourceImage;
-        [ObservableProperty] private ObservableCollection<BoundingBox> boxes = new();
+        [ObservableProperty] private string imagePath;
+        [ObservableProperty] private int objectCount;
     }
 
     public partial class BoundingBox : ObservableObject
@@ -86,6 +87,8 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private string cocoAnnotationPath;
         [ObservableProperty]
+        private double confidenceThreshold = 0.5;
+        [ObservableProperty]
         private bool isVerifying;
         [ObservableProperty]
         private int resultTabIndex;
@@ -102,7 +105,9 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private ISeries[] chartSeries;
         [ObservableProperty]
-        private ICartesianAxis[] chartAxes;
+        private ICartesianAxis[] chartXAxes;
+        [ObservableProperty]
+        private ICartesianAxis[] chartYAxes;
 
         // 可视化结果
         [ObservableProperty]
@@ -115,11 +120,29 @@ namespace AutoTrainer.ViewModels
         {
             ValidDatasetImagePreviews = [];
             ChartSeries = [];
-            ChartAxes = [];
+            ChartXAxes = [];
+            ChartYAxes = [];
             ClearResults();
         }
 
         #region 命令
+        [RelayCommand]
+        private void OpenImageLocation(string imagePath)
+        {
+            if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+            {
+                try
+                {
+                    var argument = $"/select, \"{imagePath}\"";
+                    System.Diagnostics.Process.Start("explorer.exe", argument);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "无法打开文件位置");
+                }
+            }
+        }
+
         [RelayCommand]
         private void Loaded()
         {
@@ -229,7 +252,8 @@ namespace AutoTrainer.ViewModels
                     task_type = IsCheckedClassifyMode ? "classification" : "detection",
                     model_weights_path = ModelWeightsPath,
                     validation_data_path = ValidDatasetPath,
-                    coco_annotation_path = CocoAnnotationPath
+                    coco_annotation_path = CocoAnnotationPath,
+                    confidence_threshold = ConfidenceThreshold
                 };
                 var configJson = JsonConvert.SerializeObject(config, Formatting.Indented);
                 var configPath = Path.Combine(App.ConfigFolderPath, "validation_config.json");
@@ -349,9 +373,12 @@ namespace AutoTrainer.ViewModels
                         }
                     }
                 };
-                ChartAxes = new ICartesianAxis[]
+                ChartXAxes = new ICartesianAxis[]
                 {
-                    new Axis { Name = "Predicted", Labels = labels, LabelsRotation = -45 },
+                    new Axis { Name = "Predicted", Labels = labels, LabelsRotation = -45 }
+                };
+                ChartYAxes = new ICartesianAxis[]
+                {
                     new Axis { Name = "Actual", Labels = labels }
                 };
             }
@@ -392,9 +419,12 @@ namespace AutoTrainer.ViewModels
                         Fill = null
                     }
                 };
-                ChartAxes = new ICartesianAxis[]
+                ChartXAxes = new ICartesianAxis[]
                 {
-                    new Axis { Name = "Recall" },
+                    new Axis { Name = "Recall" }
+                };
+                ChartYAxes = new ICartesianAxis[]
+                {
                     new Axis { Name = "Precision" }
                 };
             }
@@ -404,38 +434,17 @@ namespace AutoTrainer.ViewModels
             {
                 if (!File.Exists(item.Path)) continue;
 
+                var totalBoxes = 0;
+                if (item.GroundTruthBoxes != null) totalBoxes += item.GroundTruthBoxes.Count;
+                if (item.PredictedBoxes != null) totalBoxes += item.PredictedBoxes.Count;
+
                 var detectedResult = new DetectedImageResult
                 {
-                    SourceImage = new Bitmap(item.Path)
+                    SourceImage = new Bitmap(item.Path),  // Path now points to annotated image
+                    ImagePath = item.Path,
+                    ObjectCount = totalBoxes
                 };
 
-                // Ground truth boxes (e.g., green)
-                if(item.GroundTruthBoxes != null)
-                    foreach (var box in item.GroundTruthBoxes)
-                    {
-                        detectedResult.Boxes.Add(new BoundingBox
-                        {
-                            Rect = new Rect(box.Coords[0], box.Coords[1], box.Coords[2] - box.Coords[0], box.Coords[3] - box.Coords[1]),
-                            Stroke = Brushes.Green,
-                            StrokeThickness = 2,
-                            IsPrediction = false,
-                            Label = box.Label
-                        });
-                    }
-
-                // Predicted boxes (e.g., red)
-                if(item.PredictedBoxes != null)
-                    foreach (var box in item.PredictedBoxes)
-                    {
-                        detectedResult.Boxes.Add(new BoundingBox
-                        {
-                            Rect = new Rect(box.Coords[0], box.Coords[1], box.Coords[2] - box.Coords[0], box.Coords[3] - box.Coords[1]),
-                            Stroke = Brushes.Red,
-                            StrokeThickness = 1.5,
-                            IsPrediction = true,
-                            Label = $"{box.Label} ({box.Confidence:P0})"
-                        });
-                    }
                 DetectionResults.Add(detectedResult);
             }
         }
@@ -541,7 +550,8 @@ namespace AutoTrainer.ViewModels
 
             // Clear charts
             ChartSeries = Array.Empty<ISeries>();
-            ChartAxes = Array.Empty<ICartesianAxis>();
+            ChartXAxes = Array.Empty<ICartesianAxis>();
+            ChartYAxes = Array.Empty<ICartesianAxis>();
 
             // Clear visual results
             ClassifiedResults.Clear();
