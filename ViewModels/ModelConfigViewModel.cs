@@ -19,8 +19,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+using Newtonsoft.Json;
 
 namespace AutoTrainer.ViewModels
 {
@@ -30,8 +29,6 @@ namespace AutoTrainer.ViewModels
         public ModelConfigViewModel()
         {
             ModelList = [];
-            GetRequirementPackages();
-            Requirements = string.Join("\r\n", requireApps);
 
             // 初始化任务类型
             TaskTypes = new ObservableCollection<TaskTypeInfo>
@@ -41,13 +38,14 @@ namespace AutoTrainer.ViewModels
             };
 
             SelectedTaskType = TaskTypes[0]; // 默认选择分类
+            Task.Run(SetRequirementsDisplay);
             Task.Run(GetPython);
         }
         #endregion
 
         #region 全局属性
         private string modelHelperScript = Path.Combine($"{Environment.CurrentDirectory}","PyScripts","ModelHelper.py");
-        private string requirementsFilePath = Path.Combine(Environment.CurrentDirectory, "Configs", "Requirements.yaml");
+        private string requirementsFilePath = Path.Combine(Environment.CurrentDirectory, "Configs", "Requirements.json");
         private string[] requireApps = [
             "torch",
             "torchvision",
@@ -139,26 +137,79 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isTaskTypeChanging = false;
 
-            #endregion
+        #endregion
 
         #region 函数
+        /// <summary>
+        /// 设置需求包显示
+        /// </summary>
+        /// <returns></returns>
+        private async Task SetRequirementsDisplay()
+        {
+            GetRequirementPackages();
+
+            var otherPackages = requireApps
+                .Where(r => !r.Trim().StartsWith("torch"))
+                .ToList();
+
+            var torchPackages = new List<string>();
+
+            var cudaResult = await CliWrapHelper.ExecuteLine("nvidia-smi");
+
+            if (cudaResult.ExitCode == 0 && !string.IsNullOrEmpty(cudaResult.Output))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(cudaResult.Output, @"CUDA Version:\s*(\d+\.\d+)");
+                if (match.Success)
+                {
+                    var cudaVersion = match.Groups[1].Value;
+                    string cuVersion = cudaVersion.Trim().Replace(".", "");
+                    if (!string.IsNullOrEmpty(cuVersion))
+                    {
+                        torchPackages.Add($"torch --index-url https://download.pytorch.org/whl/{cuVersion}");
+                        torchPackages.Add($"torchvision --index-url https://download.pytorch.org/whl/{cuVersion}");
+                    }
+                }
+            }
+
+            if (torchPackages.Count == 0)
+            {
+                // Default for CPU or if CUDA version not matched
+                torchPackages.Add("torch");
+                torchPackages.Add("torchvision");
+            }
+
+            var allDisplayPackages = new List<string>();
+            allDisplayPackages.AddRange(torchPackages);
+            allDisplayPackages.AddRange(otherPackages);
+
+            Requirements = string.Join("\r\n", allDisplayPackages);
+        }
+        /// <summary>
+        /// 获取需求包列表
+        /// </summary>
         private void GetRequirementPackages()
         {
             if (File.Exists(requirementsFilePath))
             {
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                    .Build();
                 try
                 {
-                    var yamlContent = File.ReadAllText(requirementsFilePath);
-                    requireApps = deserializer.Deserialize<string[]>(yamlContent);
+                    var jsonContent = File.ReadAllText(requirementsFilePath);
+                    var requirementsData = JsonConvert.DeserializeObject<RequirementsData>(jsonContent);
+                    if (requirementsData?.Packages != null)
+                    {
+                        requireApps = requirementsData.Packages;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error reading requirements file: {ex.Message}");
                 }
             }
+        }
+
+        private class RequirementsData
+        {
+            public string[] Packages { get; set; } = [];
         }
         /// <summary>
         /// 找到Python
@@ -428,18 +479,37 @@ namespace AutoTrainer.ViewModels
                     .Where(pkg => !string.IsNullOrEmpty(pkg.Name))
                     .ToDictionary(pkg => pkg.Name!, pkg => pkg.Version);
 
+                var requiredPackageNames = new HashSet<string>();
+
                 // 检查所需的包
-                foreach (var requiredPackage in requiredPackages.Select(p => p.Trim().ToLowerInvariant()))
+                foreach (var requiredPackageLine in requiredPackages)
                 {
-                    if (string.IsNullOrWhiteSpace(requiredPackage))
+                    if (string.IsNullOrWhiteSpace(requiredPackageLine))
                         continue;
 
-                    if (!installedPackages.ContainsKey(requiredPackage))
+                    var packageName = requiredPackageLine.Split(new[] { '=', '>', '<', ' ' }, 2)[0].Trim().ToLowerInvariant();
+
+                    if (requiredPackageNames.Contains(packageName))
+                        continue;
+
+                    if (!installedPackages.ContainsKey(packageName))
                     {
                         result.IsMatch = false;
-                        result.MissingPackages.Add(requiredPackage);
+                        if (packageName == "torch" || packageName == "torchvision")
+                        {
+                            if (!result.MissingPackages.Contains("torch"))
+                            {
+                                result.MissingPackages.Add("torch");
+                            }
+                        }
+                        else
+                        {
+                            result.MissingPackages.Add(requiredPackageLine);
+                        }
                     }
+                    requiredPackageNames.Add(packageName);
                 }
+
                 // 构建结果信息
                 if (!result.IsMatch)
                 {
@@ -674,27 +744,56 @@ namespace AutoTrainer.ViewModels
         {
             if (missingApps.Count > 0)
             {
-                StringBuilder sb = new StringBuilder();
-                var activateFile = OperatingSystem.IsWindows()? $@"{PythonVenvPath}\Scripts\activate.bat" : $"source {PythonVenvPath}/bin/activate";
-                sb.Append(activateFile);
-                foreach (var missingApp in missingApps)
-                {
-                    sb.Append($"&& pip install {missingApp}");
-                 }
-                var command = sb.ToString();
+                IsVisibleProgressBar = true;
+                IsRunningProgressBar = true;
+
                 try
                 {
-                    // 设置进度条状态
-                    IsVisibleProgressBar = true;
-                    IsRunningProgressBar = true;
-                    // 安装缺失的软件包
-                    await CliWrapHelper.ExecuteLine(command, isShowTerminal:false,onOutputReceived: HandleOutput);
-                    // 重新执行Python脚本
+                    var activateFile = OperatingSystem.IsWindows() ? $@"{PythonVenvPath}\Scripts\activate.bat" : $"source {PythonVenvPath}/bin/activate";
+
+                    var isTorchMissing = missingApps.Remove("torch");
+
+                    if (isTorchMissing)
+                    {
+                        var cudaVersionResult = await CliWrapHelper.ExecuteLine("nvidia-smi");
+                        string torchInstallCommand = "pip3 install torch torchvision"; 
+
+                        if (cudaVersionResult.ExitCode == 0 && !string.IsNullOrEmpty(cudaVersionResult.Output))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(cudaVersionResult.Output, @"CUDA Version:\s*(\d+\.\d+)");
+                            if (match.Success)
+                            {
+                                string cudaVersion = match.Groups[1].Value;
+                                if (!string.IsNullOrEmpty(cudaVersion)) 
+                                { 
+                                    string cuVersion = cudaVersion.Trim().Replace(".", "");
+                                    torchInstallCommand = $"pip3 install torch torchvision --index-url https://download.pytorch.org/whl/{cuVersion}";
+                                }
+                            }
+                        }
+
+                        StringBuilder torchCommandSb = new StringBuilder();
+                        torchCommandSb.Append(activateFile);
+                        torchCommandSb.Append($" && {torchInstallCommand}");
+                        await CliWrapHelper.ExecuteLine(torchCommandSb.ToString(), isShowTerminal: false, onOutputReceived: HandleOutput);
+                    }
+
+                    if (missingApps.Count > 0)
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append(activateFile);
+                        foreach (var missingApp in missingApps)
+                        {
+                            sb.Append($" && pip3 install \"{missingApp}\"");
+                        }
+                        var command = sb.ToString();
+                        await CliWrapHelper.ExecuteLine(command, isShowTerminal: false, onOutputReceived: HandleOutput);
+                    }
+
                     await ExecutePy();
                 }
                 finally
                 {
-                    // 在任务完成或发生异常时都能重置进度条状态
                     IsVisibleProgressBar = false;
                     IsRunningProgressBar = false;
                 }

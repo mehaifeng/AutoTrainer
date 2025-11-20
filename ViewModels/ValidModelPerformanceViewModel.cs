@@ -114,12 +114,28 @@ namespace AutoTrainer.ViewModels
         public ValidModelPerformanceViewModel()
         {
             ValidDatasetImagePreviews = [];
-            ChartSeries = Array.Empty<ISeries>(); // Initialize to avoid null reference
-            ChartAxes = Array.Empty<ICartesianAxis>(); // Initialize to avoid null reference
-            ClearResults(); // Clear results on initialization
+            ChartSeries = [];
+            ChartAxes = [];
+            ClearResults();
         }
 
         #region 命令
+        [RelayCommand]
+        private void Loaded()
+        {
+            if(App.TrainModel?.TaskType == "classification")
+            {
+                IsCheckedClassifyMode = true;
+            }
+            else if(App.TrainModel?.TaskType == "detection")
+            {
+                IsCheckedClassifyMode = false;
+            }
+        }
+        /// <summary>
+        /// 选择模型权重文件
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task SelectWeightsFile()
         {
@@ -142,7 +158,10 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
-
+        /// <summary>
+        /// 选择COCO标注文件
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task SelectCocoFile()
         {
@@ -165,7 +184,10 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
-
+        /// <summary>
+        /// 开始执行验证
+        /// </summary>
+        /// <returns></returns>
         [RelayCommand]
         private async Task StartVerification()
         {
@@ -268,7 +290,6 @@ namespace AutoTrainer.ViewModels
                 IsVerifying = false;
             }
         }
-
         /// <summary>
         /// 选择验证集目录
         /// </summary>

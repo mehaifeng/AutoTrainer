@@ -1,4 +1,5 @@
 ﻿using AutoTrainer.ControlHelper;
+using AutoTrainer.Emuns;
 using AutoTrainer.Extension;
 using AutoTrainer.Helpers;
 using AutoTrainer.Models;

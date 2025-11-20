@@ -199,6 +199,7 @@
 						IsVisible="{Binding IsVisibleInstallMissing}"
 						Command="{Binding InstallMissingAppCommand}"
 						Classes="outline"
+						HorizontalAlignment="Center"
 						HorizontalContentAlignment="Center"
 						Content="安装缺失的软件包"
 						Foreground="Red"/>

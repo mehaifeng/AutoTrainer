@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace AutoTrainer.Models
 {
     /// <summary>
-    /// Represents the complete validation result payload from a Python script.
+    /// 表示来自 Python 脚本的完整验证结果有效负载。
     /// </summary>
     public class ValidationResult
     {
@@ -19,14 +19,14 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// Holds all performance metrics. Properties are nullable to support both task types.
+    /// 包含所有性能指标。属性可为空，以支持两种任务类型。
     /// </summary>
     public class ValidationSummaryMetrics
     {
         [JsonProperty("time")]
         public double Time { get; set; }
 
-        // Classification metrics
+        // 分类指标
         [JsonProperty("accuracy")]
         public double? Accuracy { get; set; }
 
@@ -36,7 +36,7 @@ namespace AutoTrainer.Models
         [JsonProperty("f1_macro")]
         public double? F1Score { get; set; }
 
-        // Detection metrics
+        // 目标检测指标
         [JsonProperty("map50")]
         public double? Map50 { get; set; }
 
@@ -48,7 +48,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// Holds the raw data required for plotting charts in the UI.
+    /// 存储用于在用户界面中绘制图表的原始数据。
     /// </summary>
     public class ChartData
     {
@@ -59,11 +59,11 @@ namespace AutoTrainer.Models
         public List<PointData> PrCurvePoints { get; set; }
 
         [JsonProperty("labels")]
-        public List<string> Labels { get; set; } // For confusion matrix axes
+        public List<string> Labels { get; set; } // 用于混淆矩阵轴
     }
 
     /// <summary>
-    /// Represents a point with X and Y coordinates.
+    /// 表示一个具有 X 和 Y 坐标的点。
     /// </summary>
     public class PointData
     {
@@ -75,7 +75,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// Contains the validation result for a single image.
+    /// 包含单张图像的验证结果。
     /// </summary>
     public class ImageResult
     {
@@ -95,7 +95,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// Represents a bounding box with coordinates, label, and confidence.
+    /// 表示一个带有坐标、标签和置信度的边界框。
     /// </summary>
     public class Box
     {

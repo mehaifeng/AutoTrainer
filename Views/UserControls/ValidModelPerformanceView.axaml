@@ -12,6 +12,11 @@
              x:Class="AutoTrainer.Views.UserControls.ValidModelPerformanceView"
              x:DataType="{x:Type viewmodel:ValidModelPerformanceViewModel}"
              DataContext="{x:Static app:App.ValidationVM}">
+	<Interaction.Behaviors>
+		<EventTriggerBehavior EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadedCommand}"/>
+		</EventTriggerBehavior>
+	</Interaction.Behaviors>
     <Grid ColumnDefinitions=".3*,.7*">
         <!--任务类型，模型选择，开始验证-->
         <Grid Margin="10" RowDefinitions="Auto,*">
@@ -102,13 +107,25 @@
             </Expander>
         </Grid>
         <!--结果呈现-->
-        <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="10">
-            <ProgressBar IsIndeterminate="{Binding IsVerifying}" Width="100" Height="10" ZIndex="1"
-                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,0"/>
+        <Grid 
+			Grid.Column="1"
+			RowDefinitions="*,5,350"
+			Margin="10">
+            <ProgressBar 
+				IsIndeterminate="{Binding IsVerifying}"
+				Width="100" 
+				Height="5" 
+				ZIndex="1"
+                HorizontalAlignment="Center"
+				VerticalAlignment="Top"
+				Margin="0,10,0,0"/>
             <!--模型性能指标-->
-            <StackPanel Grid.Row="0" Orientation="Vertical">
+            <Grid 
+				Grid.Row="0" 
+				RowDefinitions="20,*"
+				VerticalAlignment="Stretch">
                 <TextBlock Text="模型性能指标" FontSize="18" FontWeight="Bold"/>
-                <Border Margin="0,10,0,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
+                <Border Grid.Row="1" Margin="0,10,0,0" BorderBrush="Black" BorderThickness="1" CornerRadius="5">
                     <Grid>
                         <!--分类模型性能指标-->
                         <Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding IsCheckedClassifyMode}">
@@ -138,7 +155,11 @@
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>
-                            <lvc:CartesianChart Grid.Row="1" Series="{Binding ChartSeries}" XAxes="{Binding ChartAxes}" Height="300" Margin="10"/>
+                            <lvc:CartesianChart
+								Grid.Row="1" 
+								Series="{Binding ChartSeries}" 
+								XAxes="{Binding ChartAxes}"
+								Margin="10"/>
                         </Grid>
                         <!--目标检测模型性能指标-->
                         <Grid RowDefinitions="80,*" Margin="10" IsVisible="{Binding !IsCheckedClassifyMode}">
@@ -174,12 +195,31 @@
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>
-                            <lvc:CartesianChart Grid.Row="1" Series="{Binding ChartSeries}" XAxes="{Binding ChartAxes}" Height="300" Margin="10"/>
+                            <lvc:CartesianChart 
+								Grid.Row="1" 
+								Series="{Binding ChartSeries}"
+								XAxes="{Binding ChartAxes}"
+								VerticalAlignment="Stretch"
+								Margin="10"/>
                         </Grid>
                     </Grid>
                 </Border>
-            </StackPanel>
-            <TabControl Grid.Row="1" Margin="0,10,0,0" SelectedIndex="{Binding ResultTabIndex}">
+            </Grid>
+			<GridSplitter
+                Grid.Row="1"
+				Margin="0,2,0,2"
+				CornerRadius="5"
+                HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+                ResizeDirection="Rows"
+                Cursor="SizeNorthSouth"/>
+            <TabControl 
+				Grid.Row="2"
+				VerticalAlignment="Stretch"
+				SelectedIndex="{Binding ResultTabIndex}"
+				BorderBrush="Black" 
+				BorderThickness="1"
+				CornerRadius="5" >
                 <TabItem Header="推理结果">
                     <Grid>
                         <!-- 分类模型结果 -->
@@ -254,7 +294,12 @@
                 </TabItem>
                 <TabItem Header="推理输出">
                     <ScrollViewer>
-                        <TextBox Text="{Binding VerificationOutput}" IsReadOnly="True" TextWrapping="Wrap" Margin="10"/>
+                        <TextBox
+							BorderThickness="0"
+							Text="{Binding VerificationOutput}"
+							IsReadOnly="True"
+							TextWrapping="Wrap"
+							Margin="10"/>
                     </ScrollViewer>
                 </TabItem>
             </TabControl>

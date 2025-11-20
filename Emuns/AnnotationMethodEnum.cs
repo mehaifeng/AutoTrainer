@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AutoTrainer.Models
+namespace AutoTrainer.Emuns
 {
     public enum AnnotationMethodEnum
     {

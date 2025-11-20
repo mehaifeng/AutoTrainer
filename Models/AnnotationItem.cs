@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using AutoTrainer.Emuns;
+using Avalonia;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;

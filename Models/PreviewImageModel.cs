@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace AutoTrainer.Models
 {
+    /// <summary>
+    /// 预览图片模型
+    /// </summary>
     public partial class PreviewImageModel : ViewModelBase
     {
         [ObservableProperty]
