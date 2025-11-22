@@ -261,7 +261,7 @@ namespace AutoTrainer.ViewModels
 
                 // 选择脚本
                 var scriptName = IsCheckedClassifyMode ? "ClassificationValidator.py" : "DetectionValidator.py";
-                var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", scriptName);
+                var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", scriptName);
 
                 var result = await CliWrapHelper.ExecutePythonScriptAsync(
                     pythonScript,

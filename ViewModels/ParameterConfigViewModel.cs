@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -677,6 +678,27 @@ namespace AutoTrainer.ViewModels
                     MaskWeight = MaskWeight,
                     KeypointWeight = KeypointWeight
                 };
+                
+                // 从训练标注文件中读取类别数（如果存在）
+                if (!string.IsNullOrEmpty(TrainAnnotationPath) && File.Exists(TrainAnnotationPath))
+                {
+                    try
+                    {
+                        var jsonText = File.ReadAllText(TrainAnnotationPath);
+                        using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
+                        
+                        if (doc.RootElement.TryGetProperty("categories", out var categories))
+                        {
+                            var categoryCount = categories.GetArrayLength();
+                            App.TrainModel.NumClasses = categoryCount;
+                            Log.Information($"从检测标注文件读取类别数: {categoryCount}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning($"读取检测类别数失败: {ex.Message}，请手动设置类别数");
+                    }
+                }
             }
             else
             {

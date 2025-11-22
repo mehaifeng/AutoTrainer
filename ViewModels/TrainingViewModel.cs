@@ -28,9 +28,16 @@ namespace AutoTrainer.ViewModels
     public partial class TrainingViewModel : ViewModelBase
     {
         private bool isPyRunning = false;
-        private readonly CancellationTokenSource cancellationTokenSource = new();
+        private CancellationTokenSource? cancellationTokenSource;
         private readonly CancellationTokenSource _refreshCts = new();
         private int ScanningIndex = 0;
+        
+        [ObservableProperty]
+        private bool isTraining = false;
+        
+        [ObservableProperty]
+        private bool canStopTraining = false;
+        
         public TrainingViewModel()
         {
             Log.Information("TrainingViewModel 初始化完成");
@@ -277,13 +284,59 @@ namespace AutoTrainer.ViewModels
                     await StartClassificationTraining();
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Log.Information("训练被用户取消");
+                // 不显示错误消息，因为是用户主动取消
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "启动或完成训练过程失败");
                 isPyRunning = false;
+                IsTraining = false;
+                CanStopTraining = false;
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
             }
         }
+        
+        /// <summary>
+        /// 停止训练
+        /// </summary>
+        [RelayCommand]
+        private async Task StopTraining()
+        {
+            Log.Information("用户请求停止训练");
+            
+            if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
+            {
+                try
+                {
+                    Log.Warning("取消训练任务...");
+                    cancellationTokenSource.Cancel();
+                    
+                    // 等待一小段时间让进程响应取消
+                    await Task.Delay(1000);
+                    
+                    // 重置状态
+                    IsTraining = false;
+                    CanStopTraining = false;
+                    isPyRunning = false;
+                    
+                    Log.Information("训练已成功停止");
+                    await MessageBoxManager.GetMessageBoxStandard("训练已停止", "训练已被用户终止", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "停止训练时发生错误");
+                    await MessageBoxManager.GetMessageBoxStandard("错误", $"停止训练失败: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                }
+            }
+            else
+            {
+                Log.Warning("没有正在运行的训练任务");
+            }
+        }
+        
         /// <summary>
         /// 转到下一页
         /// </summary>
@@ -542,6 +595,12 @@ namespace AutoTrainer.ViewModels
 
             ScanningIndex = 0;
             IsShowNextPage = false;
+            IsTraining = true;
+            CanStopTraining = true;
+
+            // 重置或创建新的CancellationTokenSource
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
 
             Log.Debug("初始化图表和输出信息");
             #region 初始化图标和输出信息
@@ -574,32 +633,48 @@ namespace AutoTrainer.ViewModels
             await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
             Log.Debug("训练配置保存成功");
 
-            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelTrainer.py");
+            // 获取对应的训练脚本
+            var pythonScript = GetClassificationTrainerScript(App.TrainModel.PretrainedModel ?? "");
             var configPath = Path.Combine(Environment.CurrentDirectory, "Configs", "ModelParam.json");
             var arguments = $"--config {configPath}";
 
-            Log.Information("启动Python分类训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+            Log.Information("启动Python分类训练脚本(流式输出): {Script} 参数: {Arguments}", pythonScript, arguments);
 
-            _ = Task.Run(() => ScanningThePyOutPut(cancellationTokenSource.Token));
             isPyRunning = true;
 
-            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+            // 使用新的流式执行方法
+            var result = await CliWrapHelper.ExecutePythonScriptWithStreamingAsync(
+                pythonScript, 
+                App.PythonVenvPath, 
+                arguments, 
+                onStdoutLine: ProcessPythonOutput,
+                cancellationTokenSource?.Token ?? CancellationToken.None);
+
+            // 检查是否被用户取消
+            if (result.ExitCode == -999)
+            {
+                Log.Information("分类训练被用户取消");
+                isPyRunning = false;
+                IsTraining = false;
+                CanStopTraining = false;
+                return;
+            }
 
             if (result.ExitCode != 0)
             {
                 var errorMessage = result.Error ?? "Unknown error occurred during training";
                 Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                await cancellationTokenSource.CancelAsync();
+                isPyRunning = false;
+                IsTraining = false;
+                CanStopTraining = false;
                 return;
             }
 
             Log.Information("Python分类训练脚本成功完成");
             isPyRunning = false;
-
-            Log.Debug("读取最终训练输出");
-            await ReadPyOutputAtMeantime();
-
+            IsTraining = false;
+            CanStopTraining = false;
             IsShowNextPage = true;
             Log.Information("分类训练过程成功完成，显示下一页");
         }
@@ -612,6 +687,12 @@ namespace AutoTrainer.ViewModels
 
             ScanningIndex = 0;
             IsShowNextPage = false;
+            IsTraining = true;
+            CanStopTraining = true;
+
+            // 重置或创建新的CancellationTokenSource
+            cancellationTokenSource?.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
 
             // 验证检测任务必需的路径
             if (string.IsNullOrEmpty(App.TrainModel.Detection?.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.Detection?.TrainAnnotationPath))
@@ -634,30 +715,47 @@ namespace AutoTrainer.ViewModels
             await File.WriteAllTextAsync(configPath, jsonStr);
             Log.Debug("检测训练配置保存成功");
 
-            // 启动检测训练脚本
-            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "DetectionTrainer.py");
+            // 使用新的检测训练脚本
+            var pythonScript = GetDetectionTrainerScript(App.TrainModel.PretrainedModel ?? "");
             var arguments = $"--config {configPath}";
 
-            Log.Information("启动Python检测训练脚本: {Script} 参数: {Arguments}", pythonScript, arguments);
+            Log.Information("启动Python检测训练脚本(流式输出): {Script} 参数: {Arguments}", pythonScript, arguments);
 
-            _ = Task.Run(() => ScanningTheDetectionPyOutput(cancellationTokenSource.Token));
             isPyRunning = true;
 
-            var result = await CliWrapHelper.ExecutePythonScriptAsync(pythonScript, App.PythonVenvPath, arguments, isShowTerminal: false, null, cancellationTokenSource.Token);
+            // 使用新的流式执行方法
+            var result = await CliWrapHelper.ExecutePythonScriptWithStreamingAsync(
+                pythonScript,
+                App.PythonVenvPath,
+                arguments,
+                onStdoutLine: ProcessPythonOutput,
+                cancellationTokenSource?.Token ?? CancellationToken.None);
+
+            // 检查是否被用户取消
+            if (result.ExitCode == -999)
+            {
+                Log.Information("检测训练被用户取消");
+                isPyRunning = false;
+                IsTraining = false;
+                CanStopTraining = false;
+                return;
+            }
 
             if (result.ExitCode != 0)
             {
                 var errorMessage = result.Error ?? "Unknown error occurred during detection training";
                 Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
                 await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                await cancellationTokenSource.CancelAsync();
+                isPyRunning = false;
+                IsTraining = false;
+                CanStopTraining = false;
                 return;
             }
 
             Log.Information("Python检测训练脚本成功完成");
             isPyRunning = false;
-
-            await ReadDetectionPyOutputAtMeantime();
+            IsTraining = false;
+            CanStopTraining = false;
             IsShowNextPage = true;
             Log.Information("检测训练过程成功完成，显示下一页");
         }
@@ -675,55 +773,99 @@ namespace AutoTrainer.ViewModels
                 TrainLossValues = [];
                 ValidationAccValues = [];
                 ValidationLossValues = [];
-                Series =
-            [new LineSeries<ObservableValue>(TrainAccValues)
+                
+                // 根据任务类型显示不同的曲线
+                bool isDetection = App.TrainModel?.TaskType?.ToLower() == "detection";
+                
+                if (isDetection)
                 {
-                    Name = "Train Acc Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.Orange, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.Orange,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(ValidationLossValues)
+                    // 检测任务：只显示损失曲线（没有准确率）
+                    Series =
+                    [
+                        new LineSeries<ObservableValue>(TrainLossValues)
+                        {
+                            Name = "Train Loss",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.OrangeRed,
+                                StrokeThickness = 2
+                            }
+                        },
+                        new LineSeries<ObservableValue>(ValidationLossValues)
+                        {
+                            Name = "Validation Loss",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.DodgerBlue,
+                                StrokeThickness = 2
+                            }
+                        }
+                    ];
+                    Log.Debug("Detection task: initialized chart with loss curves only");
+                }
+                else
                 {
-                    Name = "Validation Loss Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.DodgerBlue,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(ValidationAccValues)
-                {
-                    Name = "Validation Acc Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.Blue, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.Blue,
-                        StrokeThickness = 2
-                    }
-                },
-            new LineSeries<ObservableValue>(TrainLossValues)
-                {
-                    Name = "Train Loss Values",
-                    Fill = null,
-                    GeometrySize = 5,
-                    GeometryStroke = new SolidColorPaint(SKColors.OrangeRed, 2),
-                    Stroke = new SolidColorPaint()
-                    {
-                        Color = SKColors.OrangeRed,
-                        StrokeThickness = 2
-                    }
-                }];
+                    // 分类任务：显示损失和准确率曲线
+                    Series =
+                    [
+                        new LineSeries<ObservableValue>(TrainAccValues)
+                        {
+                            Name = "Train Acc",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.Orange, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.Orange,
+                                StrokeThickness = 2
+                            }
+                        },
+                        new LineSeries<ObservableValue>(ValidationLossValues)
+                        {
+                            Name = "Validation Loss",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.DodgerBlue, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.DodgerBlue,
+                                StrokeThickness = 2
+                            }
+                        },
+                        new LineSeries<ObservableValue>(ValidationAccValues)
+                        {
+                            Name = "Validation Acc",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.Blue, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.Blue,
+                                StrokeThickness = 2
+                            }
+                        },
+                        new LineSeries<ObservableValue>(TrainLossValues)
+                        {
+                            Name = "Train Loss",
+                            Fill = null,
+                            GeometrySize = 5,
+                            GeometryStroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                            Stroke = new SolidColorPaint()
+                            {
+                                Color = SKColors.OrangeRed,
+                                StrokeThickness = 2
+                            }
+                        }
+                    ];
+                    Log.Debug("Classification task: initialized chart with loss and accuracy curves");
+                }
+                
                 Log.Debug("Training chart series initialized successfully with {SeriesCount} series", Series?.Count ?? 0);
             }
             catch (Exception ex)
@@ -859,11 +1001,22 @@ namespace AutoTrainer.ViewModels
                                 var valAcc = entry.Metrics?.ValidationAccuracy;
                                 var valLoss = entry.Metrics?.ValidationLoss;
 
-                                TrainAccValues.Add(new ObservableValue() { Value = trainAcc });
-                                TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
-                                ValidationAccValues.Add(new ObservableValue() { Value = valAcc });
-                                ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
-                                EpochState.CurrentEpoch = entry.Epoch;
+                                // 在UI线程更新图表数据
+                                await Dispatcher.UIThread.InvokeAsync(() =>
+                                {
+                                    TrainAccValues.Add(new ObservableValue() { Value = trainAcc });
+                                    TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
+                                    ValidationAccValues.Add(new ObservableValue() { Value = valAcc });
+                                    ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
+                                    EpochState.CurrentEpoch = entry.Epoch;
+                                    
+                                    // 详细日志
+                                    Log.Information("✅ Epoch进度更新: {Current}/{Total} (CurrentEpoch={CE}, TotalEpochs={TE})", 
+                                        EpochState.CurrentEpoch, 
+                                        EpochState.TotalEpochs,
+                                        EpochState.CurrentEpoch.HasValue ? EpochState.CurrentEpoch.Value : -1,
+                                        EpochState.TotalEpochs.HasValue ? EpochState.TotalEpochs.Value : -1);
+                                });
 
                                 Log.Information("Epoch {Epoch} metrics - Train Acc: {TrainAcc:F4}, Train Loss: {TrainLoss:F4}, Val Acc: {ValAcc:F4}, Val Loss: {ValLoss:F4}",
                                     entry.Epoch, trainAcc, trainLoss, valAcc, valLoss);
@@ -1037,10 +1190,17 @@ namespace AutoTrainer.ViewModels
                                 var trainLoss = entry.Metrics?.TrainLoss;
                                 var valLoss = entry.Metrics?.ValidationLoss;
 
-                                // 检测任务主要关注损失值
-                                TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
-                                ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
-                                EpochState.CurrentEpoch = entry.Epoch;
+                                // 在UI线程更新图表数据
+                                await Dispatcher.UIThread.InvokeAsync(() =>
+                                {
+                                    TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
+                                    ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
+                                    EpochState.CurrentEpoch = entry.Epoch;
+                                    
+                                    Log.Information("✅ Detection Epoch进度更新: {Current}/{Total}", 
+                                        EpochState.CurrentEpoch, 
+                                        EpochState.TotalEpochs);
+                                });
 
                                 Log.Information("Detection Epoch {Epoch} metrics - Train Loss: {TrainLoss:F4}, Val Loss: {ValLoss:F4}",
                                     entry.Epoch, trainLoss, valLoss);
@@ -1089,6 +1249,320 @@ namespace AutoTrainer.ViewModels
                 throw;
             }
         }
+
+        #region 新的流式输出处理方法
+
+        /// <summary>
+        /// 根据模型名称获取对应的分类训练脚本路径
+        /// </summary>
+        private string GetClassificationTrainerScript(string modelName)
+        {
+            var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Training", "Classification");
+
+            // EfficientNet系列
+            if (modelName.StartsWith("efficientnet", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(basePath, "efficientnet_trainer.py");
+
+            // TODO: 添加其他模型系列的映射
+            // if (modelName.StartsWith("mobilenet", StringComparison.OrdinalIgnoreCase))
+            //     return Path.Combine(basePath, "mobilenet_trainer.py");
+            // if (modelName.StartsWith("resnet", StringComparison.OrdinalIgnoreCase))
+            //     return Path.Combine(basePath, "resnet_trainer.py");
+
+            // 默认：如果没有专用脚本，记录警告并抛出异常
+            Log.Warning("模型 {ModelName} 没有对应的专用训练脚本", modelName);
+            throw new NotSupportedException($"模型 {modelName} 暂无对应的训练脚本。请在配置文件 AvailableModels.json 中确认该模型是否支持。");
+        }
+
+        /// <summary>
+        /// 根据模型名称获取对应的检测训练脚本路径
+        /// </summary>
+        private string GetDetectionTrainerScript(string modelName)
+        {
+            var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Training", "Detection");
+
+            // Faster R-CNN系列
+            if (modelName.StartsWith("fasterrcnn", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(basePath, "fasterrcnn_trainer.py");
+
+            // TODO: 添加其他检测模型系列的映射
+            // if (modelName.StartsWith("retinanet", StringComparison.OrdinalIgnoreCase))
+            //     return Path.Combine(basePath, "retinanet_trainer.py");
+            // if (modelName.StartsWith("ssd", StringComparison.OrdinalIgnoreCase))
+            //     return Path.Combine(basePath, "ssd_trainer.py");
+
+            // 默认：如果没有专用脚本，记录警告并抛出异常
+            Log.Warning("检测模型 {ModelName} 没有对应的专用训练脚本", modelName);
+            throw new NotSupportedException($"检测模型 {modelName} 暂无对应的训练脚本。");
+        }
+
+        /// <summary>
+        /// 处理Python实时输出（每行JSON）
+        /// </summary>
+        private void ProcessPythonOutput(string line)
+        {
+            try
+            {
+                // 尝试解析为JSON日志
+                var baseEntry = JsonConvert.DeserializeObject<TrainingLogEntry>(line);
+
+                if (baseEntry == null || string.IsNullOrEmpty(baseEntry.Type))
+                {
+                    // 非JSON行，作为普通日志输出
+                    Dispatcher.UIThread.Post(() => PyOutput += line + "\n");
+                    return;
+                }
+
+                // 根据类型处理不同的日志
+                switch (baseEntry.Type)
+                {
+                    case "config":
+                        var configEntry = JsonConvert.DeserializeObject<ConfigLogEntry>(line);
+                        if (configEntry != null) HandleConfigLog(configEntry);
+                        break;
+
+                    case "progress":
+                        var progressEntry = JsonConvert.DeserializeObject<ProgressLogEntry>(line);
+                        if (progressEntry != null) HandleProgressLog(progressEntry);
+                        break;
+
+                    case "metrics":
+                        var metricsEntry = JsonConvert.DeserializeObject<MetricsLogEntry>(line);
+                        if (metricsEntry != null) HandleMetricsLog(metricsEntry);
+                        break;
+
+                    case "validation":
+                        var valEntry = JsonConvert.DeserializeObject<ValidationLogEntry>(line);
+                        if (valEntry != null) HandleValidationLog(valEntry);
+                        break;
+
+                    case "checkpoint":
+                        var cpEntry = JsonConvert.DeserializeObject<CheckpointLogEntry>(line);
+                        if (cpEntry != null) HandleCheckpointLog(cpEntry);
+                        break;
+
+                    case "lr_schedule":
+                        var lrEntry = JsonConvert.DeserializeObject<LRScheduleLogEntry>(line);
+                        if (lrEntry != null) HandleLRScheduleLog(lrEntry);
+                        break;
+
+                    case "early_stop":
+                        var esEntry = JsonConvert.DeserializeObject<EarlyStopLogEntry>(line);
+                        if (esEntry != null) HandleEarlyStopLog(esEntry);
+                        break;
+
+                    case "system":
+                        var sysEntry = JsonConvert.DeserializeObject<SystemLogEntry>(line);
+                        if (sysEntry != null) HandleSystemLog(sysEntry);
+                        break;
+
+                    case "info":
+                        var infoEntry = JsonConvert.DeserializeObject<InfoLogEntry>(line);
+                        if (infoEntry != null)
+                            Dispatcher.UIThread.Post(() => PyOutput += $"[INFO] {infoEntry.Message}\n");
+                        break;
+
+                    case "warning":
+                        var warnEntry = JsonConvert.DeserializeObject<WarningLogEntry>(line);
+                        if (warnEntry != null)
+                            Dispatcher.UIThread.Post(() => PyOutput += $"[WARNING] {warnEntry.Message}\n");
+                        break;
+
+                    case "error":
+                        var errEntry = JsonConvert.DeserializeObject<ErrorLogEntry>(line);
+                        if (errEntry != null) HandleErrorLog(errEntry);
+                        break;
+
+                    case "complete":
+                        var completeEntry = JsonConvert.DeserializeObject<CompleteLogEntry>(line);
+                        if (completeEntry != null) HandleCompleteLog(completeEntry);
+                        break;
+
+                    default:
+                        // 未知类型，作为普通文本输出
+                        Dispatcher.UIThread.Post(() => PyOutput += line + "\n");
+                        break;
+                }
+            }
+            catch (JsonException)
+            {
+                // JSON解析失败，作为普通文本输出
+                Dispatcher.UIThread.Post(() => PyOutput += line + "\n");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "处理Python输出失败: {Line}", line);
+            }
+        }
+
+        /// <summary>
+        /// 处理配置日志
+        /// </summary>
+        private void HandleConfigLog(ConfigLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                PyOutput += $"=== 训练配置 ===\n";
+                PyOutput += $"模型: {entry.Model}\n";
+                PyOutput += $"类别数: {entry.NumClasses}\n";
+                PyOutput += $"批次大小: {entry.BatchSize}\n";
+                PyOutput += $"训练轮数: {entry.Epochs}\n";
+                PyOutput += $"学习率: {entry.LearningRate}\n";
+                PyOutput += $"设备: {entry.Device}\n";
+                PyOutput += $"================\n\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理进度日志
+        /// </summary>
+        private void HandleProgressLog(ProgressLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                // 注意：当前设计中没有单独的进度条属性
+                // 可以通过PyOutput显示进度信息
+                PyOutput += $">>> Epoch {entry.Epoch}/{entry.TotalEpochs} ({entry.Percent:F1}%)\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理指标日志
+        /// </summary>
+        private void HandleMetricsLog(MetricsLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                // 更新图表 - 使用现有的ObservableValue集合
+                if (entry.Phase == "train")
+                {
+                    TrainLossValues?.Add(new ObservableValue() { Value = entry.Loss });
+                    TrainAccValues?.Add(new ObservableValue() { Value = entry.Accuracy });
+                }
+                else if (entry.Phase == "val")
+                {
+                    ValidationLossValues?.Add(new ObservableValue() { Value = entry.Loss });
+                    ValidationAccValues?.Add(new ObservableValue() { Value = entry.Accuracy });
+                }
+
+                PyOutput += $"[{entry.Phase.ToUpper()}] Epoch {entry.Epoch}: Loss={entry.Loss:F6}, Acc={entry.Accuracy:F6}, LR={entry.LearningRate:E2}\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理验证结果日志
+        /// </summary>
+        private void HandleValidationLog(ValidationLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var status = entry.Improved ? "✓ 改进" : "✗ 未改进";
+                PyOutput += $"  验证结果: {status}\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理检查点日志
+        /// </summary>
+        private void HandleCheckpointLog(CheckpointLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                PyOutput += $"  💾 保存模型: {entry.Reason} (Epoch {entry.Epoch})\n";
+                PyOutput += $"     路径: {entry.Path}\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理学习率调整日志
+        /// </summary>
+        private void HandleLRScheduleLog(LRScheduleLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                PyOutput += $"  📉 学习率调整 (Epoch {entry.Epoch}): {entry.OldLR:E2} → {entry.NewLR:E2} ({entry.Reason})\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理早停日志
+        /// </summary>
+        private void HandleEarlyStopLog(EarlyStopLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                PyOutput += $"\n⏸️ 早停触发 (Epoch {entry.Epoch})\n";
+                PyOutput += $"   原因: {entry.Reason}\n";
+                PyOutput += $"   最佳Epoch: {entry.BestEpoch}\n";
+                foreach (var metric in entry.BestMetrics)
+                {
+                    PyOutput += $"   {metric.Key}: {metric.Value:F6}\n";
+                }
+                PyOutput += "\n";
+            });
+        }
+
+        /// <summary>
+        /// 处理系统资源日志
+        /// </summary>
+        private void HandleSystemLog(SystemLogEntry entry)
+        {
+            // 系统资源信息可以选择性显示或用于监控
+            Log.Debug("系统资源 - GPU: {GPU}%, Memory: {Mem}GB, CPU: {CPU}%",
+                entry.GPUUsage, entry.MemoryUsage, entry.CPUUsage);
+        }
+
+        /// <summary>
+        /// 处理错误日志
+        /// </summary>
+        private void HandleErrorLog(ErrorLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                PyOutput += $"\n❌ 错误: {entry.Message}\n";
+                if (!string.IsNullOrEmpty(entry.ErrorType))
+                {
+                    PyOutput += $"   类型: {entry.ErrorType}\n";
+                }
+                if (!string.IsNullOrEmpty(entry.Traceback))
+                {
+                    PyOutput += $"   堆栈:\n{entry.Traceback}\n";
+                }
+            });
+
+            Log.Error("Python训练错误: {Message}, 类型: {Type}", entry.Message, entry.ErrorType);
+        }
+
+        /// <summary>
+        /// 处理完成日志
+        /// </summary>
+        private void HandleCompleteLog(CompleteLogEntry entry)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                var timeSpan = TimeSpan.FromSeconds(entry.TotalTime);
+                var msg = $"\n🎉 训练完成！\n" +
+                          $"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                          $"  最佳Epoch: {entry.BestEpoch}\n";
+
+                foreach (var metric in entry.BestMetrics)
+                {
+                    msg += $"  {metric.Key}: {metric.Value:F6}\n";
+                }
+
+                msg += $"  训练时长: {timeSpan:hh\\:mm\\:ss}\n" +
+                       $"  模型路径: {entry.ModelPath}\n" +
+                       $"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+
+                PyOutput += msg;
+                isPyRunning = false;
+            });
+
+            Log.Information("训练完成 - 最佳Epoch: {BestEpoch}, 用时: {Time}秒", entry.BestEpoch, entry.TotalTime);
+        }
+
+        #endregion
+
         #endregion
     }
 }

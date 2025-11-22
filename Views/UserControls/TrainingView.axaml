@@ -131,14 +131,17 @@
 						Height="35"
 						Content="开始训练"
 						FontFamily="avares://AutoTrainer/Assets/Fonts#思源黑体 CN Bold"
-						Command="{Binding StartTrainingCommand}">
+						Command="{Binding StartTrainingCommand}"
+						IsEnabled="{Binding !IsTraining}">
 					</Button>
 					<Button
 						Height="35"
 						Margin="10,0,0,0"
-						Content="暂停">
+						Content="停止训练"
+						FontFamily="avares://AutoTrainer/Assets/Fonts#思源黑体 CN Bold"
+						Command="{Binding StopTrainingCommand}"
+						IsEnabled="{Binding CanStopTraining}">
 					</Button>
-					<Button Height="35" Margin="10,0,0,0" Content="停止"/>
 				</StackPanel>
 			</Grid>
 		</Grid>

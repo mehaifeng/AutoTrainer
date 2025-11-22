@@ -1,0 +1,285 @@
+"""
+COCO格式检测数据加载器
+支持COCO格式的目标检测数据集加载和预处理
+"""
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms as T
+from PIL import Image
+import json
+import os
+from typing import Dict, Any, List, Tuple, Optional
+import numpy as np
+
+
+class COCODetectionDataset(Dataset):
+    """COCO格式检测数据集"""
+    
+    def __init__(self, 
+                 images_dir: str, 
+                 annotation_file: str,
+                 transforms: Optional[Any] = None):
+        """
+        初始化COCO检测数据集
+        
+        Args:
+            images_dir: 图像文件夹路径
+            annotation_file: COCO格式标注文件路径（JSON）
+            transforms: 数据变换（可选）
+        """
+        self.images_dir = images_dir
+        self.transforms = transforms
+        
+        # 加载COCO标注
+        with open(annotation_file, 'r', encoding='utf-8') as f:
+            self.coco_data = json.load(f)
+        
+        # 构建图像ID到文件名的映射
+        self.images = {img['id']: img for img in self.coco_data['images']}
+        
+        # 构建类别ID映射（COCO类别ID不连续，需要映射到1-N，0保留给背景）
+        self.categories = {cat['id']: cat for cat in self.coco_data['categories']}
+        # 注意：检测模型中，0 是背景类，前景类从 1 开始
+        self.cat_id_to_label = {cat_id: idx + 1 for idx, cat_id in enumerate(sorted(self.categories.keys()))}
+        self.label_to_cat_id = {idx + 1: cat_id for idx, cat_id in enumerate(sorted(self.categories.keys()))}
+        
+        # 按图像ID组织标注
+        self.image_to_annotations = {}
+        for ann in self.coco_data['annotations']:
+            image_id = ann['image_id']
+            if image_id not in self.image_to_annotations:
+                self.image_to_annotations[image_id] = []
+            self.image_to_annotations[image_id].append(ann)
+        
+        # 获取所有图像ID列表
+        self.image_ids = list(self.images.keys())
+        
+    def __len__(self):
+        return len(self.image_ids)
+    
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """
+        获取一个样本
+        
+        Args:
+            idx: 索引
+            
+        Returns:
+            (image, target) 其中target包含boxes, labels, image_id等
+        """
+        image_id = self.image_ids[idx]
+        image_info = self.images[image_id]
+        
+        # 加载图像
+        image_path = os.path.join(self.images_dir, image_info['file_name'])
+        image = Image.open(image_path).convert('RGB')
+        
+        # 获取该图像的所有标注
+        annotations = self.image_to_annotations.get(image_id, [])
+        
+        # 提取boxes和labels
+        boxes = []
+        labels = []
+        areas = []
+        iscrowd = []
+        
+        for ann in annotations:
+            # COCO格式: [x, y, width, height]
+            x, y, w, h = ann['bbox']
+            
+            # 验证bbox有效性
+            if w <= 0 or h <= 0:
+                # 跳过无效的标注（宽度或高度为0或负数）
+                continue
+                
+            # 转换为 [x_min, y_min, x_max, y_max]
+            x_min, y_min = x, y
+            x_max, y_max = x + w, y + h
+            
+            # 确保坐标为正数且有效
+            if x_min < 0 or y_min < 0 or x_max <= x_min or y_max <= y_min:
+                # 跳过无效的bbox
+                continue
+            
+            boxes.append([x_min, y_min, x_max, y_max])
+            
+            # 映射类别ID到连续标签
+            cat_id = ann['category_id']
+            
+            # 验证类别ID是否在映射中
+            if cat_id not in self.cat_id_to_label:
+                print(f"警告: 未知的类别ID {cat_id}，跳过该标注")
+                # 移除刚添加的box
+                boxes.pop()
+                continue
+                
+            labels.append(self.cat_id_to_label[cat_id])
+            
+            areas.append(ann.get('area', w * h))
+            iscrowd.append(ann.get('iscrowd', 0))
+        
+        # 转换为tensor
+        if len(boxes) > 0:
+            boxes = torch.as_tensor(boxes, dtype=torch.float32)
+            labels = torch.as_tensor(labels, dtype=torch.int64)
+            areas = torch.as_tensor(areas, dtype=torch.float32)
+            iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
+            
+            # 额外验证：确保标签在有效范围内
+            assert labels.min() >= 1, f"标签必须 >= 1（0是背景类），得到 min={labels.min()}"
+            assert not torch.isnan(boxes).any(), "boxes 包含 NaN"
+            assert not torch.isinf(boxes).any(), "boxes 包含 Inf"
+            assert (boxes[:, 2] > boxes[:, 0]).all(), "x_max 必须 > x_min"
+            assert (boxes[:, 3] > boxes[:, 1]).all(), "y_max 必须 > y_min"
+        else:
+            # 如果没有有效标注，创建空的tensor
+            boxes = torch.zeros((0, 4), dtype=torch.float32)
+            labels = torch.zeros((0,), dtype=torch.int64)
+            areas = torch.zeros((0,), dtype=torch.float32)
+            iscrowd = torch.zeros((0,), dtype=torch.int64)
+        
+        # 构建target字典
+        target = {
+            'boxes': boxes,
+            'labels': labels,
+            'image_id': torch.tensor([image_id]),
+            'area': areas,
+            'iscrowd': iscrowd
+        }
+        
+        # 应用变换
+        if self.transforms is not None:
+            image = self.transforms(image)
+        
+        return image, target
+    
+    def get_num_classes(self) -> int:
+        """获取类别数（不包括背景）"""
+        return len(self.categories)
+    
+    def get_category_names(self) -> List[str]:
+        """获取类别名称列表"""
+        sorted_cats = sorted(self.categories.items(), key=lambda x: self.cat_id_to_label[x[0]])
+        return [cat['name'] for _, cat in sorted_cats]
+
+
+class DetectionDataLoader:
+    """检测任务数据加载器"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        """
+        初始化检测数据加载器
+        
+        Args:
+            config: 检测配置字典
+        """
+        self.config = config
+        self.train_transform = self._get_train_transform()
+        self.val_transform = self._get_val_transform()
+        
+    def _get_train_transform(self):
+        """获取训练数据变换"""
+        # 注意：TorchVision的检测模型（Faster R-CNN等）会在内部进行标准化
+        # 因此这里只需要ToTensor()即可，不要额外标准化
+        return T.Compose([
+            T.ToTensor(),
+            # 不使用 Normalize！检测模型内部会处理
+        ])
+        
+    def _get_val_transform(self):
+        """获取验证数据变换"""
+        # 同样，验证集也不需要标准化
+        return T.Compose([
+            T.ToTensor(),
+            # 不使用 Normalize！检测模型内部会处理
+        ])
+        
+    def get_dataloaders(self, batch_size: int, num_workers: int = 4) -> Tuple[DataLoader, DataLoader]:
+        """
+        获取训练和验证数据加载器
+        
+        Args:
+            batch_size: 批次大小
+            num_workers: 数据加载工作线程数
+            
+        Returns:
+            (train_loader, val_loader)
+        """
+        # 从detection_config中获取路径
+        train_images = self.config.get('train_images_path')
+        train_ann = self.config.get('train_annotation_path')
+        val_images = self.config.get('val_images_path')
+        val_ann = self.config.get('val_annotation_path')
+        
+        if not train_images or not train_ann:
+            raise ValueError("训练数据路径和标注文件路径未设置")
+        
+        # 创建训练数据集
+        train_dataset = COCODetectionDataset(
+            train_images,
+            train_ann,
+            transforms=self.train_transform
+        )
+        
+        # 创建验证数据集
+        if val_images and val_ann:
+            val_dataset = COCODetectionDataset(
+                val_images,
+                val_ann,
+                transforms=self.val_transform
+            )
+        else:
+            # 如果没有验证集，使用训练集的一部分
+            val_split = self.config.get('validation_split', 0.2)
+            train_size = int((1 - val_split) * len(train_dataset))
+            val_size = len(train_dataset) - train_size
+            
+            train_dataset, val_dataset = torch.utils.data.random_split(
+                train_dataset, [train_size, val_size]
+            )
+        
+        # 创建DataLoader
+        # 注意：检测任务需要自定义collate_fn来处理不同数量的boxes
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            collate_fn=self._collate_fn,
+            pin_memory=True
+        )
+        
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            collate_fn=self._collate_fn,
+            pin_memory=True
+        )
+        
+        return train_loader, val_loader
+    
+    @staticmethod
+    def _collate_fn(batch):
+        """
+        自定义collate函数，处理不同数量的目标框
+        
+        Args:
+            batch: 批次数据
+            
+        Returns:
+            (images, targets) 列表
+        """
+        images = []
+        targets = []
+        
+        for image, target in batch:
+            images.append(image)
+            targets.append(target)
+        
+        # 将图像堆叠成tensor
+        images = torch.stack(images, dim=0)
+        
+        # targets保持为列表，因为每个图像的目标数量不同
+        return images, targets

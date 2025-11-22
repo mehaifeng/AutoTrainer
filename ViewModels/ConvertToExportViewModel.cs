@@ -42,7 +42,7 @@ namespace AutoTrainer.ViewModels
             var modelOutputPath = App.TrainModel.ModelOutputPath ?? string.Empty;
             var pretrainedModel = App.TrainModel.PretrainedModel ?? string.Empty;
             var modelPath = Path.Combine(modelOutputPath, pretrainedModel + ".pth");
-            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "ModelConverter.py");
+            var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Conversion", "ModelConverter.py");
             StringBuilder sb = new StringBuilder();
             sb.Append($" --model {pretrainedModel}");
             sb.Append($" --format onnx");
@@ -69,7 +69,7 @@ namespace AutoTrainer.ViewModels
             var modelPath = Path.Combine(modelOutputPath, pretrainedModel + ".pth");
             var sb = new StringBuilder();
             var venvFolder = App.PythonVenvPath;
-            var pythonScript = $"{Environment.CurrentDirectory}\\PyScripts\\ModelConverter.py";
+            var pythonScript = $"{Environment.CurrentDirectory}\\PyScripts\\Conversion\\ModelConverter.py";
             sb.Append($" --model {pretrainedModel}");
             sb.Append($" --format tensorflow");
             sb.Append($" --weights {modelPath}");

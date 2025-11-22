@@ -40,12 +40,16 @@ namespace AutoTrainer.ViewModels
             SelectedTaskType = TaskTypes[0]; // 默认选择分类
             Task.Run(SetRequirementsDisplay);
             Task.Run(GetPython);
+            
+            // 初始加载模型列表
+            Task.Run(async () => await GetModelsWithLoadingState());
         }
         #endregion
 
         #region 全局属性
-        private string modelHelperScript = Path.Combine($"{Environment.CurrentDirectory}","PyScripts","ModelHelper.py");
+        private string modelHelperScript = Path.Combine($"{Environment.CurrentDirectory}","PyScripts","Utils","ModelHelper.py");
         private string requirementsFilePath = Path.Combine(Environment.CurrentDirectory, "Configs", "Requirements.json");
+        private string availableModelsFilePath = Path.Combine(Environment.CurrentDirectory, "Configs", "AvailableModels.json");
         private string[] requireApps = [
             "torch",
             "torchvision",
@@ -260,100 +264,57 @@ namespace AutoTrainer.ViewModels
             Outputs = sb.ToString();
         }
         /// <summary>
-        /// 获取模型列表
+        /// 从配置文件获取模型列表
         /// </summary>
         /// <returns></returns>
         private async Task GetModels()
         {
-            if (!string.IsNullOrEmpty(PythonVenvPath))
+            await Task.Run(() =>
             {
-                // 确保在UI线程中初始化ModelList
-                Dispatcher.UIThread.Post(() => ModelList = new ObservableCollection<string>());
-                StringBuilder sb = new StringBuilder();
-                var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
-                sb.Append(activateFile);
-                sb.Append(" && ");
-
-                // 根据任务类型选择对应的helper脚本和参数
-                var helperScript = SelectedTaskType?.Value == "detection" ? "DetectionModelHelper.py" : "ModelHelper.py";
-                var scriptPath = Path.Combine(Environment.CurrentDirectory, "PyScripts", helperScript);
-
-                // DetectionModelHelper.py 支持 --task 参数，但 ModelHelper.py 不支持
-                if (SelectedTaskType?.Value == "detection")
+                try
                 {
-                    sb.Append($"python {scriptPath} list --task detection");
-                }
-                else
-                {
-                    sb.Append($"python {scriptPath} list --format simple");
-                }
-                var command = sb.ToString();
-                var result = await CliWrapHelper.ExecuteLine(command);
+                    // 确保在UI线程中初始化ModelList
+                    Dispatcher.UIThread.Post(() => ModelList = new ObservableCollection<string>());
 
-                // 调试信息
-                System.Diagnostics.Debug.WriteLine($"GetModels command: {command}");
-                System.Diagnostics.Debug.WriteLine($"GetModels exit code: {result.ExitCode}");
-                System.Diagnostics.Debug.WriteLine($"GetModels output: {result.Output}");
-                System.Diagnostics.Debug.WriteLine($"GetModels error: {result.Error}");
-
-                if (result.ExitCode == 0)
-                {
-                    if (!string.IsNullOrEmpty(result.Output) && result.Output.Contains("###Models###"))
+                    if (!File.Exists(availableModelsFilePath))
                     {
-                        var modelsSection = result.Output.Split("###Models###")[1].Trim();
-                        var modelLines = modelsSection.Split(App.LineBreak, StringSplitOptions.RemoveEmptyEntries);
+                        System.Diagnostics.Debug.WriteLine($"GetModels: 配置文件不存在 {availableModelsFilePath}");
+                        return;
+                    }
 
-                        foreach (var line in modelLines)
+                    var jsonContent = File.ReadAllText(availableModelsFilePath);
+                    var modelConfig = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, List<string>>>>(jsonContent);
+
+                    if (modelConfig == null || SelectedTaskType == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("GetModels: 配置为空或任务类型未选择");
+                        return;
+                    }
+
+                    var taskType = SelectedTaskType.Value;
+                    if (modelConfig.ContainsKey(taskType))
+                    {
+                        var taskModels = modelConfig[taskType];
+                        foreach (var category in taskModels)
                         {
-                            var trimmedLine = line.Trim();
-                            if (!string.IsNullOrEmpty(trimmedLine))
+                            foreach (var modelName in category.Value)
                             {
-                                // 解析模型名称，移除任务类型标记 [classification] 或 [detection]
-                                var modelName = trimmedLine;
-                                var bracketIndex = trimmedLine.LastIndexOf('[');
-                                if (bracketIndex > 0)
-                                {
-                                    modelName = trimmedLine.Substring(0, bracketIndex).Trim();
-                                }
-
-                                if (!string.IsNullOrEmpty(modelName))
-                                {
-                                    // 确保在UI线程中更新ObservableCollection
-                                    Dispatcher.UIThread.Post(() => ModelList.Add(modelName));
-                                }
+                                // 确保在UI线程中更新ObservableCollection
+                                Dispatcher.UIThread.Post(() => ModelList.Add(modelName));
                             }
                         }
-
-                        System.Diagnostics.Debug.WriteLine($"GetModels found {ModelList.Count} models");
+                        System.Diagnostics.Debug.WriteLine($"GetModels: 从配置文件加载了 {ModelList.Count} 个模型");
                     }
                     else
                     {
-                        // 如果没有找到模型标记，尝试简单分割
-                        if (!string.IsNullOrEmpty(result.Output))
-                        {
-                            var lines = result.Output.Split(App.LineBreak, StringSplitOptions.RemoveEmptyEntries);
-                            foreach (var line in lines)
-                            {
-                                var trimmedLine = line.Trim();
-                                if (!string.IsNullOrEmpty(trimmedLine) && !trimmedLine.Contains("###"))
-                                {
-                                    // 确保在UI线程中更新ObservableCollection
-                                    Dispatcher.UIThread.Post(() => ModelList.Add(trimmedLine));
-                                }
-                            }
-                        }
+                        System.Diagnostics.Debug.WriteLine($"GetModels: 配置文件中未找到任务类型 {taskType}");
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // 如果脚本执行失败，记录错误
-                    System.Diagnostics.Debug.WriteLine($"GetModels failed with error: {result.Error}");
+                    System.Diagnostics.Debug.WriteLine($"GetModels 异常: {ex.Message}");
                 }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("GetModels: PythonVenvPath is null or empty");
-            }
+            });
         }
         /// <summary>
         /// 是否跳过目录
@@ -563,20 +524,18 @@ namespace AutoTrainer.ViewModels
                 SelectModelIntroduce = null;
                 //隐藏本地模型选择，下一步按钮，模型介绍页面
                 IsVisibleIntroduce = false;
-                // 如果Python环境已配置，重新获取模型列表
-                if (!string.IsNullOrEmpty(PythonVenvPath))
+                
+                // 从配置文件重新加载模型列表
+                Task.Run(async () =>
                 {
-                    Task.Run(async () =>
+                    await GetModelsWithLoadingState();
+                }).ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
                     {
-                        await GetModelsWithLoadingState();
-                    }).ContinueWith(t =>
-                    {
-                        if (t.IsFaulted)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"GetModels failed: {t.Exception?.Message}");
-                        }
-                    }, TaskScheduler.Default);
-                }
+                        System.Diagnostics.Debug.WriteLine($"GetModels failed: {t.Exception?.Message}");
+                    }
+                }, TaskScheduler.Default);
             }
         }
         /// <summary>
@@ -815,7 +774,7 @@ namespace AutoTrainer.ViewModels
 
                 // 根据任务类型选择不同的辅助脚本
                 var helperScript = SelectedTaskType.Value == "detection" ? "DetectionModelHelper.py" : "ModelHelper.py";
-                var fullHelperPath = Path.Combine(Environment.CurrentDirectory, "PyScripts", helperScript);
+                var fullHelperPath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Utils", helperScript);
 
                 StringBuilder sb = new StringBuilder();
                 var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";

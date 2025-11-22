@@ -93,8 +93,8 @@ namespace AutoTrainer.Models
     public partial class EpochState : ViewModelBase
     {
         [ObservableProperty] 
-        private int? currentEpoch;
+        private int? currentEpoch = 0;
         [ObservableProperty] 
-        private int? totalEpochs;
+        private int? totalEpochs = 100;
     }
 }

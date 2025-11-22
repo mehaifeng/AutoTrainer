@@ -341,6 +341,125 @@ namespace AutoTrainer.Helpers
         }
 
         /// <summary>
+        /// 执行Python脚本并使用流式输出（用于实时解析JSON日志）
+        /// </summary>
+        /// <param name="pythonScriptPath">Python脚本路径</param>
+        /// <param name="venvPath">虚拟环境路径</param>
+        /// <param name="arguments">脚本参数</param>
+        /// <param name="onStdoutLine">标准输出行处理回调（每行JSON）</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>命令执行结果</returns>
+        public static async Task<CommandResult> ExecutePythonScriptWithStreamingAsync(
+            string pythonScriptPath,
+            string venvPath,
+            string? arguments = null,
+            Action<string>? onStdoutLine = null,
+            CancellationToken cancellationToken = default)
+        {
+            Log.Information("执行Python脚本(流式输出): {PythonScript}, 参数: {Arguments}",
+                pythonScriptPath, arguments ?? "无");
+
+            if (string.IsNullOrEmpty(pythonScriptPath))
+            {
+                Log.Error("Python脚本路径为空");
+                return new CommandResult { ExitCode = -1, Error = "Python script path cannot be empty" };
+            }
+
+            if (string.IsNullOrEmpty(venvPath))
+            {
+                Log.Error("虚拟环境路径为空");
+                return new CommandResult { ExitCode = -1, Error = "Virtual environment path cannot be empty" };
+            }
+
+            if (!File.Exists(pythonScriptPath))
+            {
+                Log.Error("未找到Python脚本: {PythonScript}", pythonScriptPath);
+                return new CommandResult { ExitCode = -1, Error = $"Python script not found: {pythonScriptPath}" };
+            }
+
+            try
+            {
+                // 获取Python解释器路径
+                var pythonExe = OperatingSystem.IsWindows()
+                    ? Path.Combine(venvPath, "Scripts", "python.exe")
+                    : Path.Combine(venvPath, "bin", "python");
+
+                if (!File.Exists(pythonExe))
+                {
+                    Log.Error("未找到Python解释器: {PythonExe}", pythonExe);
+                    return new CommandResult { ExitCode = -1, Error = $"Python executable not found: {pythonExe}" };
+                }
+
+                // 构建命令参数
+                var scriptArgs = $"\"{pythonScriptPath}\"";
+                if (!string.IsNullOrEmpty(arguments))
+                {
+                    scriptArgs += $" {arguments}";
+                }
+
+                Log.Debug("执行Python命令: {PythonExe} {ScriptArgs}", pythonExe, scriptArgs);
+
+                var result = new CommandResult { ExitCode = 0 };
+                var errorBuilder = new StringBuilder();
+                int lineCount = 0;
+
+                // 使用CliWrap的流式执行
+                await foreach (var cmdEvent in Cli.Wrap(pythonExe)
+                    .WithArguments(scriptArgs)
+                    .WithValidation(CommandResultValidation.None)
+                    .WithEnvironmentVariables(env =>
+                    {
+                        env.Set("PYTHONIOENCODING", "utf-8");
+                        env.Set("PYTHONUNBUFFERED", "1");  // 禁用Python输出缓冲
+                    })
+                    .ListenAsync(cancellationToken))
+                {
+                    switch (cmdEvent)
+                    {
+                        case StandardOutputCommandEvent stdOut:
+                            if (!string.IsNullOrWhiteSpace(stdOut.Text))
+                            {
+                                lineCount++;
+                                Log.Debug("Python输出行 {LineCount}: {Text}", 
+                                    lineCount, stdOut.Text.Substring(0, Math.Min(100, stdOut.Text.Length)));
+                                
+                                // 调用回调处理每一行输出
+                                onStdoutLine?.Invoke(stdOut.Text);
+                            }
+                            break;
+
+                        case StandardErrorCommandEvent stdErr:
+                            if (!string.IsNullOrWhiteSpace(stdErr.Text))
+                            {
+                                Log.Warning("Python stderr: {Error}", stdErr.Text);
+                                errorBuilder.AppendLine(stdErr.Text);
+                            }
+                            break;
+
+                        case ExitedCommandEvent exited:
+                            result.ExitCode = exited.ExitCode;
+                            Log.Information("Python脚本执行完成，退出码: {ExitCode}, 总输出行数: {LineCount}",
+                                exited.ExitCode, lineCount);
+                            break;
+                    }
+                }
+
+                result.Error = errorBuilder.ToString();
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("Python脚本执行被取消: {PythonScript}", pythonScriptPath);
+                return new CommandResult { ExitCode = -999, Error = "Execution cancelled by user" };  // 使用特殊的退出码
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "执行Python脚本失败: {PythonScript}", pythonScriptPath);
+                return new CommandResult { ExitCode = -1, Error = ex.Message };
+            }
+        }
+
+        /// <summary>
         /// 执行命令行命令并返回详细结果，支持长输出处理
         /// </summary>
         /// <param name="command">要执行的命令</param>

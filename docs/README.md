@@ -55,7 +55,7 @@ image03.jpg,类别A
 
 **可行性分析:**
 
-1.  **Python端 (`PyScripts/ModelTrainer.py`):**
+1.  **Python端 (`PyScripts/Training/ModelTrainer.py`):**
     *   **现状:** 目前使用的`ImageFolder`无法直接处理这种配置文件。
     *   **改造方案:** 需要在Python脚本中实现一个自定义的PyTorch `Dataset` 类。这个类将负责：
         1.  在构造函数 (`__init__`) 中读取并解析`annotations.txt`文件，将图片路径和标签加载到内存中。

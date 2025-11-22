@@ -440,6 +440,28 @@ namespace AutoTrainer.ViewModels
             {
                 App.TrainModel.Detection ??= new DetectionConfig();
                 App.TrainModel.Detection.TrainAnnotationPath = COCOAnnotationPath;
+                
+                // 从COCO标注文件中读取类别数
+                if (!string.IsNullOrEmpty(COCOAnnotationPath) && File.Exists(COCOAnnotationPath))
+                {
+                    try
+                    {
+                        var jsonText = File.ReadAllText(COCOAnnotationPath);
+                        using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
+                        
+                        if (doc.RootElement.TryGetProperty("categories", out var categories))
+                        {
+                            var categoryCount = categories.GetArrayLength();
+                            App.TrainModel.NumClasses = categoryCount;
+                            Log.Information($"从COCO标注文件读取类别数: {categoryCount}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning($"读取COCO类别数失败: {ex.Message}");
+                    }
+                }
+                
                 IsLoading = false;
                 ProgressState = "就绪";
             }

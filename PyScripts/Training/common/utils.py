@@ -1,0 +1,220 @@
+"""
+工具函数模块
+提供早停、GPU监控、模型保存等通用功能
+"""
+import torch
+import os
+import psutil
+from typing import Optional, Dict
+try:
+    import pynvml
+    NVML_AVAILABLE = True
+except ImportError:
+    NVML_AVAILABLE = False
+
+
+class EarlyStopping:
+    """早停机制"""
+    
+    def __init__(self, patience: int = 10, delta: float = 0.001, verbose: bool = True):
+        """
+        初始化早停
+        
+        Args:
+            patience: 等待改善的轮数
+            delta: 最小改善量
+            verbose: 是否输出详细信息
+        """
+        self.patience = patience
+        self.delta = delta
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.best_epoch = 0
+        
+    def __call__(self, val_loss: float, epoch: int) -> bool:
+        """
+        检查是否应该早停
+        
+        Args:
+            val_loss: 验证损失
+            epoch: 当前epoch
+            
+        Returns:
+            是否应该早停
+        """
+        score = -val_loss
+        
+        if self.best_score is None:
+            self.best_score = score
+            self.best_epoch = epoch
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            if self.verbose:
+                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.best_epoch = epoch
+            self.counter = 0
+            
+        return self.early_stop
+
+
+class GPUMonitor:
+    """GPU使用率监控"""
+    
+    def __init__(self):
+        """初始化GPU监控"""
+        self.available = False
+        if NVML_AVAILABLE:
+            try:
+                pynvml.nvmlInit()
+                self.available = True
+            except:
+                pass
+                
+    def get_gpu_usage(self, device_id: int = 0) -> Optional[float]:
+        """
+        获取GPU使用率
+        
+        Args:
+            device_id: GPU设备ID
+            
+        Returns:
+            GPU使用率百分比，如果无法获取则返回None
+        """
+        if not self.available:
+            return None
+            
+        try:
+            handle = pynvml.nvmlDeviceGetHandleByIndex(device_id)
+            utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            return float(utilization.gpu)
+        except:
+            return None
+            
+    def get_memory_usage(self, device_id: int = 0) -> Optional[float]:
+        """
+        获取GPU显存使用量（GB）
+        
+        Args:
+            device_id: GPU设备ID
+            
+        Returns:
+            显存使用量（GB），如果无法获取则返回None
+        """
+        if not self.available:
+            return None
+            
+        try:
+            handle = pynvml.nvmlDeviceGetHandleByIndex(device_id)
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            return mem_info.used / (1024 ** 3)  # 转换为GB
+        except:
+            return None
+            
+    def __del__(self):
+        """清理资源"""
+        if self.available:
+            try:
+                pynvml.nvmlShutdown()
+            except:
+                pass
+
+
+class SystemMonitor:
+    """系统资源监控"""
+    
+    @staticmethod
+    def get_cpu_usage() -> float:
+        """获取CPU使用率"""
+        return psutil.cpu_percent(interval=1)
+        
+    @staticmethod
+    def get_memory_usage() -> float:
+        """获取内存使用量（GB）"""
+        mem = psutil.virtual_memory()
+        return mem.used / (1024 ** 3)
+        
+    @staticmethod
+    def get_memory_percent() -> float:
+        """获取内存使用率百分比"""
+        return psutil.virtual_memory().percent
+
+
+class ModelCheckpoint:
+    """模型检查点管理器"""
+    
+    def __init__(self, save_dir: str, model_name: str):
+        """
+        初始化检查点管理器
+        
+        Args:
+            save_dir: 保存目录
+            model_name: 模型名称
+        """
+        self.save_dir = save_dir
+        self.model_name = model_name
+        self.best_acc = 0.0
+        
+        # 确保保存目录存在
+        os.makedirs(save_dir, exist_ok=True)
+        
+    def save(self, model: torch.nn.Module, epoch: int, metrics: Dict[str, float], 
+             is_best: bool = False) -> str:
+        """
+        保存模型检查点
+        
+        Args:
+            model: 模型
+            epoch: 当前epoch
+            metrics: 指标字典
+            is_best: 是否是最佳模型
+            
+        Returns:
+            保存路径
+        """
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'metrics': metrics
+        }
+        
+        if is_best:
+            save_path = os.path.join(self.save_dir, f'{self.model_name}_best.pth')
+            self.best_acc = metrics.get('accuracy', 0.0)
+        else:
+            save_path = os.path.join(self.save_dir, f'{self.model_name}_epoch{epoch}.pth')
+            
+        torch.save(checkpoint, save_path)
+        return save_path
+        
+    def save_final(self, model: torch.nn.Module) -> str:
+        """
+        保存最终模型（仅权重）
+        
+        Args:
+            model: 模型
+            
+        Returns:
+            保存路径
+        """
+        save_path = os.path.join(self.save_dir, f'{self.model_name}.pth')
+        torch.save(model.state_dict(), save_path)
+        return save_path
+
+
+def get_device() -> torch.device:
+    """获取训练设备"""
+    return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
+def set_seed(seed: int = 42):
+    """设置随机种子以保证可复现性"""
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
