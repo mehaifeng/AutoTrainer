@@ -28,7 +28,7 @@ namespace AutoTrainer.ViewModels
         public ParameterConfigViewModel()
         {
             LearningRates = [0.1f, 0.01f, 0.001f, 0.0001f];
-            BatchSizes = [8, 16, 32, 64];
+            BatchSizes = [1, 2, 4, 8, 16, 32, 64];
             Optimizers = ["Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
             SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];

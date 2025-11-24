@@ -538,6 +538,21 @@ namespace AutoTrainer.ViewModels
                     COCOAnnotationPath = files[0].TryGetLocalPath();
                     if (string.IsNullOrEmpty(COCOAnnotationPath)) return;
 
+                    // 如果已有标注数据，提示覆盖
+                    if (AllImageAnnotations.Count > 0 || CurrentImageAnnotations.Count > 0)
+                    {
+                        var msgBox = MessageBoxManager.GetMessageBoxStandard("标注覆盖警告", "导入新的COCO文件会清空当前所有标注，是否继续？", MsBox.Avalonia.Enums.ButtonEnum.YesNo);
+                        var result = await msgBox.ShowAsync();
+                        if (result == MsBox.Avalonia.Enums.ButtonResult.No)
+                        {
+                            return;
+                        }
+                        // 清空所有现有标注与UI元素
+                        CurrentImageAnnotations.Clear();
+                        ImageCanvas.Children.Clear();
+                        AllImageAnnotations.Clear();
+                    }
+
                     IsLoading = true;
                     ProgressState = "正在导入COCO标注文件...";
                     ProgressValue = 0;
@@ -1699,8 +1714,16 @@ namespace AutoTrainer.ViewModels
                     {
                         return;
                     }
+                    // 清除当前图片的标注集合与画布元素，防止残留
+                    CurrentImageAnnotations.Clear();
+                    ImageCanvas.Children.Clear();
+                    AllImageAnnotations.Clear();
+                    ClassNames = [];
                 }
-                AllImageAnnotations.Clear();
+                else
+                {
+                    AllImageAnnotations.Clear();
+                }
                 ProgressState = "正在加载图片列表...";
                 ImageList = new ObservableCollection<ImageItem>(imageItems);
 
