@@ -34,6 +34,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Path = System.IO.Path;
 
 namespace AutoTrainer.ViewModels
 {
@@ -179,10 +180,7 @@ namespace AutoTrainer.ViewModels
         public bool IsNotBatchProcessing => !IsBatchProcessing;
 
         [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(AddImageClassCommand))]
         private string? _selectedClassForAction;
-
-        public bool CanAddImageClass => !string.IsNullOrEmpty(SelectedClassForAction) && !HasSelectedAnnotation;
 
         /// <summary>
         /// 是否勾选检测框标注类型
@@ -192,6 +190,12 @@ namespace AutoTrainer.ViewModels
 
         [ObservableProperty]
         private string trainDatasetPath = string.Empty;
+
+        /// <summary>
+        /// COCO标注功能是否可用（仅检测任务可用）
+        /// </summary>
+        [ObservableProperty]
+        private bool isCocoFunctionsEnabled = false;
         #endregion
 
         #region 事件和委托
@@ -211,6 +215,9 @@ namespace AutoTrainer.ViewModels
             //初始化通知管理器
             NotifyManager = new NotificationMessageManager();
             CurrentImageAnnotations.CollectionChanged += CurrentImageAnnotations_CollectionChanged;
+            
+            // 初始化COCO功能可用状态
+            UpdateCocoFunctionsEnabled();
         }
 
         private void DatasetAnnotationViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -227,7 +234,6 @@ namespace AutoTrainer.ViewModels
                 case nameof(SelectedAnnotation):
                     OnPropertyChanged(nameof(HasSelectedAnnotation));
                     OnPropertyChanged(nameof(HasNoSelectedAnnotation));
-                    AddImageClassCommand.NotifyCanExecuteChanged();
                     if (SelectedAnnotation != null)
                     {
                         SelectedClassForAction = SelectedAnnotation.ClassName;
@@ -238,14 +244,48 @@ namespace AutoTrainer.ViewModels
 
         partial void OnSelectedClassForActionChanged(string? value)
         {
-            if (SelectedAnnotation != null && SelectedAnnotation.ClassName != value)
+            if (string.IsNullOrEmpty(value))
+                return;
+
+            if (SelectedAnnotation != null)
             {
-                SelectedAnnotation.ClassName = value;
+                // 选中了标注框：为标注框设置类别（分类/检测任务通用）
+                if (SelectedAnnotation.ClassName != value)
+                {
+                    SelectedAnnotation.ClassName = value;
+                }
             }
-            AddImageClassCommand.NotifyCanExecuteChanged();
+            else
+            {
+                // 未选中标注框：为整张图片添加分类标签（仅分类任务）
+                if (CurrentImageIndex >= 0 && CurrentImageIndex < ImageList.Count)
+                {
+                    var currentImageItem = ImageList[CurrentImageIndex];
+                    if (!currentImageItem.ImageClasses.Contains(value))
+                    {
+                        currentImageItem.ImageClasses.Add(value);
+                        CurrentImageClasses.Add(value);
+                    }
+                }
+            }
         }
 
+        /// <summary>
+        /// 更新COCO功能可用状态（仅检测任务可用）
+        /// </summary>
+        public void UpdateCocoFunctionsEnabled()
+        {
+            IsCocoFunctionsEnabled = App.TrainModel?.TaskType == "detection";
+        }
 
+        /// <summary>
+        /// 视图加载完成命令
+        /// </summary>
+        [RelayCommand]
+        private void Loaded()
+        {
+            UpdateCocoFunctionsEnabled();
+        }
 
         [RelayCommand]
         private void SelectManualMode()
@@ -343,10 +383,14 @@ namespace AutoTrainer.ViewModels
                     Imagesfolder = folders[0].TryGetLocalPath() ?? string.Empty;
                     await LoadImagesFromFolder(selectedFolder.Path);
                     TrainDatasetPath = Imagesfolder;
+                    
                     if (App.TrainModel?.TaskType == "classification")
                     {
                         App.TrainModel.Classification ??= new ClassificationConfig();
                         App.TrainModel.Classification.TrainDataPath = TrainDatasetPath;
+                        
+                        // 检查是否符合ImageFolder格式
+                        await CheckAndParseImageFolderFormat(Imagesfolder);
                     }
                     else if(App.TrainModel?.TaskType == "detection")
                     {
@@ -364,6 +408,93 @@ namespace AutoTrainer.ViewModels
             {
                 App.TrainModel.Detection ??= new DetectionConfig();
                 App.TrainModel.Detection.TrainImagesPath = Imagesfolder;
+            }
+        }
+
+        /// <summary>
+        /// 检查并解析ImageFolder格式
+        /// </summary>
+        private async Task CheckAndParseImageFolderFormat(string folderPath)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                    return;
+
+                var subDirs = Directory.GetDirectories(folderPath);
+                
+                if (subDirs.Length < 2)
+                {
+                    Log.Information("目录不符合ImageFolder格式（至少需要2个类别文件夹）");
+                    return;
+                }
+
+                var validClasses = new List<string>();
+                var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp", ".tiff", ".tif" };
+
+                foreach (var dir in subDirs)
+                {
+                    var dirName = Path.GetFileName(dir);
+                    var hasImages = Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
+                        .Any(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()));
+
+                    if (hasImages)
+                    {
+                        validClasses.Add(dirName);
+                    }
+                }
+
+                if (validClasses.Count >= 2)
+                {
+                    // 符合ImageFolder格式，收集类别
+                    ClassNames.Clear();
+                    foreach (var className in validClasses.OrderBy(c => c))
+                    {
+                        ClassNames.Add(className);
+                    }
+
+                    // 注意：图片的类别已经在LoadImagesFromFolder中分配了
+                    // 但如果LoadImagesFromFolder没有分配（比如先加载图片再检测格式的情况），需要补充分配
+                    if (ImageList.Any(img => img.ImageClasses.Count == 0))
+                    {
+                        foreach (var imageItem in ImageList)
+                        {
+                            if (imageItem.ImageClasses.Count == 0)
+                            {
+                                // 根据图片所在的文件夹确定类别
+                                var imagePath = imageItem.FilePath;
+                                var parentDir = Path.GetFileName(Path.GetDirectoryName(imagePath));
+                                
+                                if (validClasses.Contains(parentDir))
+                                {
+                                    imageItem.ImageClasses.Add(parentDir);
+                                }
+                            }
+                        }
+                    }
+
+                    // 更新类别数
+                    App.TrainModel.NumClasses = validClasses.Count;
+
+                    NotifyManager.CreateMessage()
+                        .Accent("#1E88E5")
+                        .Background("#e5e4e2")
+                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
+                        .HasBadge("成功")
+                        .HasMessage($"检测到ImageFolder格式，共 {validClasses.Count} 个类别：{string.Join(", ", validClasses)}")
+                        .Dismiss().WithDelay(6000, t => { })
+                        .Queue();
+
+                    Log.Information($"检测到ImageFolder格式，{validClasses.Count} 个类别: {string.Join(", ", validClasses)}");
+                }
+                else
+                {
+                    Log.Information("目录不符合ImageFolder格式");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "检查ImageFolder格式时出错");
             }
         }
 
@@ -532,21 +663,6 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 添加图像分类
         /// </summary>
-        [RelayCommand(CanExecute = nameof(CanAddImageClass))]
-        private void AddImageClass()
-        {
-            if (CurrentImageIndex < 0 || CurrentImageIndex >= ImageList.Count)
-                return;
-
-            var currentImageItem = ImageList[CurrentImageIndex];
-            if (SelectedClassForAction != null && !currentImageItem.ImageClasses.Contains(SelectedClassForAction))
-            {
-                currentImageItem.ImageClasses.Add(SelectedClassForAction);
-                // Also update the UI-bound collection
-                CurrentImageClasses.Add(SelectedClassForAction);
-            }
-        }
-
         /// <summary>
         /// 移除图像分类
         /// </summary>
@@ -907,6 +1023,18 @@ namespace AutoTrainer.ViewModels
                         {
                             ClassNames.Add(newClass);
                         }
+                    }
+
+                    // 保存标注文件路径到配置
+                    if (App.TrainModel?.TaskType == "classification")
+                    {
+                        App.TrainModel.Classification ??= new ClassificationConfig();
+                        App.TrainModel.Classification.TrainAnnotationPath = selectedFile;
+                        
+                        // 更新类别数
+                        App.TrainModel.NumClasses = ClassNames.Count;
+                        
+                        Log.Information($"保存分类标注文件路径: {selectedFile}, 类别数: {ClassNames.Count}");
                     }
 
                     //刷新当前受到影响的图像，给它们加上匹配的类别
@@ -1508,13 +1636,61 @@ namespace AutoTrainer.ViewModels
                         ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
                     };
 
-                    return directoryInfo.GetFiles()
-                        .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
-                        .Select(f => f.FullName)
-                        .OrderBy(f => f)
-                        .Select(path => new ImageItem { FilePath = path, FileName = System.IO.Path.GetFileName(path) })
-                        .ToList();
+                    // 检查是否为ImageFolder格式（至少有2个子目录）
+                    var subDirs = directoryInfo.GetDirectories();
+                    bool isImageFolder = subDirs.Length >= 2 && 
+                                        subDirs.Any(d => d.GetFiles()
+                                            .Any(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant())));
+
+                    List<ImageItem> items = new List<ImageItem>();
+
+                    if (isImageFolder)
+                    {
+                        // ImageFolder格式：递归加载所有子目录中的图片
+                        Log.Information("检测到ImageFolder格式，递归加载所有子目录中的图片");
+                        
+                        foreach (var subDir in subDirs)
+                        {
+                            var categoryName = subDir.Name;
+                            var filesInCategory = subDir.GetFiles("*.*", SearchOption.AllDirectories)
+                                .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
+                                .OrderBy(f => f.FullName);
+
+                            foreach (var file in filesInCategory)
+                            {
+                                var imageItem = new ImageItem 
+                                { 
+                                    FilePath = file.FullName, 
+                                    FileName = file.Name,
+                                };
+                                
+                                // 为图片添加类别标签
+                                imageItem.ImageClasses.Add(categoryName);
+                                
+                                items.Add(imageItem);
+                            }
+                        }
+
+                        Log.Information($"从ImageFolder加载了 {items.Count} 张图片");
+                    }
+                    else
+                    {
+                        // 非ImageFolder格式：只加载根目录的图片
+                        items = directoryInfo.GetFiles()
+                            .Where(f => supportedExtensions.Contains(f.Extension.ToLowerInvariant()))
+                            .Select(f => f.FullName)
+                            .OrderBy(f => f)
+                            .Select(path => new ImageItem 
+                            { 
+                                FilePath = path, 
+                                FileName = Path.GetFileName(path),
+                            })
+                            .ToList();
+                    }
+
+                    return items;
                 });
+                
                 if(ImageList.Count > 0)
                 {
                     var msgBox = MessageBoxManager.GetMessageBoxStandard("文件覆盖警告", "此操作会覆盖当前工作图片，未保存的内容将丢失，是否继续？", MsBox.Avalonia.Enums.ButtonEnum.YesNo);
@@ -1538,7 +1714,7 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"加载图像失败: {ex.Message}");
-                // Handle error
+                Log.Error(ex, "加载图像失败");
             }
             finally
             {

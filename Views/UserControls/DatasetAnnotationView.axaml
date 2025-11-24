@@ -5,8 +5,6 @@
     xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
     xmlns:converter="using:AutoTrainer.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-    xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:model="using:AutoTrainer.Models"
     xmlns:paz="using:Avalonia.Controls.PanAndZoom"
@@ -17,6 +15,11 @@
     d:DesignWidth="1300"
     x:DataType="vm:DatasetAnnotationViewModel"
     mc:Ignorable="d">
+	<Interaction.Behaviors>
+		<EventTrigger EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadedCommand}"/>
+		</EventTrigger>
+	</Interaction.Behaviors>
 	<UserControl.Styles>
 		<Style Selector="Button">
 			<Setter Property="Width" Value="150"/>
@@ -173,7 +176,8 @@
 							</Button>
                             <Button
                                 Command="{Binding ImportCOCOFileCommand}"
-                                CommandParameter="{Binding ElementName=DataAnnotationView}">
+                                CommandParameter="{Binding ElementName=DataAnnotationView}"
+                                IsEnabled="{Binding IsCocoFunctionsEnabled}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="ImageEditOutline" />
 									<TextBlock Text="导入COCO标注"/>
@@ -181,7 +185,8 @@
 							</Button>
                             <Button
                                 Command="{Binding ExportCOCOFileCommand}"
-								CommandParameter="{Binding ElementName=DataAnnotationView}">
+								CommandParameter="{Binding ElementName=DataAnnotationView}"
+                                IsEnabled="{Binding IsCocoFunctionsEnabled}">
 								<StackPanel Orientation="Horizontal" Spacing="5">
 									<iconPacks:PackIconMaterial Kind="FileExportOutline" />
 									<TextBlock Text="导出COCO标注"/>
@@ -496,22 +501,11 @@
                     <Expander Header="当前标注" IsExpanded="True" HorizontalAlignment="Stretch">
                         <StackPanel Grid.Column="0" Spacing="8">
                             <TextBlock Text="选择类别" FontSize="12" Margin="0,0,0,2"/>
-							<StackPanel Orientation="Horizontal">
-                                <ComboBox
-									Width="120"
-                                    ItemsSource="{Binding ClassNames}"
-                                    SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}" />
-								<Button
-	                                Grid.Column="1"
-									IsEnabled="False"
-	                                Width="30"
-	                                Height="30"
-	                                Margin="5,0,0,0"
-	                                Command="{Binding AddImageClassCommand}"
-	                                ToolTip.Tip="添加图像分类">
-									<iconPacks:PackIconMaterial Kind="Plus" />
-								</Button>
-							</StackPanel>
+                            <ComboBox
+								Width="120"
+                                ItemsSource="{Binding ClassNames}"
+                                SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}"
+								ToolTip.Tip="选中标注框：为标注框设置类别&#x0a;未选中标注框：为整张图片添加分类"/>
                             <TextBlock Text="边界框" Margin="0,10,0,10" IsVisible="{Binding HasSelectedAnnotation}"/>
                             <!--  坐标信息  -->
                             <Grid IsEnabled="{Binding HasSelectedAnnotation}" IsVisible="{Binding HasSelectedAnnotation}">

@@ -6,6 +6,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -63,7 +65,7 @@ namespace AutoTrainer.ViewModels
                 e.PropertyName == "SelectedReduction" || e.PropertyName == "LabelSmoothing" ||
                 e.PropertyName == "Pos_weight" || e.PropertyName == "Beta" || e.PropertyName == "KLDivLoss_Reductions")
             {
-                LossFunctionModel lossFunctionModel;
+                ClassifyLossConfig lossFunctionModel;
 
                 switch (SelectedLossFunction)
                 {
@@ -71,7 +73,7 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
                         if (!string.IsNullOrEmpty(Weight))
                         {
-                            lossFunctionModel = new LossFunctionModel
+                            lossFunctionModel = new ClassifyLossConfig
                             {
                                 type = SelectedLossFunction,
                                 args = new Params
@@ -94,7 +96,7 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "二分类交叉熵损失函数";
                         if (!string.IsNullOrEmpty(Weight))
                         {
-                            lossFunctionModel = new LossFunctionModel
+                            lossFunctionModel = new ClassifyLossConfig
                             {
                                 type = SelectedLossFunction,
                                 args = new Params
@@ -117,7 +119,7 @@ namespace AutoTrainer.ViewModels
                         LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
                         if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight))
                         {
-                            lossFunctionModel = new LossFunctionModel
+                            lossFunctionModel = new ClassifyLossConfig
                             {
                                 type = SelectedLossFunction,
                                 args = new Params
@@ -138,7 +140,7 @@ namespace AutoTrainer.ViewModels
                         break;
                     case "MSELoss":
                         LossFunctionDescribe = "均方误差损失函数，适用于回归任务";
-                        lossFunctionModel = new LossFunctionModel
+                        lossFunctionModel = new ClassifyLossConfig
                         {
                             type = SelectedLossFunction,
                             args = new Params
@@ -158,7 +160,7 @@ namespace AutoTrainer.ViewModels
                         break;
                     case "L1Loss":
                         LossFunctionDescribe = "L1损失函数，适用于回归任务";
-                        lossFunctionModel = new LossFunctionModel
+                        lossFunctionModel = new ClassifyLossConfig
                         {
                             type = SelectedLossFunction,
                             args = new Params
@@ -178,7 +180,7 @@ namespace AutoTrainer.ViewModels
                         break;
                     case "SmoothL1Loss":
                         LossFunctionDescribe = "平滑L1损失函数，适用于回归任务";
-                        lossFunctionModel = new LossFunctionModel
+                        lossFunctionModel = new ClassifyLossConfig
                         {
                             type = SelectedLossFunction,
                             args = new Params
@@ -198,7 +200,7 @@ namespace AutoTrainer.ViewModels
                         break;
                     case "KLDivLoss":
                         LossFunctionDescribe = "KL散度损失函数，适用于分布预测任务";
-                        lossFunctionModel = new LossFunctionModel
+                        lossFunctionModel = new ClassifyLossConfig
                         {
                             type = SelectedLossFunction,
                             args = new Params
@@ -221,15 +223,41 @@ namespace AutoTrainer.ViewModels
         }
         #region 可绑定属性
         /// <summary>
-        /// 训练集地址
+        /// 分类任务训练集地址
         /// </summary>
         [ObservableProperty]
-        private string? trainSetPath;
+        private string? classifyTrainSetPath;
+
         /// <summary>
-        /// 验证集地址
+        /// 分类任务验证集地址
         /// </summary>
         [ObservableProperty]
-        private string? validationSetPath;
+        private string? classifyValidationSetPath;
+
+        /// <summary>
+        /// 分类任务标注文件地址
+        /// </summary>
+        [ObservableProperty]
+        private string? classifyAnnotationPath;
+
+        /// <summary>
+        /// 训练集是否为ImageFolder格式
+        /// </summary>
+        [ObservableProperty]
+        private bool isImageFolderFormat = false;
+
+        /// <summary>
+        /// 从ImageFolder或标注文件检测到的类别列表
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<string> detectedClassNames = new();
+
+        /// <summary>
+        /// 检测任务从COCO标注文件检测到的类别
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<string> detectedDetectionClassNames = new();
+
         /// <summary>
         /// 学习率集合
         /// </summary>
@@ -417,13 +445,13 @@ namespace AutoTrainer.ViewModels
         /// 训练图像路径
         /// </summary>
         [ObservableProperty]
-        private string? trainImagesPath;
+        private string? detectionTrainSetPath;
 
         /// <summary>
         /// 验证图像路径
         /// </summary>
         [ObservableProperty]
-        private string? valImagesPath;
+        private string? detectionValidationSetPath;
 
         /// <summary>
         /// 训练标注文件路径
@@ -441,7 +469,7 @@ namespace AutoTrainer.ViewModels
         /// 标注格式选择
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<string> annotationFormats = new() { "coco", "yolo", "pascal_voc" };
+        private ObservableCollection<string> annotationFormats = ["coco", "yolo", "pascal_voc"];
 
         [ObservableProperty]
         private string selectedAnnotationFormat = "coco";
@@ -498,8 +526,15 @@ namespace AutoTrainer.ViewModels
             UpdateUIForTaskType();
             if (App.TrainModel.TaskType == "classification")
             {
-                TrainSetPath = App.TrainModel?.Classification?.TrainDataPath;
-                ValidationSetPath = App.TrainModel?.Classification?.ValDataPath;
+                ClassifyTrainSetPath = App.TrainModel?.Classification?.TrainDataPath;
+                ClassifyValidationSetPath = App.TrainModel?.Classification?.ValDataPath;
+                ClassifyAnnotationPath = App.TrainModel?.Classification?.TrainAnnotationPath;
+
+                // 如果已有标注文件，加载类别信息
+                if (!string.IsNullOrEmpty(ClassifyAnnotationPath) && File.Exists(ClassifyAnnotationPath))
+                {
+                    LoadClassNamesFromAnnotation(ClassifyAnnotationPath);
+                }
 
                 // Load data augmentation settings
                 if (App.TrainModel?.Classification?.DataAugmentation != null)
@@ -520,10 +555,24 @@ namespace AutoTrainer.ViewModels
             }
             else if(App.TrainModel?.TaskType == "detection")
             {
-                TrainImagesPath = App.TrainModel?.Detection?.TrainImagesPath;
-                ValImagesPath = App.TrainModel?.Detection?.ValImagesPath;
+                DetectionTrainSetPath = App.TrainModel?.Detection?.TrainImagesPath;
+                DetectionValidationSetPath = App.TrainModel?.Detection?.ValImagesPath;
                 TrainAnnotationPath = App.TrainModel?.Detection?.TrainAnnotationPath;
                 ValAnnotationPath = App.TrainModel?.Detection?.ValAnnotationPath;
+
+                // 如果已有训练标注文件，加载类别信息
+                if (!string.IsNullOrEmpty(TrainAnnotationPath) && File.Exists(TrainAnnotationPath))
+                {
+                    var categories = ParseCocoCategories(TrainAnnotationPath);
+                    if (categories.Count > 0)
+                    {
+                        DetectedDetectionClassNames.Clear();
+                        foreach (var category in categories)
+                        {
+                            DetectedDetectionClassNames.Add(category);
+                        }
+                    }
+                }
 
                 // Load annotation format
                 if (!string.IsNullOrEmpty(App.TrainModel?.Detection?.AnnotationFormat))
@@ -567,7 +616,14 @@ namespace AutoTrainer.ViewModels
                         });
                         if (folders.Count > 0)
                         {
-                            selectableText.Text = folders[0].TryGetLocalPath();
+                            var selectedFolder = folders[0].TryGetLocalPath();
+                            selectableText.Text = selectedFolder;
+
+                            // 检查是否是分类训练集目录，进行ImageFolder格式检测
+                            if (selectableText.Name == "TrainDir_Tb" && !IsDetectionTask)
+                            {
+                                await CheckAndHandleImageFolderFormat(selectedFolder);
+                            }
                         }
                     }
                     else
@@ -580,11 +636,29 @@ namespace AutoTrainer.ViewModels
                         });
                         if (files.Count > 0)
                         {
-                            selectableText.Text = files[0].TryGetLocalPath();
+                            var selectedPath = files[0].TryGetLocalPath();
+                            selectableText.Text = selectedPath;
+
+                            // 处理标注文件选择
+                            if (selectableText.Name == "ClassifyAnnotation_Tb" && !IsDetectionTask)
+                            {
+                                // 分类标注文件
+                                await HandleAnnotationFileSelected(selectedPath);
+                            }
+                            else if (selectableText.Name == "TrainAnnotation_Tb" && IsDetectionTask)
+                            {
+                                // 检测训练标注文件
+                                await HandleDetectionAnnotationSelected(selectedPath);
+                            }
+                            else if (selectableText.Name == "ValAnnotation_Tb" && IsDetectionTask)
+                            {
+                                // 检测验证标注文件
+                                await HandleDetectionAnnotationSelected(selectedPath);
+                            }
                         }
                     }
 
-                    if (!string.IsNullOrEmpty(ValidationSetPath))
+                    if (!string.IsNullOrEmpty(ClassifyValidationSetPath))
                     {
                         IsEnableValSetRate = false;
                     }
@@ -595,7 +669,7 @@ namespace AutoTrainer.ViewModels
         private void ClearPath(SelectableTextBlock selectableText)
         {
             selectableText.Text = string.Empty;
-            if (string.IsNullOrEmpty(ValidationSetPath))
+            if (string.IsNullOrEmpty(ClassifyValidationSetPath))
             {
                 IsEnableValSetRate = true;
             }
@@ -644,6 +718,27 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task SaveConfig()
         {
+            // 分类任务验证
+            if (!IsDetectionTask)
+            {
+                if (!ValidateClassificationTrainSet())
+                {
+                    await ShowClassificationFormatWarning();
+                    return;
+                }
+                
+                if (DetectedClassNames.Count == 0)
+                {
+                    var messageBox = MessageBoxManager.GetMessageBoxStandard(
+                        "错误",
+                        "未检测到任何类别，请检查数据集配置",
+                        ButtonEnum.Ok,
+                        Icon.Error);
+                    await messageBox.ShowAsync();
+                    return;
+                }
+            }
+
             // 保存通用配置
             App.TrainModel.LearningRate = SelectedLearningRate;
             App.TrainModel.LrScheduler = SelectedStrategy;
@@ -659,8 +754,8 @@ namespace AutoTrainer.ViewModels
             {
                 // 检测任务配置 - 使用新结构
                 App.TrainModel.Detection ??= new DetectionConfig();
-                App.TrainModel.Detection.TrainImagesPath = TrainImagesPath;
-                App.TrainModel.Detection.ValImagesPath = ValImagesPath;
+                App.TrainModel.Detection.TrainImagesPath = DetectionTrainSetPath;
+                App.TrainModel.Detection.ValImagesPath = DetectionValidationSetPath;
                 App.TrainModel.Detection.TrainAnnotationPath = TrainAnnotationPath;
                 App.TrainModel.Detection.ValAnnotationPath = ValAnnotationPath;
                 App.TrainModel.Detection.AnnotationFormat = SelectedAnnotationFormat;
@@ -704,9 +799,28 @@ namespace AutoTrainer.ViewModels
             {
                 // 分类任务配置 - 使用新结构
                 App.TrainModel.Classification ??= new ClassificationConfig();
-                App.TrainModel.Classification.TrainDataPath = TrainSetPath;
-                App.TrainModel.Classification.ValDataPath = ValidationSetPath;
-                App.TrainModel.Classification.ValidationSplit = SelectedValidationSetRate;
+                App.TrainModel.Classification.TrainDataPath = ClassifyTrainSetPath;
+                App.TrainModel.Classification.ValDataPath = ClassifyValidationSetPath;
+                App.TrainModel.Classification.TrainAnnotationPath = ClassifyAnnotationPath;
+
+                // 根据数据集格式设置类别数
+                if (IsImageFolderFormat)
+                {
+                    // ImageFolder格式：从目录结构获取类别数
+                    App.TrainModel.NumClasses = DetectedClassNames.Count;
+                    Log.Information($"使用ImageFolder格式，类别数: {DetectedClassNames.Count}");
+                }
+                else if (!string.IsNullOrEmpty(ClassifyAnnotationPath) && File.Exists(ClassifyAnnotationPath))
+                {
+                    // 标注文件模式：从标注文件获取类别数
+                    App.TrainModel.NumClasses = DetectedClassNames.Count;
+                    Log.Information($"使用标注文件模式，类别数: {DetectedClassNames.Count}");
+                }
+
+                // 验证集分割比例（仅在没有单独验证集时使用）
+                App.TrainModel.Classification.ValidationSplit = string.IsNullOrEmpty(ClassifyValidationSetPath) 
+                    ? SelectedValidationSetRate 
+                    : 0;
 
                 // 数据增强配置
                 App.TrainModel.Classification.DataAugmentation.RandomHorizonFlip = RandomHorizonFlipChecked;
@@ -717,7 +831,7 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.Classification.DataAugmentation.RandomZoom = RandomZoomChecked;
 
                 // 分类损失函数配置
-                App.TrainModel.Classification.LossFunction = new LossFunctionModel
+                App.TrainModel.Classification.LossFunction = new ClassifyLossConfig 
                 {
                     type = SelectedLossFunction,
                     args = new Params
@@ -769,6 +883,308 @@ namespace AutoTrainer.ViewModels
 
             // Keypoint R-CNN 显示关键点参数
             IsShowKeypointParameters = modelName.Contains("keypointrcnn");
+        }
+
+        /// <summary>
+        /// 检查并处理ImageFolder格式的训练集
+        /// </summary>
+        private async Task CheckAndHandleImageFolderFormat(string folderPath)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                    return;
+
+                var subDirs = Directory.GetDirectories(folderPath);
+                
+                if (subDirs.Length < 2)
+                {
+                    IsImageFolderFormat = false;
+                    DetectedClassNames.Clear();
+                    await ShowClassificationFormatWarning();
+                    return;
+                }
+
+                var validClasses = new List<string>();
+                var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".gif" };
+
+                foreach (var dir in subDirs)
+                {
+                    var dirName = Path.GetFileName(dir);
+                    var hasImages = Directory.EnumerateFiles(dir)
+                        .Any(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()));
+
+                    if (hasImages)
+                    {
+                        validClasses.Add(dirName);
+                    }
+                }
+
+                if (validClasses.Count >= 2)
+                {
+                    IsImageFolderFormat = true;
+                    DetectedClassNames.Clear();
+                    foreach (var className in validClasses.OrderBy(c => c))
+                    {
+                        DetectedClassNames.Add(className);
+                    }
+                    App.TrainModel.NumClasses = validClasses.Count;
+                    ClassifyAnnotationPath = null;
+                    
+                    Log.Information($"检测到ImageFolder格式，{validClasses.Count} 个类别: {string.Join(", ", validClasses)}");
+                }
+                else
+                {
+                    IsImageFolderFormat = false;
+                    DetectedClassNames.Clear();
+                    await ShowClassificationFormatWarning();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "检查ImageFolder格式时出错");
+                IsImageFolderFormat = false;
+                await ShowClassificationFormatWarning();
+            }
+        }
+
+        /// <summary>
+        /// 显示分类格式警告
+        /// </summary>
+        private async Task ShowClassificationFormatWarning()
+        {
+            var messageBox = MessageBoxManager.GetMessageBoxStandard(
+                "数据集格式不符合要求",
+                "训练集目录不符合ImageFolder格式（按类别分文件夹）。\n\n" +
+                "请执行以下操作之一：\n" +
+                "1. 调整目录结构为ImageFolder格式\n" +
+                "2. 提供分类标注文件（TXT格式）",
+                ButtonEnum.Ok,
+                Icon.Warning);
+            
+            await messageBox.ShowAsync();
+        }
+
+        /// <summary>
+        /// 处理标注文件选择
+        /// </summary>
+        private async Task HandleAnnotationFileSelected(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                    return;
+
+                var (isValid, classNames, imageCount) = await Task.Run(() => 
+                    ValidateClassificationAnnotationFile(filePath, ClassifyTrainSetPath));
+
+                if (!isValid)
+                {
+                    Log.Warning("标注文件格式不正确或无法与训练集图片匹配");
+                    var messageBox = MessageBoxManager.GetMessageBoxStandard(
+                        "标注文件验证失败",
+                        "标注文件格式不正确或无法与训练集图片匹配。\n\n" +
+                        "请确保：\n" +
+                        "1. TXT文件每行格式：imageName className\n" +
+                        "2. 至少有1张图片能在训练集中找到",
+                        ButtonEnum.Ok,
+                        Icon.Warning);
+                    await messageBox.ShowAsync();
+                    return;
+                }
+
+                IsImageFolderFormat = false;
+                DetectedClassNames.Clear();
+                foreach (var className in classNames.OrderBy(c => c))
+                {
+                    DetectedClassNames.Add(className);
+                }
+
+                App.TrainModel.NumClasses = classNames.Count;
+
+                Log.Information($"从标注文件加载 {classNames.Count} 个类别，匹配 {imageCount} 张图片");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "处理标注文件时出错");
+            }
+        }
+
+        /// <summary>
+        /// 验证分类标注文件
+        /// </summary>
+        private (bool isValid, HashSet<string> classNames, int imageCount) ValidateClassificationAnnotationFile(
+            string annotationPath, string? imageDir)
+        {
+            var classNames = new HashSet<string>();
+            var matchedCount = 0;
+            
+            try
+            {
+                if (string.IsNullOrEmpty(annotationPath) || !File.Exists(annotationPath))
+                    return (false, classNames, 0);
+
+                var lines = File.ReadAllLines(annotationPath);
+                
+                HashSet<string>? imageFiles = null;
+                if (!string.IsNullOrEmpty(imageDir) && Directory.Exists(imageDir))
+                {
+                    var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".gif" };
+                    imageFiles = new HashSet<string>(
+                        Directory.EnumerateFiles(imageDir, "*.*", SearchOption.AllDirectories)
+                            .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()))
+                            .Select(f => Path.GetFileNameWithoutExtension(f)),
+                        StringComparer.OrdinalIgnoreCase
+                    );
+                }
+
+                foreach (var line in lines)
+                {
+                    var parts = line.Trim().Split(new[] { ' ', '\t' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 2)
+                    {
+                        var imageName = parts[0];
+                        var className = parts[1];
+
+                        classNames.Add(className);
+
+                        if (imageFiles != null)
+                        {
+                            if (imageFiles.Contains(imageName))
+                            {
+                                matchedCount++;
+                            }
+                        }
+                        else
+                        {
+                            matchedCount++;
+                        }
+                    }
+                }
+
+                bool isValid = classNames.Count > 0 && matchedCount > 0;
+                
+                return (isValid, classNames, matchedCount);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "验证标注文件失败");
+                return (false, classNames, 0);
+            }
+        }
+
+        /// <summary>
+        /// 从标注文件加载类别名称
+        /// </summary>
+        private void LoadClassNamesFromAnnotation(string annotationPath)
+        {
+            try
+            {
+                var (isValid, classNames, imageCount) = ValidateClassificationAnnotationFile(
+                    annotationPath, ClassifyTrainSetPath);
+
+                if (isValid)
+                {
+                    DetectedClassNames.Clear();
+                    foreach (var className in classNames.OrderBy(c => c))
+                    {
+                        DetectedClassNames.Add(className);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "从标注文件加载类别失败");
+            }
+        }
+
+        /// <summary>
+        /// 处理检测标注文件选择
+        /// </summary>
+        private async Task HandleDetectionAnnotationSelected(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                    return;
+
+                var categories = await Task.Run(() => ParseCocoCategories(filePath));
+
+                if (categories.Count > 0)
+                {
+                    DetectedDetectionClassNames.Clear();
+                    foreach (var category in categories.OrderBy(c => c))
+                    {
+                        DetectedDetectionClassNames.Add(category);
+                    }
+
+                    App.TrainModel.NumClasses = categories.Count;
+
+                    Log.Information($"从COCO标注文件加载 {categories.Count} 个类别");
+                }
+                else
+                {
+                    Log.Warning("COCO标注文件中未找到类别信息");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "处理COCO标注文件时出错");
+            }
+        }
+
+        /// <summary>
+        /// 解析COCO格式标注文件中的类别
+        /// </summary>
+        private List<string> ParseCocoCategories(string cocoFilePath)
+        {
+            var categories = new List<string>();
+            
+            try
+            {
+                var jsonText = File.ReadAllText(cocoFilePath);
+                using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
+                
+                if (doc.RootElement.TryGetProperty("categories", out var categoriesElement))
+                {
+                    foreach (var category in categoriesElement.EnumerateArray())
+                    {
+                        if (category.TryGetProperty("name", out var nameElement))
+                        {
+                            var name = nameElement.GetString();
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                categories.Add(name);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "解析COCO类别失败");
+            }
+            
+            return categories;
+        }
+
+        /// <summary>
+        /// 验证分类训练集是否有效
+        /// </summary>
+        private bool ValidateClassificationTrainSet()
+        {
+            if (string.IsNullOrEmpty(ClassifyTrainSetPath))
+                return false;
+
+            if (!string.IsNullOrEmpty(ClassifyAnnotationPath) && File.Exists(ClassifyAnnotationPath))
+                return true;
+
+            if (!IsImageFolderFormat)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         #endregion

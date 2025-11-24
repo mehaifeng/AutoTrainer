@@ -42,7 +42,7 @@ namespace AutoTrainer
                     Classification = new ClassificationConfig
                     {
                         DataAugmentation = new DataAugmentationConfig(),
-                        LossFunction = new LossFunctionModel()
+                        LossFunction = new ClassifyLossConfig()
                     },
                     Detection = new DetectionConfig
                     {
