@@ -106,18 +106,28 @@
                     <ItemsControl ItemsSource="{Binding ValidDatasetImagePreviews}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel/>
+                                <WrapPanel Margin="5"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="90" Height="90" Margin="5"
-                                        Background="White"
-                                        CornerRadius="5"
-                                        BorderBrush="LightGray" BorderThickness="1">
+                            <DataTemplate x:DataType="viewmodel:ValidationPreviewImage">
+                                <Border 
+                                    Width="120" 
+                                    Height="120" 
+                                    Margin="5"
+                                    Background="White"
+                                    CornerRadius="5"
+                                    BorderBrush="LightGray" 
+                                    BorderThickness="1"
+                                    Cursor="Hand"
+                                    Tapped="OnValidationPreviewImageTapped">
+                                    <Border.Tag>
+                                        <Binding Path="ImagePath"/>
+                                    </Border.Tag>
                                     <Image
-                                        Source="{Binding .}"
-                                        Stretch="UniformToFill"/>
+                                        Source="{Binding Thumbnail}"
+                                        Stretch="Uniform"
+                                        ToolTip.Tip="点击查看大图"/>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

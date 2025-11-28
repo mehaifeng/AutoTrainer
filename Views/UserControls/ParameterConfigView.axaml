@@ -37,13 +37,21 @@
 				VerticalAlignment="Center"
 				Orientation="Horizontal">
 				<Button
-					Height="35"
-					Content="重设配置" />
+					Height="35">
+					<StackPanel Orientation="Horizontal">
+						<iconPacks:PackIconMaterial Kind="BackupRestore" />
+						<TextBlock Text="重设配置" Margin="10,0,0,0" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
 				<Button
 					Height="35"
 					Margin="10,0,10,0"
-					Command="{Binding SaveConfigCommand}"
-					Content="保存配置" />
+					Command="{Binding SaveConfigCommand}">
+					<StackPanel Orientation="Horizontal">
+						<iconPacks:PackIconMaterial Kind="ContentSaveOutline" />
+						<TextBlock Text="保存配置" Margin="10,0,0,0" VerticalAlignment="Center"/>
+					</StackPanel>
+				</Button>
 				<Button
 					Grid.Row="0"
 					Command="{Binding GoToNextTabCommand}"

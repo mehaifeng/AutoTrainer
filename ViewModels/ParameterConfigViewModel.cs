@@ -27,9 +27,9 @@ namespace AutoTrainer.ViewModels
     {
         public ParameterConfigViewModel()
         {
-            LearningRates = [0.1f, 0.01f, 0.001f, 0.0001f];
+            LearningRates = [0.1f, 0.01f, 0.001f, 0.0003f, 0.0001f, 0.00001f];
             BatchSizes = [1, 2, 4, 8, 16, 32, 64];
-            Optimizers = ["Adam", "SGD"];
+            Optimizers = ["AdamW", "Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
             SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];
             LossFunctionTypes = ["CrossEntropyLoss", "BCELoss", "BCEWithLogitsLoss", "MSELoss", "L1Loss", "SmoothL1Loss", "KLDivLoss"];
@@ -227,6 +227,16 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private string? classifyTrainSetPath;
+        
+        partial void OnClassifyTrainSetPathChanged(string? value)
+        {
+            // 当训练集路径改变时，如果是分类任务且有值，自动检测ImageFolder格式
+            // 自动触发时不显示警告（showWarning=false）
+            if (!IsDetectionTask && !string.IsNullOrEmpty(value))
+            {
+                _ = CheckAndHandleImageFolderFormat(value, showWarning: false);
+            }
+        }
 
         /// <summary>
         /// 分类任务验证集地址
@@ -622,7 +632,7 @@ namespace AutoTrainer.ViewModels
                             // 检查是否是分类训练集目录，进行ImageFolder格式检测
                             if (selectableText.Name == "TrainDir_Tb" && !IsDetectionTask)
                             {
-                                await CheckAndHandleImageFolderFormat(selectedFolder);
+                                await CheckAndHandleImageFolderFormat(selectedFolder, showWarning: true);
                             }
                         }
                     }
@@ -888,7 +898,9 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 检查并处理ImageFolder格式的训练集
         /// </summary>
-        private async Task CheckAndHandleImageFolderFormat(string folderPath)
+        /// <param name="folderPath">文件夹路径</param>
+        /// <param name="showWarning">是否显示警告对话框（手动选择时为true，自动触发时为false）</param>
+        private async Task CheckAndHandleImageFolderFormat(string folderPath, bool showWarning = true)
         {
             try
             {
@@ -901,7 +913,10 @@ namespace AutoTrainer.ViewModels
                 {
                     IsImageFolderFormat = false;
                     DetectedClassNames.Clear();
-                    await ShowClassificationFormatWarning();
+                    if (showWarning)
+                    {
+                        await ShowClassificationFormatWarning();
+                    }
                     return;
                 }
 
@@ -937,14 +952,20 @@ namespace AutoTrainer.ViewModels
                 {
                     IsImageFolderFormat = false;
                     DetectedClassNames.Clear();
-                    await ShowClassificationFormatWarning();
+                    if (showWarning)
+                    {
+                        await ShowClassificationFormatWarning();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "检查ImageFolder格式时出错");
                 IsImageFolderFormat = false;
-                await ShowClassificationFormatWarning();
+                if (showWarning)
+                {
+                    await ShowClassificationFormatWarning();
+                }
             }
         }
 

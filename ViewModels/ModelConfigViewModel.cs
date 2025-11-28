@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -821,8 +822,35 @@ namespace AutoTrainer.ViewModels
                 });
                 if (model.Count>0)
                 {
+                    var modelPath = model[0].Path.LocalPath;
+                    
+                    // 验证模型一致性
+                    if (!string.IsNullOrEmpty(SelectModel) && !string.IsNullOrEmpty(App.PythonVenvPath))
+                    {
+                        var validationResult = await CliWrapHelper.ValidateModelConsistencyAsync(
+                            modelPath, SelectModel, App.PythonVenvPath);
+                        
+                        if (!validationResult.valid)
+                        {
+                            // 显示警告或错误对话框
+                            var messageBox = MessageBoxManager.GetMessageBoxStandard(
+                                "模型验证",
+                                validationResult.message,
+                                validationResult.modelName == null ? ButtonEnum.Ok : ButtonEnum.YesNo,
+                                Icon.Warning);
+                            
+                            var result = await messageBox.ShowAsync();
+                            
+                            // 如果是严重错误（模型不匹配）且用户选择No，则取消选择
+                            if (validationResult.modelName != null && result == ButtonResult.No)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                    
                     SelectedLocalWeightText = model[0].Name;
-                    App.TrainModel.LocalWeightsPath = model[0].Path.LocalPath;
+                    App.TrainModel.LocalWeightsPath = modelPath;
                 }
             }
         }

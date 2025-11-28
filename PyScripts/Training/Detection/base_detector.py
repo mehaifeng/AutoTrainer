@@ -19,7 +19,7 @@ from common import (
     ConfigParser, StructuredLogger, LegacyJsonLogger,
     MetricsCalculator, AverageMeter,
     EarlyStopping, GPUMonitor, SystemMonitor, ModelCheckpoint,
-    get_device, set_seed
+    get_device, set_seed, DetectionDataLoader
 )
 
 
@@ -83,6 +83,79 @@ class BaseDetectionTrainer:
     def prepare_data(self):
         """准备数据加载器（子类必须实现）"""
         raise NotImplementedError("子类必须实现prepare_data方法")
+    
+    def validate_data(self):
+        """
+        验证数据集的完整性和正确性
+        检查类别标签是否在有效范围内
+        """
+        try:
+            StructuredLogger.info("验证数据集...")
+            num_classes = self.config_parser.num_classes
+            
+            # 收集训练集和验证集的所有类别
+            train_categories = set()
+            val_categories = set()
+            
+            # 检查训练集
+            if hasattr(self, 'train_loader') and self.train_loader:
+                StructuredLogger.info("检查训练集类别...")
+                for images, targets in self.train_loader:
+                    for target in targets:
+                        if 'labels' in target:
+                            labels = target['labels'].cpu().numpy()
+                            train_categories.update(labels.tolist())
+                    break  # 只检查第一个batch以快速验证
+            
+            # 检查验证集
+            if hasattr(self, 'val_loader') and self.val_loader:
+                StructuredLogger.info("检查验证集类别...")
+                for images, targets in self.val_loader:
+                    for target in targets:
+                        if 'labels' in target:
+                            labels = target['labels'].cpu().numpy()
+                            val_categories.update(labels.tolist())
+                    break  # 只检查第一个batch以快速验证
+            
+            # 验证类别范围 (前景类标签应该在 [1, num_classes] 范围内，0是背景)
+            all_categories = train_categories | val_categories
+            invalid_labels = [label for label in all_categories if label < 1 or label > num_classes]
+            
+            if invalid_labels:
+                error_msg = (
+                    f"\n{'='*60}\n"
+                    f"❌ 数据集验证失败：类别标签超出有效范围\n"
+                    f"{'='*60}\n"
+                    f"配置的类别数: {num_classes} (前景类)\n"
+                    f"有效标签范围: [1, {num_classes}] (0为背景类，自动添加)\n"
+                    f"训练集类别: {sorted(train_categories)}\n"
+                    f"验证集类别: {sorted(val_categories)}\n"
+                    f"无效标签: {sorted(invalid_labels)}\n"
+                    f"\n可能的原因:\n"
+                    f"1. 训练集和验证集的COCO标注文件类别数不一致\n"
+                    f"2. 标注文件中的category_id超出了配置的类别数范围\n"
+                    f"3. 标注文件中的类别定义与实际使用的类别不匹配\n"
+                    f"\n解决方案:\n"
+                    f"1. 检查训练集和验证集的COCO标注文件\n"
+                    f"2. 确保所有category_id在[1, {num_classes}]范围内\n"
+                    f"3. 确保配置的类别数({num_classes})包含了所有实际使用的类别\n"
+                    f"{'='*60}\n"
+                )
+                StructuredLogger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            StructuredLogger.info(
+                f"✓ 数据集验证通过\n"
+                f"  训练集类别: {sorted(train_categories)}\n"
+                f"  验证集类别: {sorted(val_categories)}\n"
+                f"  前景类范围: [1, {num_classes}] (0为背景类)"
+            )
+            
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            StructuredLogger.error(f"数据验证过程出错: {str(e)}")
+            raise
         
     def prepare_optimizer(self):
         """准备优化器"""
@@ -98,6 +171,12 @@ class BaseDetectionTrainer:
             )
         elif opt_type == 'Adam':
             self.optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=opt_config['lr'],
+                weight_decay=opt_config['weight_decay']
+            )
+        elif opt_type == 'AdamW':
+            self.optimizer = optim.AdamW(
                 self.model.parameters(),
                 lr=opt_config['lr'],
                 weight_decay=opt_config['weight_decay']
@@ -171,6 +250,9 @@ class BaseDetectionTrainer:
             
             StructuredLogger.info("准备数据...")
             self.prepare_data()
+            
+            # 验证数据集
+            self.validate_data()
             
             StructuredLogger.info("准备训练组件...")
             self.prepare_optimizer()

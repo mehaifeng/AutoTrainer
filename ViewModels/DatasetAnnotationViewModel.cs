@@ -1848,7 +1848,7 @@ namespace AutoTrainer.ViewModels
                 Categories = new List<Category>()
             };
 
-            // 收集所有类别名称
+            // 收集所有类别名称并排序（确保类别ID的一致性）
             var allClassNames = new HashSet<string>();
             foreach (var annotations in AllImageAnnotations.Values)
             {
@@ -1861,10 +1861,13 @@ namespace AutoTrainer.ViewModels
                 }
             }
 
-            // 创建类别映射
+            // 对类别名称排序，确保每次导出时类别ID一致
+            var sortedClassNames = allClassNames.OrderBy(name => name).ToList();
+
+            // 创建类别映射（从1开始，0保留给背景类）
             var categoryIdMap = new Dictionary<string, int>();
             int categoryId = 1;
-            foreach (var className in allClassNames)
+            foreach (var className in sortedClassNames)
             {
                 categoryIdMap[className] = categoryId;
                 cocoDataset.Categories.Add(new Category
@@ -1947,23 +1950,9 @@ namespace AutoTrainer.ViewModels
                         ];
                         cocoAnnotation.Area = Math.Round(rectModel.Width * rectModel.Height, 2);
 
-                        // 将矩形框转换为多边形点作为segmentation
-                        var rectSegmentation = new List<double>
-                        {
-                            Math.Round(rectModel.X, 2),
-                            Math.Round(rectModel.Y, 2),
-                            Math.Round(rectModel.X + rectModel.Width, 2),
-                            Math.Round(rectModel.Y, 2),
-                            Math.Round(rectModel.X + rectModel.Width, 2),
-                            Math.Round(rectModel.Y + rectModel.Height, 2),
-                            Math.Round(rectModel.X, 2),
-                            Math.Round(rectModel.Y + rectModel.Height, 2)
-                        };
-
-                        cocoAnnotation.Segmentation = new Segmentation
-                        {
-                            Polygons = [rectSegmentation]
-                        };
+                        // 矩形框标注不需要segmentation字段（用于目标检测任务）
+                        // 如果将来需要实例分割，可以在此处添加
+                        cocoAnnotation.Segmentation = null;
                     }
                     else if (annotation.AnnotationType == AnnotationToolEnum.Polygon && annotation is PolygonModel polygon)
                     {

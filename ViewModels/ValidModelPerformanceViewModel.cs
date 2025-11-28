@@ -69,6 +69,12 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty] private bool isPrediction;
         [ObservableProperty] private string label;
     }
+    
+    public partial class ValidationPreviewImage : ObservableObject
+    {
+        [ObservableProperty] private Bitmap thumbnail;
+        [ObservableProperty] private string imagePath;
+    }
     #endregion
 
     public partial class ValidModelPerformanceViewModel : ViewModelBase
@@ -78,10 +84,32 @@ namespace AutoTrainer.ViewModels
         #region 可绑定属性
         [ObservableProperty]
         private bool isCheckedClassifyMode = true;
+        
+        partial void OnIsCheckedClassifyModeChanged(bool value)
+        {
+            // 当任务类型改变时，重新加载预览图片（因为搜索选项不同）
+            if (!string.IsNullOrEmpty(ValidDatasetPath))
+            {
+                _ = LoadValidDatasetImagePreview();
+            }
+        }
         [ObservableProperty]
         private string validDatasetPath = string.Empty;
+        
+        partial void OnValidDatasetPathChanged(string value)
+        {
+            // 当验证集路径改变时，自动加载预览图片
+            if (!string.IsNullOrEmpty(value))
+            {
+                _ = LoadValidDatasetImagePreview();
+            }
+            else
+            {
+                ValidDatasetImagePreviews.Clear();
+            }
+        }
         [ObservableProperty]
-        private ObservableCollection<Bitmap> validDatasetImagePreviews;
+        private ObservableCollection<ValidationPreviewImage> validDatasetImagePreviews;
         [ObservableProperty]
         private string modelWeightsPath;
         [ObservableProperty]
@@ -259,9 +287,9 @@ namespace AutoTrainer.ViewModels
                 var configPath = Path.Combine(App.ConfigFolderPath, "validation_config.json");
                 await File.WriteAllTextAsync(configPath, configJson);
 
-                // 选择脚本
-                var scriptName = IsCheckedClassifyMode ? "ClassificationValidator.py" : "DetectionValidator.py";
-                var pythonScript = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", scriptName);
+                // 选择验证脚本（根据模型类型自动选择）
+                var pythonScript = GetValidationScript();
+                Log.Information("使用验证脚本: {Script}", pythonScript);
 
                 var result = await CliWrapHelper.ExecutePythonScriptAsync(
                     pythonScript,
@@ -335,7 +363,8 @@ namespace AutoTrainer.ViewModels
                     if (folder.Count > 0)
                     {
                         ValidDatasetPath = folder[0].TryGetLocalPath() ?? string.Empty;
-                        await LoadValidDatasetImagePreview();
+                        // 不需要手动调用 LoadValidDatasetImagePreview()
+                        // 因为 OnValidDatasetPathChanged 会自动触发
                     }
                 }
             }
@@ -461,9 +490,12 @@ namespace AutoTrainer.ViewModels
             {
                 var allowExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".png", ".jpeg", ".bmp", ".tiff", ".webp" };
                 
-                // 仅加载顶层目录的图片
-                var files = Directory.EnumerateFiles(ValidDatasetPath, "*", SearchOption.TopDirectoryOnly)
-                                     .Where(file => allowExtensions.Contains(Path.GetExtension(file)))
+                // 根据任务类型决定搜索深度
+                // 分类任务：最多搜索2层（当前目录+子目录，支持ImageFolder格式）
+                // 检测任务：仅搜索当前目录
+                int maxDepth = IsCheckedClassifyMode ? 2 : 1;
+                
+                var files = EnumerateFilesWithMaxDepth(ValidDatasetPath, maxDepth, allowExtensions)
                                      .Take(50); // 最多预览50张
 
                 await Task.Run(() =>
@@ -473,9 +505,16 @@ namespace AutoTrainer.ViewModels
                         try
                         {
                             using var originalBitmap = new Bitmap(file);
-                            // 统一缩放到90x90的预览图
-                            var finalBitmap = originalBitmap.CreateScaledBitmap(new PixelSize(90, 90), BitmapInterpolationMode.HighQuality);
-                            Dispatcher.UIThread.InvokeAsync(() => ValidDatasetImagePreviews.Add(finalBitmap));
+                            // 统一缩放到120x120的预览图
+                            var thumbnailBitmap = originalBitmap.CreateScaledBitmap(new PixelSize(120, 120), BitmapInterpolationMode.HighQuality);
+                            
+                            var previewImage = new ValidationPreviewImage
+                            {
+                                Thumbnail = thumbnailBitmap,
+                                ImagePath = file
+                            };
+                            
+                            Dispatcher.UIThread.InvokeAsync(() => ValidDatasetImagePreviews.Add(previewImage));
                         }
                         catch (Exception ex)
                         {
@@ -483,6 +522,65 @@ namespace AutoTrainer.ViewModels
                         }
                     }
                 });
+            }
+        }
+
+        /// <summary>
+        /// 枚举指定深度的文件
+        /// </summary>
+        /// <param name="rootPath">根目录</param>
+        /// <param name="maxDepth">最大深度（1=仅当前目录，2=当前目录+子目录）</param>
+        /// <param name="allowExtensions">允许的扩展名</param>
+        /// <returns>文件路径枚举</returns>
+        private IEnumerable<string> EnumerateFilesWithMaxDepth(string rootPath, int maxDepth, HashSet<string> allowExtensions)
+        {
+            return EnumerateFilesRecursive(rootPath, allowExtensions, currentDepth: 1, maxDepth);
+        }
+
+        /// <summary>
+        /// 递归枚举文件（带深度控制）
+        /// </summary>
+        private IEnumerable<string> EnumerateFilesRecursive(string directory, HashSet<string> allowExtensions, int currentDepth, int maxDepth)
+        {
+            // 枚举当前目录的文件
+            IEnumerable<string> files = Enumerable.Empty<string>();
+            try
+            {
+                files = Directory.EnumerateFiles(directory)
+                                .Where(file => allowExtensions.Contains(Path.GetExtension(file)));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "无法访问目录: {Directory}", directory);
+                yield break;
+            }
+
+            foreach (var file in files)
+            {
+                yield return file;
+            }
+
+            // 如果还没到最大深度，继续递归子目录
+            if (currentDepth < maxDepth)
+            {
+                IEnumerable<string> subDirs = Enumerable.Empty<string>();
+                try
+                {
+                    subDirs = Directory.EnumerateDirectories(directory);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "无法枚举子目录: {Directory}", directory);
+                    yield break;
+                }
+
+                foreach (var subDir in subDirs)
+                {
+                    foreach (var file in EnumerateFilesRecursive(subDir, allowExtensions, currentDepth + 1, maxDepth))
+                    {
+                        yield return file;
+                    }
+                }
             }
         }
 
@@ -560,6 +658,62 @@ namespace AutoTrainer.ViewModels
             // Reset output log
             VerificationOutput = string.Empty;
         }
+        
+        /// <summary>
+        /// 根据模型路径获取对应的验证脚本路径
+        /// </summary>
+        private string GetValidationScript()
+        {
+            if (IsCheckedClassifyMode)
+            {
+                // 分类任务 - 根据模型类型选择脚本
+                return GetClassificationValidatorScript(ModelWeightsPath);
+            }
+            else
+            {
+                // 检测任务 - 根据模型类型选择脚本
+                return GetDetectionValidatorScript(ModelWeightsPath);
+            }
+        }
+        
+        /// <summary>
+        /// 获取分类验证脚本
+        /// </summary>
+        private string GetClassificationValidatorScript(string modelPath)
+        {
+            var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "Classification");
+            var modelPathLower = modelPath.ToLower();
+            
+            // EfficientNet系列
+            if (modelPathLower.Contains("efficientnet"))
+                return Path.Combine(basePath, "efficientnet_validator.py");
+            
+            // MobileNet系列
+            if (modelPathLower.Contains("mobilenet"))
+                return Path.Combine(basePath, "mobilenet_validator.py");
+            
+            // 默认：使用旧的通用脚本作为fallback
+            Log.Warning("未识别的分类模型，使用通用验证器: {ModelPath}", modelPath);
+            return Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "ClassificationValidator.py");
+        }
+        
+        /// <summary>
+        /// 获取检测验证脚本
+        /// </summary>
+        private string GetDetectionValidatorScript(string modelPath)
+        {
+            var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "Detection");
+            var modelPathLower = modelPath.ToLower();
+            
+            // Faster R-CNN系列
+            if (modelPathLower.Contains("fasterrcnn") || modelPathLower.Contains("faster_rcnn"))
+                return Path.Combine(basePath, "fasterrcnn_validator.py");
+            
+            // 默认：使用旧的通用脚本作为fallback
+            Log.Warning("未识别的检测模型，使用通用验证器: {ModelPath}", modelPath);
+            return Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "DetectionValidator.py");
+        }
+        
         #endregion
 
     }

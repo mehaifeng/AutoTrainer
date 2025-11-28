@@ -429,7 +429,7 @@ namespace AutoTrainer.ViewModels
                 cmd = @"top -bn1 | grep '%Cpu' | awk '{print $2}' | cut -d',' -f1";  // 只取 user %，避免逗号
             }
 
-            var result = await CliWrapHelper.ExecuteLine(cmd);
+            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
             if (result.ExitCode != 0) return 0;
 
             string output = result.Output?.Trim() ?? string.Empty;
@@ -460,7 +460,7 @@ namespace AutoTrainer.ViewModels
                 cmd = @"free -m | awk 'NR==2{printf ""%d"", $3*100/$2}'";
             }
 
-            var result = await CliWrapHelper.ExecuteLine(cmd);
+            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
             if (result.ExitCode != 0) return 0;
 
             string output = result.Output?.Trim() ?? string.Empty;
@@ -482,11 +482,11 @@ namespace AutoTrainer.ViewModels
                 ? "where nvidia-smi"
                 : "which nvidia-smi";
 
-            var check = await CliWrapHelper.ExecuteLine(checkCmd);
+            var check = await CliWrapHelper.ExecuteLine(checkCmd, enableVerboseLogging: false);
             if (check.ExitCode != 0) return -1; // -1 表示不支持
 
             string cmd = @"nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits";
-            var result = await CliWrapHelper.ExecuteLine(cmd);
+            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
             if (result.ExitCode != 0) return -1;
 
             var line = result.Output?.Trim();
@@ -1263,11 +1263,15 @@ namespace AutoTrainer.ViewModels
             if (modelName.StartsWith("efficientnet", StringComparison.OrdinalIgnoreCase))
                 return Path.Combine(basePath, "efficientnet_trainer.py");
 
+            // MobileNet系列
+            if (modelName.StartsWith("mobilenet", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(basePath, "mobilenet_trainer.py");
+
             // TODO: 添加其他模型系列的映射
-            // if (modelName.StartsWith("mobilenet", StringComparison.OrdinalIgnoreCase))
-            //     return Path.Combine(basePath, "mobilenet_trainer.py");
             // if (modelName.StartsWith("resnet", StringComparison.OrdinalIgnoreCase))
             //     return Path.Combine(basePath, "resnet_trainer.py");
+            // if (modelName.StartsWith("convnext", StringComparison.OrdinalIgnoreCase))
+            //     return Path.Combine(basePath, "convnext_trainer.py");
 
             // 默认：如果没有专用脚本，记录警告并抛出异常
             Log.Warning("模型 {ModelName} 没有对应的专用训练脚本", modelName);

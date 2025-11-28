@@ -56,6 +56,10 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
+            # 验证损失改善
+            improvement = -score - (-self.best_score)  # 新损失 - 旧损失（负值表示改善）
+            if self.counter > 0 and self.verbose:
+                print(f'✓ 验证损失改善 {abs(improvement):.6f}，早停计数重置: {self.counter} → 0')
             self.best_score = score
             self.best_epoch = epoch
             self.counter = 0
@@ -180,7 +184,8 @@ class ModelCheckpoint:
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
-            'metrics': metrics
+            'metrics': metrics,
+            'model_name': self.model_name  # 添加模型名称用于验证
         }
         
         if is_best:

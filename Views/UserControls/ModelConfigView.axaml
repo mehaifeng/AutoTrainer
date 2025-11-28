@@ -291,7 +291,8 @@
 									IsVisible="{Binding IsVisibleIntroduce}"
 									Text="{Binding SelectedLocalWeightText}"
 									FontSize="20"
-									VerticalAlignment="Center"
+									VerticalAlignment="Bottom"
+									HorizontalAlignment="Left"
 									Margin="10,10,0,0"/>
 								<!--下一步 Next Step-->
 								<Button

@@ -123,6 +123,12 @@ class BaseClassificationTrainer:
                 lr=opt_config['lr'],
                 weight_decay=opt_config['weight_decay']
             )
+        elif opt_type == 'AdamW':
+            self.optimizer = optim.AdamW(
+                self.model.parameters(),
+                lr=opt_config['lr'],
+                weight_decay=opt_config['weight_decay']
+            )
         elif opt_type == 'SGD':
             self.optimizer = optim.SGD(
                 self.model.parameters(),

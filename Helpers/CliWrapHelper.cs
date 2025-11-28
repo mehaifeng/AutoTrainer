@@ -97,10 +97,14 @@ namespace AutoTrainer.Helpers
             string arguments,
             string? workingDirectory = null,
             bool isShowTerminal = false,
-            OutputReceivedHandler? onOutputReceived = null)
+            OutputReceivedHandler? onOutputReceived = null,
+            bool enableVerboseLogging = true)
         {
-            Log.Debug("执行命令行: {Arguments} 在目录: {Directory}, 显示终端: {ShowTerminal}",
-                arguments, workingDirectory ?? Environment.CurrentDirectory, isShowTerminal);
+            if (enableVerboseLogging)
+            {
+                Log.Debug("执行命令行: {Arguments} 在目录: {Directory}, 显示终端: {ShowTerminal}",
+                    arguments, workingDirectory ?? Environment.CurrentDirectory, isShowTerminal);
+            }
 
             if (string.IsNullOrWhiteSpace(arguments))
             {
@@ -121,7 +125,10 @@ namespace AutoTrainer.Helpers
                 {
                     shellPath = "cmd.exe";
                     shellArgs = $"/c {arguments}";
-                    Log.Debug("使用Windows shell: {ShellPath} 参数: {ShellArgs}", shellPath, shellArgs);
+                    if (enableVerboseLogging)
+                    {
+                        Log.Debug("使用Windows shell: {ShellPath} 参数: {ShellArgs}", shellPath, shellArgs);
+                    }
                 }
                 else
                 {
@@ -133,9 +140,12 @@ namespace AutoTrainer.Helpers
                         if (!File.Exists(shellPath))
                         {
                             shellPath = "/bin/zsh";
-                            Log.Debug("macOS上未找到bash，使用zsh: {ShellPath}", shellPath);
+                            if (enableVerboseLogging)
+                            {
+                                Log.Debug("macOS上未找到bash，使用zsh: {ShellPath}", shellPath);
+                            }
                         }
-                        else
+                        else if (enableVerboseLogging)
                         {
                             Log.Debug("使用macOS bash shell: {ShellPath}", shellPath);
                         }
@@ -143,7 +153,10 @@ namespace AutoTrainer.Helpers
                     else // Linux
                     {
                         shellPath = "/bin/bash";
-                        Log.Debug("使用Linux bash shell: {ShellPath}", shellPath);
+                        if (enableVerboseLogging)
+                        {
+                            Log.Debug("使用Linux bash shell: {ShellPath}", shellPath);
+                        }
                     }
                     // Unix-like 系统的命令参数格式相同
                     shellArgs = $"-c \"{arguments.Replace("\"", "\\\"")}\"";
@@ -162,11 +175,17 @@ namespace AutoTrainer.Helpers
                     string defaultPath = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
                     var currentPath = Environment.GetEnvironmentVariable("PATH");
                     environmentVariables["PATH"] = string.IsNullOrEmpty(currentPath) ? defaultPath : currentPath + ":" + defaultPath;
-                    Log.Debug("设置macOS PATH: {Path}", environmentVariables["PATH"]);
+                    if (enableVerboseLogging)
+                    {
+                        Log.Debug("设置macOS PATH: {Path}", environmentVariables["PATH"]);
+                    }
                 }
 
-                Log.Debug("配置命令环境变量: {EnvVars}",
-                    string.Join(", ", environmentVariables.Keys));
+                if (enableVerboseLogging)
+                {
+                    Log.Debug("配置命令环境变量: {EnvVars}",
+                        string.Join(", ", environmentVariables.Keys));
+                }
 
                 var command = Cli.Wrap(shellPath)
                     .WithArguments(shellArgs)
@@ -175,17 +194,26 @@ namespace AutoTrainer.Helpers
 
                 if (isShowTerminal)
                 {
-                    Log.Debug("在终端模式下执行命令（无输出重定向）");
+                    if (enableVerboseLogging)
+                    {
+                        Log.Debug("在终端模式下执行命令（无输出重定向）");
+                    }
                     // 显示终端模式 - 直接执行而不重定向输出
                     var processResult = await command.ExecuteAsync();
                     result.ExitCode = processResult.ExitCode;
-                    Log.Information("终端模式下命令完成，退出码: {ExitCode}", processResult.ExitCode);
+                    if (enableVerboseLogging)
+                    {
+                        Log.Information("终端模式下命令完成，退出码: {ExitCode}", processResult.ExitCode);
+                    }
                 }
                 else
                 {
                     if (onOutputReceived != null)
                     {
-                        Log.Debug("在实时输出模式下执行命令");
+                        if (enableVerboseLogging)
+                        {
+                            Log.Debug("在实时输出模式下执行命令");
+                        }
                         // 实时输出模式
                         var commandTask = command.ListenAsync();
                         CommandResult? finalResult = null;
@@ -200,8 +228,11 @@ namespace AutoTrainer.Helpers
                                     if (!string.IsNullOrEmpty(stdOut.Text))
                                     {
                                         outputLines++;
-                                        Log.Debug("命令标准输出行 {LineCount}: {Text}", outputLines,
-                                            stdOut.Text.Trim().Substring(0, Math.Min(100, stdOut.Text.Trim().Length)));
+                                        if (enableVerboseLogging)
+                                        {
+                                            Log.Debug("命令标准输出行 {LineCount}: {Text}", outputLines,
+                                                stdOut.Text.Trim().Substring(0, Math.Min(100, stdOut.Text.Trim().Length)));
+                                        }
                                         onOutputReceived(stdOut.Text);
                                     }
                                     break;
@@ -216,28 +247,40 @@ namespace AutoTrainer.Helpers
                                     break;
                                 case ExitedCommandEvent exited:
                                     finalResult = new CommandResult { ExitCode = exited.ExitCode };
-                                    Log.Information("命令进程退出，退出码: {ExitCode}", exited.ExitCode);
+                                    if (enableVerboseLogging)
+                                    {
+                                        Log.Information("命令进程退出，退出码: {ExitCode}", exited.ExitCode);
+                                    }
                                     break;
                             }
                         }
 
                         result.ExitCode = finalResult?.ExitCode ?? 0;
-                        Log.Debug("实时执行完成。总标准输出行数: {StdOutCount}, 标准错误行数: {StdErrCount}",
-                            outputLines, errorLines);
+                        if (enableVerboseLogging)
+                        {
+                            Log.Debug("实时执行完成。总标准输出行数: {StdOutCount}, 标准错误行数: {StdErrCount}",
+                                outputLines, errorLines);
+                        }
                     }
                     else
                     {
-                        Log.Debug("在缓冲输出模式下执行命令");
+                        if (enableVerboseLogging)
+                        {
+                            Log.Debug("在缓冲输出模式下执行命令");
+                        }
                         // 缓冲输出模式
                         var bufferedResult = await command.ExecuteBufferedAsync(Encoding.UTF8);
                         result.Output = bufferedResult.StandardOutput;
                         result.Error = bufferedResult.StandardError;
                         result.ExitCode = bufferedResult.ExitCode;
 
-                        Log.Debug("缓冲执行完成。退出码: {ExitCode}, 标准输出长度: {StdOutLen}, 标准错误长度: {StdErrLen}",
-                            bufferedResult.ExitCode,
-                            bufferedResult.StandardOutput?.Length ?? 0,
-                            bufferedResult.StandardError?.Length ?? 0);
+                        if (enableVerboseLogging)
+                        {
+                            Log.Debug("缓冲执行完成。退出码: {ExitCode}, 标准输出长度: {StdOutLen}, 标准错误长度: {StdErrLen}",
+                                bufferedResult.ExitCode,
+                                bufferedResult.StandardOutput?.Length ?? 0,
+                                bufferedResult.StandardError?.Length ?? 0);
+                        }
                     }
                 }
             }
@@ -255,9 +298,12 @@ namespace AutoTrainer.Helpers
             }
             finally
             {
-                var duration = DateTime.UtcNow - startTime;
-                Log.Information("命令执行完成，耗时 {Duration}ms，退出码 {ExitCode}: {Arguments}",
-                    duration.TotalMilliseconds, result.ExitCode, arguments);
+                if (enableVerboseLogging)
+                {
+                    var duration = DateTime.UtcNow - startTime;
+                    Log.Information("命令执行完成，耗时 {Duration}ms，退出码 {ExitCode}: {Arguments}",
+                        duration.TotalMilliseconds, result.ExitCode, arguments);
+                }
             }
 
             return result;
@@ -587,6 +633,64 @@ namespace AutoTrainer.Helpers
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 验证模型一致性
+        /// </summary>
+        /// <param name="modelPath">模型文件路径</param>
+        /// <param name="expectedModelName">期望的模型名称</param>
+        /// <param name="venvPath">虚拟环境路径</param>
+        /// <returns>验证结果(valid, model_name, message)</returns>
+        public static async Task<(bool valid, string? modelName, string message)> ValidateModelConsistencyAsync(
+            string modelPath, string expectedModelName, string venvPath)
+        {
+            Log.Information("验证模型一致性: {ModelPath}, 期望模型: {ExpectedModel}", 
+                modelPath, expectedModelName);
+
+            try
+            {
+                var validatorScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, 
+                    "PyScripts", "Utils", "ModelValidator.py");
+
+                if (!File.Exists(validatorScript))
+                {
+                    Log.Error("模型验证脚本不存在: {Script}", validatorScript);
+                    return (false, null, "错误：找不到模型验证工具");
+                }
+
+                var arguments = $"\"{modelPath}\" \"{expectedModelName}\"";
+                var result = await ExecutePythonScriptAsync(validatorScript, venvPath, arguments);
+
+                if (result.ExitCode != 0)
+                {
+                    Log.Error("模型验证脚本执行失败: {Error}", result.Error);
+                    return (false, null, $"验证失败: {result.Error}");
+                }
+
+                // 解析JSON结果
+                if (string.IsNullOrEmpty(result.Output))
+                {
+                    return (false, null, "验证脚本未返回结果");
+                }
+
+                var jsonResult = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(result.Output);
+                var valid = jsonResult.GetProperty("valid").GetBoolean();
+                var modelName = jsonResult.TryGetProperty("model_name", out var nameElement) && nameElement.ValueKind != System.Text.Json.JsonValueKind.Null
+                    ? nameElement.GetString()
+                    : null;
+                var message = jsonResult.GetProperty("message").GetString() ?? "";
+
+                Log.Information("模型验证结果: Valid={Valid}, ModelName={ModelName}, Message={Message}", 
+                    valid, modelName, message);
+
+                return (valid, modelName, message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "模型验证过程发生异常");
+                return (false, null, $"验证异常: {ex.Message}");
+            }
         }
     }
 }

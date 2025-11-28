@@ -39,9 +39,15 @@ class COCODetectionDataset(Dataset):
         
         # 构建类别ID映射（COCO类别ID不连续，需要映射到1-N，0保留给背景）
         self.categories = {cat['id']: cat for cat in self.coco_data['categories']}
+        
+        # 按类别名称排序，确保训练集和验证集的映射一致
         # 注意：检测模型中，0 是背景类，前景类从 1 开始
-        self.cat_id_to_label = {cat_id: idx + 1 for idx, cat_id in enumerate(sorted(self.categories.keys()))}
-        self.label_to_cat_id = {idx + 1: cat_id for idx, cat_id in enumerate(sorted(self.categories.keys()))}
+        sorted_categories = sorted(self.coco_data['categories'], key=lambda x: x['name'])
+        self.cat_id_to_label = {cat['id']: idx + 1 for idx, cat in enumerate(sorted_categories)}
+        self.label_to_cat_id = {idx + 1: cat['id'] for idx, cat in enumerate(sorted_categories)}
+        
+        # 存储类别名称到标签的映射（用于验证）
+        self.cat_name_to_label = {cat['name']: idx + 1 for idx, cat in enumerate(sorted_categories)}
         
         # 按图像ID组织标注
         self.image_to_annotations = {}
@@ -53,6 +59,19 @@ class COCODetectionDataset(Dataset):
         
         # 获取所有图像ID列表
         self.image_ids = list(self.images.keys())
+        
+        # 打印类别映射信息
+        print(f"\n{'='*60}")
+        print(f"COCO数据集加载完成")
+        print(f"{'='*60}")
+        print(f"图像数量: {len(self.image_ids)}")
+        print(f"类别数量: {len(self.categories)}")
+        print(f"\n类别映射 (COCO ID -> 模型标签):")
+        for cat in sorted_categories:
+            coco_id = cat['id']
+            model_label = self.cat_id_to_label[coco_id]
+            print(f"  '{cat['name']}': {coco_id} -> {model_label}")
+        print(f"{'='*60}\n")
         
     def __len__(self):
         return len(self.image_ids)
@@ -228,6 +247,9 @@ class DetectionDataLoader:
                 val_ann,
                 transforms=self.val_transform
             )
+            
+            # 验证训练集和验证集的类别一致性
+            self._validate_category_consistency(train_dataset, val_dataset)
         else:
             # 如果没有验证集，使用训练集的一部分
             val_split = self.config.get('validation_split', 0.2)
@@ -259,6 +281,53 @@ class DetectionDataLoader:
         )
         
         return train_loader, val_loader
+    
+    @staticmethod
+    def _validate_category_consistency(train_dataset, val_dataset):
+        """
+        验证训练集和验证集的类别一致性
+        
+        Args:
+            train_dataset: 训练数据集
+            val_dataset: 验证数据集
+            
+        Raises:
+            ValueError: 如果类别不一致
+        """
+        # 获取类别名称映射
+        train_cats = train_dataset.cat_name_to_label
+        val_cats = val_dataset.cat_name_to_label
+        
+        # 检查类别名称集合是否一致
+        train_names = set(train_cats.keys())
+        val_names = set(val_cats.keys())
+        
+        if train_names != val_names:
+            missing_in_val = train_names - val_names
+            missing_in_train = val_names - train_names
+            
+            error_msg = "训练集和验证集的类别不一致：\n"
+            if missing_in_val:
+                error_msg += f"  验证集缺少类别: {sorted(missing_in_val)}\n"
+            if missing_in_train:
+                error_msg += f"  训练集缺少类别: {sorted(missing_in_train)}\n"
+            error_msg += "请确保训练集和验证集的COCO标注文件包含相同的类别。"
+            
+            raise ValueError(error_msg)
+        
+        # 检查类别名称到标签的映射是否一致
+        for cat_name in train_names:
+            if train_cats[cat_name] != val_cats[cat_name]:
+                error_msg = (
+                    f"类别 '{cat_name}' 的标签映射不一致：\n"
+                    f"  训练集: {train_cats[cat_name]}\n"
+                    f"  验证集: {val_cats[cat_name]}\n"
+                    f"这通常是因为类别在COCO文件中的顺序不同。"
+                )
+                raise ValueError(error_msg)
+        
+        print(f"✓ 类别验证通过: 训练集和验证集包含相同的 {len(train_names)} 个类别")
+        print(f"  类别列表: {sorted(train_names)}")
     
     @staticmethod
     def _collate_fn(batch):
