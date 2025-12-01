@@ -140,15 +140,20 @@
 												ItemsSource="{Binding Optimizers}"
 												SelectedItem="{Binding SelectedOptimizer}"/>
 										</StackPanel>
-
+										<!-- 自定义模型名称 -->
+										<StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,20">
+											<TextBlock Text="自定义模型名称" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+											<TextBox Text="{Binding CustomModelName}"/>
+										</StackPanel>
 										<!-- 验证集比例 -->
-										<StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,20" IsVisible="{Binding !IsDetectionTask}">
+										<StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,10,20" IsVisible="{Binding !IsDetectionTask}">
 											<TextBlock Text="验证集比例" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<ComboBox
 												ItemsSource="{Binding ValidationSetRates}"
 												SelectedItem="{Binding SelectedValidationSetRate}"
 												SelectedIndex="1"/>
 										</StackPanel>
+
 									</Grid>
 								</StackPanel>
 							</Border>

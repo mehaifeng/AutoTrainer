@@ -772,6 +772,8 @@ namespace AutoTrainer.ViewModels
 
                 // 设置模型信息到全局配置
                 App.TrainModel.PretrainedModel = SelectModel;
+                // 将预训练模型名同步到自定义模型名称（用户可在参数页再修改）
+                App.TrainModel.CustomModelName = SelectModel;
 
                 // 根据任务类型选择不同的辅助脚本
                 var helperScript = SelectedTaskType.Value == "detection" ? "DetectionModelHelper.py" : "ModelHelper.py";

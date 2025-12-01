@@ -286,14 +286,14 @@
 									Content="选择本地权重"
 									Margin="10,0,0,0"/>
 								<!--选择本地模型名称 Selected Local Weight Name-->
-								<TextBlock
+								<SelectableTextBlock
 									Grid.Column="3"
-									IsVisible="{Binding IsVisibleIntroduce}"
 									Text="{Binding SelectedLocalWeightText}"
-									FontSize="20"
+									IsVisible="{Binding IsVisibleIntroduce}"
+									FontSize="14"
 									VerticalAlignment="Bottom"
-									HorizontalAlignment="Left"
-									Margin="10,10,0,0"/>
+									Margin="10,0,0,0"
+									HorizontalAlignment="Left"/>
 								<!--下一步 Next Step-->
 								<Button
 									Grid.Column="4"

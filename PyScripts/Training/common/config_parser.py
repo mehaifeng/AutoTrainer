@@ -87,8 +87,13 @@ class ConfigParser:
         
     @property
     def model_name(self) -> str:
-        """获取模型名称"""
+        """获取用于构建架构的基础模型名称（始终为预训练模型标准名）"""
         return self.config['pretrained_model']
+
+    @property
+    def save_model_name(self) -> str:
+        """获取用于保存/显示的模型名称（优先自定义名称）"""
+        return self.config.get('custom_model_name') or self.config['pretrained_model']
         
     @property
     def num_classes(self) -> int:

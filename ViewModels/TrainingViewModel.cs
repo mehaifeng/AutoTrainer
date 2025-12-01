@@ -159,6 +159,10 @@ namespace AutoTrainer.ViewModels
                 sb.AppendLine("=== 通用训练参数 ===");
                 sb.AppendLine("任务类型: " + (modelParam.TaskType == "classification" ? "图像分类" : "目标检测"));
                 sb.AppendLine("模型: " + modelParam.PretrainedModel);
+                // 自定义模型名称（默认取预训练模型名）
+                if (string.IsNullOrWhiteSpace(modelParam.CustomModelName))
+                    modelParam.CustomModelName = modelParam.PretrainedModel;
+                sb.AppendLine("自定义模型名称: " + modelParam.CustomModelName);
                 sb.AppendLine("学习率: " + modelParam.LearningRate);
                 sb.AppendLine("优化器: " + modelParam.Optimizer);
                 sb.AppendLine("学习率调度器: " + modelParam.LrScheduler);
@@ -243,7 +247,10 @@ namespace AutoTrainer.ViewModels
 
                 // 通用输出参数
                 sb.AppendLine("=== 输出配置 ===");
-                sb.AppendLine("模型保存路径: " + modelParam.ModelOutputPath);
+                var modelFile = (!string.IsNullOrEmpty(modelParam.ModelOutputPath) && !string.IsNullOrEmpty(modelParam.CustomModelName))
+                    ? System.IO.Path.Combine(modelParam.ModelOutputPath, modelParam.CustomModelName + ".pt")
+                    : modelParam.ModelOutputPath;
+                sb.AppendLine("模型保存路径: " + modelFile);
                 sb.AppendLine("训练日志输出路径: " + modelParam.PyTrainLogOutputPath);
 
                 EpochState.TotalEpochs = modelParam.Epochs;
@@ -272,6 +279,30 @@ namespace AutoTrainer.ViewModels
                     Log.Error("无法开始训练: TrainModel 为空");
                     await MessageBoxManager.GetMessageBoxStandard("训练失败", "训练模型配置为空", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
                     return;
+                }
+
+                // 同名文件警告检查
+                try
+                {
+                    var outputDir = App.TrainModel.ModelOutputPath;
+                    var modelBaseName = string.IsNullOrWhiteSpace(App.TrainModel.CustomModelName) ? App.TrainModel.PretrainedModel : App.TrainModel.CustomModelName;
+                    if (!string.IsNullOrWhiteSpace(outputDir) && !string.IsNullOrWhiteSpace(modelBaseName))
+                    {
+                        var pthPath = System.IO.Path.Combine(outputDir, modelBaseName + ".pth");
+                        var ptPath = System.IO.Path.Combine(outputDir, modelBaseName + ".pt");
+                        if (System.IO.File.Exists(pthPath) || System.IO.File.Exists(ptPath))
+                        {
+                            await MessageBoxManager.GetMessageBoxStandard(
+                                "警告",
+                                $"模型输出目录中已存在同名文件: {modelBaseName}.pth 或 {modelBaseName}.pt\n继续训练可能会覆盖旧文件。",
+                                MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                                MsBox.Avalonia.Enums.Icon.Warning).ShowWindowAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"开始训练前检查同名文件失败: {ex.Message}");
                 }
 
                 // 根据任务类型选择不同的训练流程

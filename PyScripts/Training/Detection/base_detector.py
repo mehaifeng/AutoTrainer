@@ -63,7 +63,7 @@ class BaseDetectionTrainer:
         
         # 输出配置信息
         StructuredLogger.config(
-            model=self.config_parser.model_name,
+            model=self.config_parser.save_model_name,
             num_classes=self.config_parser.num_classes,
             batch_size=self.config_parser.batch_size,
             epochs=self.config_parser.epochs,
@@ -262,7 +262,7 @@ class BaseDetectionTrainer:
             # 模型检查点管理器
             checkpoint_manager = ModelCheckpoint(
                 self.config_parser.model_output_path,
-                self.config_parser.model_name
+                self.config_parser.save_model_name
             )
             
             # 开始训练

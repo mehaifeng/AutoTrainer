@@ -44,6 +44,10 @@ namespace AutoTrainer.ViewModels
             Epochs = 25;
             EarlyStopRound = 5;
             EarlyStopDelta = 0.0001f;
+            // 初始化自定义模型名称
+            CustomModelName = string.IsNullOrWhiteSpace(App.TrainModel?.CustomModelName)
+                ? App.TrainModel?.PretrainedModel
+                : App.TrainModel?.CustomModelName;
             this.PropertyChanged += ParameterConfigViewModel_PropertyChanged;
         }
 
@@ -222,6 +226,18 @@ namespace AutoTrainer.ViewModels
             }
         }
         #region 可绑定属性
+        /// <summary>
+        /// 自定义模型名称
+        /// </summary>
+        [ObservableProperty]
+        private string? customModelName;
+        partial void OnCustomModelNameChanged(string? value)
+        {
+            if (App.TrainModel != null)
+            {
+                App.TrainModel.CustomModelName = value;
+            }
+        }
         /// <summary>
         /// 分类任务训练集地址
         /// </summary>
@@ -534,7 +550,7 @@ namespace AutoTrainer.ViewModels
         private void Loaded()
         {
             UpdateUIForTaskType();
-            if (App.TrainModel.TaskType == "classification")
+            if (App.TrainModel?.TaskType == "classification")
             {
                 ClassifyTrainSetPath = App.TrainModel?.Classification?.TrainDataPath;
                 ClassifyValidationSetPath = App.TrainModel?.Classification?.ValDataPath;
@@ -758,6 +774,7 @@ namespace AutoTrainer.ViewModels
             App.TrainModel.Epochs = Epochs;
             App.TrainModel.EarlyStoppingRounds = EarlyStopRound;
             App.TrainModel.EarlyStoppingDelta = EarlyStopDelta;
+            App.TrainModel.CustomModelName = string.IsNullOrWhiteSpace(CustomModelName) ? App.TrainModel.PretrainedModel : CustomModelName;
 
             // 根据任务类型保存特定配置
             if (IsDetectionTask)
@@ -853,6 +870,31 @@ namespace AutoTrainer.ViewModels
                         reduction = SelectedReduction
                     }
                 };
+            }
+
+            // 同名文件警告检查
+            try
+            {
+                var outputDir = App.TrainModel.ModelOutputPath;
+                var modelBaseName = string.IsNullOrWhiteSpace(App.TrainModel.CustomModelName) ? App.TrainModel.PretrainedModel : App.TrainModel.CustomModelName;
+                if (!string.IsNullOrWhiteSpace(outputDir) && !string.IsNullOrWhiteSpace(modelBaseName))
+                {
+                    var pthPath = Path.Combine(outputDir, modelBaseName + ".pth");
+                    var ptPath = Path.Combine(outputDir, modelBaseName + ".pt");
+                    if (File.Exists(pthPath) || File.Exists(ptPath))
+                    {
+                        var box = MessageBoxManager.GetMessageBoxStandard(
+                            "警告",
+                            $"模型输出目录中已存在同名文件: {modelBaseName}.pth 或 {modelBaseName}.pt\n继续保存配置并训练可能会覆盖旧文件。",
+                            ButtonEnum.Ok,
+                            Icon.Warning);
+                        await box.ShowAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"检查同名文件时发生错误: {ex.Message}");
             }
 
             string jsonStr = JsonConvert.SerializeObject(App.TrainModel, Formatting.Indented);

@@ -80,10 +80,16 @@ namespace AutoTrainer.Models
 
         #region 输出配置
         /// <summary>
-        /// 训练模型输出路径
+        /// 训练模型输出路径（目录）
         /// </summary>
         [JsonProperty("model_output_path")]
         public string? ModelOutputPath { get; set; }
+
+        /// <summary>
+        /// 自定义模型名称（不含扩展名），默认取预训练模型名
+        /// </summary>
+        [JsonProperty("custom_model_name")]
+        public string? CustomModelName { get; set; }
 
         /// <summary>
         /// python训练脚本的日志输出路径

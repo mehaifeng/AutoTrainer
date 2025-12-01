@@ -604,7 +604,7 @@ namespace AutoTrainer.ViewModels
             if (!string.IsNullOrEmpty(trainModel.ModelOutputPath) && Directory.Exists(trainModel.ModelOutputPath))
             {
                 // Look for the latest .pt file in the output directory and its subdirectories
-                var ptFiles = Directory.EnumerateFiles(trainModel.ModelOutputPath, "*.pt", SearchOption.AllDirectories)
+                var ptFiles = Directory.EnumerateFiles(trainModel.ModelOutputPath, "*.pth", SearchOption.AllDirectories)
                                        .OrderByDescending(f => new System.IO.FileInfo(f).CreationTime) // Get the latest one
                                        .FirstOrDefault();
                 if (ptFiles != null)
