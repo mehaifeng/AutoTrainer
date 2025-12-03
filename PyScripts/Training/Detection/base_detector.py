@@ -262,7 +262,9 @@ class BaseDetectionTrainer:
             # 模型检查点管理器
             checkpoint_manager = ModelCheckpoint(
                 self.config_parser.model_output_path,
-                self.config_parser.save_model_name
+                self.config_parser.save_model_name,  # 文件名使用自定义名称
+                self.config_parser.model_name,  # metadata使用架构名称
+                self.config_parser.num_classes  # 类别数
             )
             
             # 开始训练

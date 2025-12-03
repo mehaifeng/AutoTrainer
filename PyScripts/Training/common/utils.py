@@ -152,17 +152,22 @@ class SystemMonitor:
 class ModelCheckpoint:
     """模型检查点管理器"""
     
-    def __init__(self, save_dir: str, model_name: str):
+    def __init__(self, save_dir: str, save_name: str, architecture_name: str, num_classes: int):
         """
         初始化检查点管理器
         
         Args:
             save_dir: 保存目录
-            model_name: 模型名称
+            save_name: 用于文件名的模型名称（可自定义）
+            architecture_name: 模型架构名称（用于metadata）
+            num_classes: 类别数（包含背景类）
         """
         self.save_dir = save_dir
-        self.model_name = model_name
-        self.best_acc = 0.0
+        self.save_name = save_name
+        self.architecture_name = architecture_name
+        self.num_classes = num_classes
+        self.best_epoch = 0
+        self.best_metrics = {}
         
         # 确保保存目录存在
         os.makedirs(save_dir, exist_ok=True)
@@ -185,21 +190,23 @@ class ModelCheckpoint:
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'metrics': metrics,
-            'model_name': self.model_name  # 添加模型名称用于验证
+            'model_name': self.architecture_name,  # 架构名称
+            'num_classes': self.num_classes  # 类别数
         }
         
         if is_best:
-            save_path = os.path.join(self.save_dir, f'{self.model_name}_best.pth')
-            self.best_acc = metrics.get('accuracy', 0.0)
+            save_path = os.path.join(self.save_dir, f'{self.save_name}_best.pth')
+            self.best_epoch = epoch
+            self.best_metrics = metrics.copy()
         else:
-            save_path = os.path.join(self.save_dir, f'{self.model_name}_epoch{epoch}.pth')
+            save_path = os.path.join(self.save_dir, f'{self.save_name}_epoch{epoch}.pth')
             
         torch.save(checkpoint, save_path)
         return save_path
         
     def save_final(self, model: torch.nn.Module) -> str:
         """
-        保存最终模型（仅权重）
+        保存最终模型（包含完整元数据）
         
         Args:
             model: 模型
@@ -207,8 +214,16 @@ class ModelCheckpoint:
         Returns:
             保存路径
         """
-        save_path = os.path.join(self.save_dir, f'{self.model_name}.pth')
-        torch.save(model.state_dict(), save_path)
+        checkpoint = {
+            'epoch': self.best_epoch,
+            'model_state_dict': model.state_dict(),
+            'metrics': self.best_metrics,
+            'model_name': self.architecture_name,  # 架构名称
+            'num_classes': self.num_classes  # 类别数
+        }
+        
+        save_path = os.path.join(self.save_dir, f'{self.save_name}.pth')
+        torch.save(checkpoint, save_path)
         return save_path
 
 

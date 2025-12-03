@@ -197,7 +197,43 @@ class FasterRCNNTrainer(BaseDetectionTrainer):
                         
                         # 检查boxes有效性
                         if torch.isnan(boxes).any() or torch.isinf(boxes).any():
-                            error_msg = f"Batch {batch_idx}, 样本 {i}: boxes 包含 NaN 或 Inf"
+                            error_msg = (
+                                f"❌ 数据验证失败 (Batch {batch_idx}, 样本 {i}):\n"
+                                f"   边界框坐标包含 NaN 或 Inf\n"
+                                f"   boxes: {boxes.tolist()}"
+                            )
+                            StructuredLogger.error(error_msg)
+                            raise ValueError(error_msg)
+                        
+                        # 检查boxes格式 (x1, y1, x2, y2)
+                        if (boxes[:, 2] <= boxes[:, 0]).any() or (boxes[:, 3] <= boxes[:, 1]).any():
+                            invalid_boxes = []
+                            for j, box in enumerate(boxes):
+                                if box[2] <= box[0] or box[3] <= box[1]:
+                                    invalid_boxes.append((j, box.tolist()))
+                            
+                            error_msg = (
+                                f"❌ 数据验证失败 (Batch {batch_idx}, 样本 {i}):\n"
+                                f"   边界框坐标无效 (x2 <= x1 或 y2 <= y1)\n"
+                                f"   无效的框: {invalid_boxes}\n"
+                                f"   边界框格式应为 [x1, y1, x2, y2]，其中 x2 > x1 且 y2 > y1"
+                            )
+                            StructuredLogger.error(error_msg)
+                            raise ValueError(error_msg)
+                        
+                        # 检查boxes面积是否过小
+                        areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+                        if (areas < 1.0).any():
+                            small_boxes = []
+                            for j, (box, area) in enumerate(zip(boxes, areas)):
+                                if area < 1.0:
+                                    small_boxes.append((j, box.tolist(), area.item()))
+                            
+                            StructuredLogger.warning(
+                                f"⚠️ 数据警告 (Batch {batch_idx}, 样本 {i}):\n"
+                                f"   发现面积过小的边界框（可能导致训练不稳定）:\n"
+                                f"   {small_boxes}"
+                            )
                             StructuredLogger.error(error_msg)
                             raise ValueError(error_msg)
                 
@@ -215,8 +251,34 @@ class FasterRCNNTrainer(BaseDetectionTrainer):
             # 计算总损失
             losses = sum(loss for loss in loss_dict.values())
             
+            # 检查损失是否为NaN或Inf
+            if not torch.isfinite(losses):
+                StructuredLogger.warning(
+                    f"检测到异常损失值: {losses.item()}, 跳过此batch\n"
+                    f"loss_dict: {loss_dict}"
+                )
+                self.optimizer.zero_grad()
+                continue
+            
             # 反向传播
             losses.backward()
+            
+            # 梯度裁剪（防止梯度爆炸）
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+            
+            # 检查梯度是否包含NaN
+            has_nan_grad = False
+            for name, param in self.model.named_parameters():
+                if param.grad is not None and not torch.isfinite(param.grad).all():
+                    StructuredLogger.warning(f"参数 {name} 的梯度包含NaN或Inf")
+                    has_nan_grad = True
+                    break
+            
+            if has_nan_grad:
+                StructuredLogger.warning("跳过包含NaN梯度的batch")
+                self.optimizer.zero_grad()
+                continue
+            
             self.optimizer.step()
             
             # 统计

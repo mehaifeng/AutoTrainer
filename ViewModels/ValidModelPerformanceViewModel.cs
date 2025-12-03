@@ -51,7 +51,14 @@ namespace AutoTrainer.ViewModels
     public partial class ClassifiedImageGroup : ObservableObject
     {
         [ObservableProperty] private string className;
-        [ObservableProperty] private ObservableCollection<Bitmap> images = new();
+        [ObservableProperty] private ObservableCollection<ClassifiedImageItem> images = new();
+    }
+
+    public partial class ClassifiedImageItem : ObservableObject
+    {
+        [ObservableProperty] private Bitmap image;
+        [ObservableProperty] private double confidence;
+        [ObservableProperty] private string confidenceText;
     }
 
     public partial class DetectedImageResult : ObservableObject
@@ -255,13 +262,26 @@ namespace AutoTrainer.ViewModels
                 await MessageBoxManager.GetMessageBoxStandard("错误", "请提供一个有效的验证集目录路径").ShowWindowAsync();
                 return;
             }
-            if (!IsCheckedClassifyMode && (string.IsNullOrEmpty(CocoAnnotationPath) || !File.Exists(CocoAnnotationPath)))
+            if (!IsCheckedClassifyMode && !string.IsNullOrEmpty(CocoAnnotationPath) && !File.Exists(CocoAnnotationPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "目标检测任务需要一个COCO标注文件").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "提供的COCO标注文件路径无效").ShowWindowAsync();
+                return;
             }
             if(string.IsNullOrEmpty(App.PythonVenvPath) || !Directory.Exists(Path.Combine(App.PythonVenvPath, "Scripts")))
             {
                 await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowAsync();
+                return;
+            }
+            
+            // 验证模型metadata（必须包含model_name）
+            var metadataValidation = await ValidateModelMetadataAsync(ModelWeightsPath);
+            if (!metadataValidation.isValid)
+            {
+                await MessageBoxManager.GetMessageBoxStandard(
+                    "模型验证失败", 
+                    metadataValidation.errorMessage,
+                    MsBox.Avalonia.Enums.ButtonEnum.Ok,
+                    MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
                 return;
             }
             #endregion
@@ -287,8 +307,8 @@ namespace AutoTrainer.ViewModels
                 var configPath = Path.Combine(App.ConfigFolderPath, "validation_config.json");
                 await File.WriteAllTextAsync(configPath, configJson);
 
-                // 选择验证脚本（根据模型类型自动选择）
-                var pythonScript = GetValidationScript();
+                // 选择验证脚本（根据模型metadata自动选择）
+                var pythonScript = await GetValidationScriptAsync();
                 Log.Information("使用验证脚本: {Script}", pythonScript);
 
                 var result = await CliWrapHelper.ExecutePythonScriptAsync(
@@ -420,7 +440,15 @@ namespace AutoTrainer.ViewModels
                 foreach (var item in group)
                 {
                     if (File.Exists(item.Path))
-                        imageGroup.Images.Add(new Bitmap(item.Path));
+                    {
+                        var imageItem = new ClassifiedImageItem
+                        {
+                            Image = new Bitmap(item.Path),
+                            Confidence = item.Confidence,
+                            ConfidenceText = $"{item.Confidence:P1}"  // 格式化为百分比，如 95.5%
+                        };
+                        imageGroup.Images.Add(imageItem);
+                    }
                 }
                 ClassifiedResults.Add(imageGroup);
             }
@@ -660,58 +688,146 @@ namespace AutoTrainer.ViewModels
         }
         
         /// <summary>
+        /// 验证模型metadata是否包含必需的字段
+        /// </summary>
+        private async Task<(bool isValid, string errorMessage)> ValidateModelMetadataAsync(string modelPath)
+        {
+            if (string.IsNullOrEmpty(App.PythonVenvPath))
+            {
+                return (false, "Python虚拟环境未配置");
+            }
+            
+            try
+            {
+                // 读取model_name
+                var modelName = await CliWrapHelper.GetModelNameFromMetadataAsync(modelPath, App.PythonVenvPath);
+                
+                if (string.IsNullOrEmpty(modelName))
+                {
+                    return (false, 
+                        "模型文件缺少必需的元数据字段 'model_name'。\n\n" +
+                        "此模型可能不是由本软件训练生成的。\n" +
+                        "请使用本软件训练的模型，或确保模型包含正确的元数据信息。");
+                }
+                
+                // 验证model_name是否符合预期格式
+                if (IsCheckedClassifyMode)
+                {
+                    // 分类任务：验证是否是支持的模型
+                    if (!IsValidClassificationModel(modelName))
+                    {
+                        return (false,
+                            $"不支持的分类模型架构: {modelName}\n\n" +
+                            $"当前支持的模型:\n" +
+                            $"  - EfficientNet系列 (efficientnet_b4, efficientnet_b5等)\n" +
+                            $"  - MobileNetV3系列 (mobilenet_v3_small, mobilenet_v3_large)");
+                    }
+                }
+                else
+                {
+                    // 检测任务：验证是否是支持的模型
+                    if (!IsValidDetectionModel(modelName))
+                    {
+                        return (false,
+                            $"不支持的检测模型架构: {modelName}\n\n" +
+                            $"当前支持的模型:\n" +
+                            $"  - Faster R-CNN系列 (fasterrcnn_resnet50_fpn, fasterrcnn_mobilenet_v3_large_fpn)");
+                    }
+                }
+                
+                Log.Information("模型metadata验证通过: {ModelName}", modelName);
+                return (true, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "验证模型metadata时发生错误");
+                return (false, $"读取模型元数据失败:\n{ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 验证是否是有效的分类模型
+        /// </summary>
+        private bool IsValidClassificationModel(string modelName)
+        {
+            var validPrefixes = new[] { "efficientnet", "mobilenet" };
+            return validPrefixes.Any(prefix => modelName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        /// <summary>
+        /// 验证是否是有效的检测模型
+        /// </summary>
+        private bool IsValidDetectionModel(string modelName)
+        {
+            var validPrefixes = new[] { "fasterrcnn" };
+            return validPrefixes.Any(prefix => modelName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        /// <summary>
         /// 根据模型路径获取对应的验证脚本路径
         /// </summary>
-        private string GetValidationScript()
+        private async Task<string> GetValidationScriptAsync()
         {
+            // 从模型元数据中读取model_name（此时已经验证过存在）
+            var modelName = await CliWrapHelper.GetModelNameFromMetadataAsync(ModelWeightsPath, App.PythonVenvPath);
+            
+            if (string.IsNullOrEmpty(modelName))
+            {
+                throw new InvalidOperationException("无法读取模型的model_name元数据");
+            }
+            
+            Log.Information("使用模型元数据选择验证器: {ModelName}", modelName);
+            
             if (IsCheckedClassifyMode)
             {
-                // 分类任务 - 根据模型类型选择脚本
-                return GetClassificationValidatorScript(ModelWeightsPath);
+                return GetClassificationValidatorScript(modelName);
             }
             else
             {
-                // 检测任务 - 根据模型类型选择脚本
-                return GetDetectionValidatorScript(ModelWeightsPath);
+                return GetDetectionValidatorScript(modelName);
             }
         }
         
         /// <summary>
         /// 获取分类验证脚本
         /// </summary>
-        private string GetClassificationValidatorScript(string modelPath)
+        /// <param name="modelName">从元数据读取的模型名称</param>
+        private string GetClassificationValidatorScript(string modelName)
         {
             var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "Classification");
-            var modelPathLower = modelPath.ToLower();
             
             // EfficientNet系列
-            if (modelPathLower.Contains("efficientnet"))
+            if (modelName.StartsWith("efficientnet", StringComparison.OrdinalIgnoreCase))
+            {
                 return Path.Combine(basePath, "efficientnet_validator.py");
+            }
             
             // MobileNet系列
-            if (modelPathLower.Contains("mobilenet"))
+            if (modelName.StartsWith("mobilenet", StringComparison.OrdinalIgnoreCase))
+            {
                 return Path.Combine(basePath, "mobilenet_validator.py");
+            }
             
-            // 默认：使用旧的通用脚本作为fallback
-            Log.Warning("未识别的分类模型，使用通用验证器: {ModelPath}", modelPath);
-            return Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "ClassificationValidator.py");
+            // 不应该到达这里（前面已验证）
+            throw new NotSupportedException($"不支持的分类模型类型: {modelName}");
         }
         
         /// <summary>
         /// 获取检测验证脚本
         /// </summary>
-        private string GetDetectionValidatorScript(string modelPath)
+        /// <param name="modelName">从元数据读取的模型名称</param>
+        private string GetDetectionValidatorScript(string modelName)
         {
             var basePath = Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "Detection");
-            var modelPathLower = modelPath.ToLower();
             
-            // Faster R-CNN系列
-            if (modelPathLower.Contains("fasterrcnn") || modelPathLower.Contains("faster_rcnn"))
+            // Faster R-CNN系列（所有变体使用同一个验证器）
+            if (modelName.StartsWith("fasterrcnn", StringComparison.OrdinalIgnoreCase))
+            {
                 return Path.Combine(basePath, "fasterrcnn_validator.py");
+            }
             
-            // 默认：使用旧的通用脚本作为fallback
-            Log.Warning("未识别的检测模型，使用通用验证器: {ModelPath}", modelPath);
-            return Path.Combine(Environment.CurrentDirectory, "PyScripts", "Inference", "DetectionValidator.py");
+            // 不应该到达这里（前面已验证）
+            throw new NotSupportedException($"不支持的检测模型类型: {modelName}");
         }
         
         #endregion

@@ -39,9 +39,9 @@ class MobileNetValidator(BaseClassificationValidator):
         """初始化验证器"""
         super().__init__(config_path)
         
-        # 从模型路径推断模型名称
+        # 从模型metadata读取模型名称（必须）
         model_path = self.config['model_weights_path']
-        self.model_name = self._infer_model_name(model_path)
+        self.model_name = self._get_model_name_from_metadata(model_path)
         
         if self.model_name not in self.MODEL_CONFIGS:
             raise ValueError(
@@ -53,21 +53,38 @@ class MobileNetValidator(BaseClassificationValidator):
         print(f"使用模型: {self.model_name}", flush=True)
         print(f"输入尺寸: {self.model_config['input_size']}x{self.model_config['input_size']}", flush=True)
     
-    def _infer_model_name(self, model_path: str) -> str:
-        """从文件路径推断模型名称"""
-        path_lower = model_path.lower()
+    def _get_model_name_from_metadata(self, model_path: str) -> str:
+        """
+        从模型metadata读取模型名称（必须存在）
         
-        if 'mobilenet_v3_large' in path_lower:
-            return 'mobilenet_v3_large'
-        elif 'mobilenet_v3_small' in path_lower:
-            return 'mobilenet_v3_small'
-        elif 'large' in path_lower:
-            return 'mobilenet_v3_large'
-        elif 'small' in path_lower:
-            return 'mobilenet_v3_small'
-        else:
-            # 默认
-            return 'mobilenet_v3_large'
+        Args:
+            model_path: 模型文件路径
+            
+        Returns:
+            模型名称
+            
+        Raises:
+            ValueError: 如果metadata中不存在model_name或格式错误
+        """
+        try:
+            checkpoint = torch.load(model_path, map_location='cpu')
+            
+            if not isinstance(checkpoint, dict):
+                raise ValueError("模型文件格式错误：不是字典格式")
+            
+            if 'model_name' not in checkpoint:
+                raise ValueError(
+                    "模型文件缺少必需的元数据字段 'model_name'。\n"
+                    "请使用本软件训练的模型，或确保模型包含正确的元数据。"
+                )
+            
+            model_name = checkpoint['model_name']
+            print(f"从metadata读取到模型名称: {model_name}", flush=True)
+            
+            return model_name
+            
+        except Exception as e:
+            raise ValueError(f"读取模型metadata失败: {str(e)}")
     
     def get_input_size(self) -> int:
         """获取模型输入尺寸"""

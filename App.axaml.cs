@@ -37,7 +37,6 @@ namespace AutoTrainer
                 TrainModel = new TrainModel
                 {
                     ModelOutputPath = ModelOutputFolderPath,
-                    PyTrainLogOutputPath = PyTrainLogsFolderPath,
                     // Initialize the new configuration structure
                     Classification = new ClassificationConfig
                     {

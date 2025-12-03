@@ -272,9 +272,17 @@
                                                     </ItemsPanelTemplate>
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border CornerRadius="5" BorderBrush="LightGray" BorderThickness="1" Margin="3" Width="100" Height="100">
-                                                            <Image Source="{Binding .}" Stretch="UniformToFill"/>
+                                                    <DataTemplate x:DataType="viewmodel:ClassifiedImageItem">
+                                                        <Border CornerRadius="5" BorderBrush="LightGray" BorderThickness="1" Margin="3" Width="100" Height="130">
+                                                            <StackPanel>
+                                                                <Image Source="{Binding Image}" Stretch="UniformToFill" Height="100"/>
+                                                                <TextBlock 
+                                                                    Text="{Binding ConfidenceText}" 
+                                                                    FontSize="11"
+                                                                    HorizontalAlignment="Center"
+                                                                    Margin="0,2,0,0"
+                                                                    Foreground="#666"/>
+                                                            </StackPanel>
                                                         </Border>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

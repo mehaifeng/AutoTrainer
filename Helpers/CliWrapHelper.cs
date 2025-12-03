@@ -692,5 +692,67 @@ namespace AutoTrainer.Helpers
                 return (false, null, $"验证异常: {ex.Message}");
             }
         }
+        
+        /// <summary>
+        /// 从模型文件中读取模型名称（model_name metadata）
+        /// </summary>
+        /// <param name="modelPath">模型文件路径</param>
+        /// <param name="venvPath">Python虚拟环境路径</param>
+        /// <returns>模型名称，如果读取失败返回null</returns>
+        public static async Task<string?> GetModelNameFromMetadataAsync(string modelPath, string venvPath)
+        {
+            Log.Information("从模型文件读取model_name: {ModelPath}", modelPath);
+            
+            try
+            {
+                var validatorScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, 
+                    "PyScripts", "Utils", "ModelMetadataReader.py");
+                
+                if (!File.Exists(validatorScript))
+                {
+                    Log.Error("模型元数据读取脚本不存在: {Script}", validatorScript);
+                    return null;
+                }
+                
+                var arguments = $"\"{modelPath}\"";
+                var result = await ExecutePythonScriptAsync(validatorScript, venvPath, arguments);
+                
+                if (result.ExitCode != 0)
+                {
+                    Log.Error("模型元数据读取失败: {Error}", result.Error);
+                    return null;
+                }
+                
+                // 解析JSON结果
+                if (string.IsNullOrEmpty(result.Output))
+                {
+                    Log.Warning("元数据读取脚本未返回结果");
+                    return null;
+                }
+                
+                var jsonResult = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(result.Output);
+                var success = jsonResult.GetProperty("success").GetBoolean();
+                
+                if (!success)
+                {
+                    var message = jsonResult.GetProperty("message").GetString();
+                    Log.Warning("读取模型元数据失败: {Message}", message);
+                    return null;
+                }
+                
+                var modelName = jsonResult.TryGetProperty("model_name", out var nameElement) && 
+                               nameElement.ValueKind != System.Text.Json.JsonValueKind.Null
+                    ? nameElement.GetString()
+                    : null;
+                
+                Log.Information("成功读取模型名称: {ModelName}", modelName);
+                return modelName;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "读取模型元数据过程发生异常");
+                return null;
+            }
+        }
     }
 }

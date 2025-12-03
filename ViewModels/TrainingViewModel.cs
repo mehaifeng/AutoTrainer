@@ -251,7 +251,6 @@ namespace AutoTrainer.ViewModels
                     ? System.IO.Path.Combine(modelParam.ModelOutputPath, modelParam.CustomModelName + ".pt")
                     : modelParam.ModelOutputPath;
                 sb.AppendLine("模型保存路径: " + modelFile);
-                sb.AppendLine("训练日志输出路径: " + modelParam.PyTrainLogOutputPath);
 
                 EpochState.TotalEpochs = modelParam.Epochs;
                 ModelParamStr = sb.ToString();
@@ -655,10 +654,6 @@ namespace AutoTrainer.ViewModels
             PyOutput = string.Empty;
             #endregion
 
-            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "Log" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
-            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
-            Log.Information("分类训练日志文件创建于: {LogPath}", currentPyLogfile);
-
             Log.Debug("保存训练配置到 ModelParam.json");
             var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
             await File.WriteAllTextAsync(Path.Combine(App.ConfigFolderPath, "ModelParam.json"), jsonStr);
@@ -734,11 +729,6 @@ namespace AutoTrainer.ViewModels
 
             InitialPlot();
             PyOutput = string.Empty;
-
-            // 创建检测训练日志文件
-            var currentPyLogfile = Path.Combine(App.PyTrainLogsFolderPath, "DetectionLog" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json");
-            App.TrainModel.PyTrainLogOutputPath = currentPyLogfile;
-            Log.Information("检测训练日志文件创建于: {LogPath}", currentPyLogfile);
 
             // 保存检测配置
             var jsonStr = JsonConvert.SerializeObject(App.TrainModel);
@@ -902,381 +892,6 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Log.Error(ex, "Failed to initialize training chart series");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Py文件执行时，处理各种任务
-        /// </summary>
-        /// <returns></returns>
-        private async Task ScanningThePyOutPut(CancellationToken token)
-        {
-            Log.Information("Starting Python training output monitoring");
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        var logPath = App.TrainModel?.PyTrainLogOutputPath;
-                        if (string.IsNullOrEmpty(logPath))
-                        {
-                            Log.Warning("Training log path is null or empty, waiting...");
-                            await Task.Delay(3000, CancellationToken.None);
-                            continue;
-                        }
-
-                        if (!File.Exists(logPath))
-                        {
-                            Log.Debug("Training log file not found yet: {LogPath}", logPath);
-                            await Task.Delay(3000, CancellationToken.None);
-                            continue;
-                        }
-
-                        Log.Debug("Training log file found, reading output");
-                        await ReadPyOutputAtMeantime();
-                        await Task.Delay(3000, CancellationToken.None);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Log.Information("Python training output monitoring cancelled");
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Error occurred while monitoring Python training process");
-                        await Task.Delay(3000, CancellationToken.None); // Wait before retrying
-                    }
-                }
-            }
-            finally
-            {
-                Log.Information("Python training output monitoring stopped");
-            }
-        }
-
-        /// <summary>
-        /// 读取Py脚本输出的json，绘图，输出和控制进度条
-        /// </summary>
-        private async Task ReadPyOutputAtMeantime()
-        {
-            var reTryCounter = 0;
-            var logFilePath = App.TrainModel?.PyTrainLogOutputPath;
-
-            if (string.IsNullOrEmpty(logFilePath))
-            {
-                Log.Error("Cannot read Python output: PyTrainLogOutputPath is null or empty");
-                return;
-            }
-
-            Log.Debug("Waiting for training log file to be created: {LogPath}", logFilePath);
-
-            while (true)
-            {
-                if (reTryCounter > 3)
-                {
-                    Log.Error("Training log file could not be created after {RetryCount} attempts: {LogPath}", reTryCounter, logFilePath);
-                    await MessageBoxManager.GetMessageBoxStandard("训练失败", $"ModelTrainer.py无法创建训练日志\n{logFilePath}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowAsync();
-                    return;
-                }
-
-                if (!File.Exists(logFilePath))
-                {
-                    await Task.Delay(1000);
-                    reTryCounter++;
-                    Log.Debug("Waiting for training log file, attempt {Attempt}", reTryCounter);
-                }
-                else
-                {
-                    Log.Information("Training log file found after {Attempt} attempts", reTryCounter);
-                    break;
-                }
-            }
-            try
-            {
-                string jsonStr;
-                // 使用FileStream来减少文件锁定时间
-                using (var fileStream = new FileStream(App.TrainModel.PyTrainLogOutputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var streamReader = new StreamReader(fileStream, Encoding.UTF8))
-                {
-                    jsonStr = await streamReader.ReadToEndAsync();
-                }
-                Log.Debug("Read training log content, length: {Length} characters", jsonStr.Length);
-
-                var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
-
-                if (pyExecuteOutput is { Entries.Count: > 0 })
-                {
-                    if (ScanningIndex >= pyExecuteOutput.Entries.Count)
-                    {
-                        Log.Debug("No new entries to process. ScanningIndex: {Index}, TotalEntries: {Count}", ScanningIndex, pyExecuteOutput.Entries.Count);
-                        return;
-                    }
-
-                    Log.Debug("Processing {NewEntries} new training log entries", pyExecuteOutput.Entries.Count - ScanningIndex);
-
-                    for (var i = ScanningIndex; i < pyExecuteOutput.Entries.Count; i++)
-                    {
-                        var entry = pyExecuteOutput.Entries[i];
-                        Log.Debug("Processing entry {EntryIndex}: Type={Type}, Epoch={Epoch}, Message={Message}",
-                            i, entry.Type, entry.Epoch, entry.Message?.Substring(0, Math.Min(50, entry.Message?.Length ?? 0)));
-
-                        //画图方面，需要找到type为Validation的消息
-                        if (string.Equals(entry.Type, "Validation", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (TrainAccValues != null && TrainLossValues != null && ValidationAccValues != null && ValidationLossValues != null)
-                            {
-                                var trainAcc = entry.Metrics?.TrainAccuracy;
-                                var trainLoss = entry.Metrics?.TrainLoss;
-                                var valAcc = entry.Metrics?.ValidationAccuracy;
-                                var valLoss = entry.Metrics?.ValidationLoss;
-
-                                // 在UI线程更新图表数据
-                                await Dispatcher.UIThread.InvokeAsync(() =>
-                                {
-                                    TrainAccValues.Add(new ObservableValue() { Value = trainAcc });
-                                    TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
-                                    ValidationAccValues.Add(new ObservableValue() { Value = valAcc });
-                                    ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
-                                    EpochState.CurrentEpoch = entry.Epoch;
-                                    
-                                    // 详细日志
-                                    Log.Information("✅ Epoch进度更新: {Current}/{Total} (CurrentEpoch={CE}, TotalEpochs={TE})", 
-                                        EpochState.CurrentEpoch, 
-                                        EpochState.TotalEpochs,
-                                        EpochState.CurrentEpoch.HasValue ? EpochState.CurrentEpoch.Value : -1,
-                                        EpochState.TotalEpochs.HasValue ? EpochState.TotalEpochs.Value : -1);
-                                });
-
-                                Log.Information("Epoch {Epoch} metrics - Train Acc: {TrainAcc:F4}, Train Loss: {TrainLoss:F4}, Val Acc: {ValAcc:F4}, Val Loss: {ValLoss:F4}",
-                                    entry.Epoch, trainAcc, trainLoss, valAcc, valLoss);
-                            }
-                            else
-                            {
-                                Log.Warning("Chart data series are null, cannot update validation metrics for epoch {Epoch}", entry.Epoch);
-                            }
-                        }
-
-                        //打印输出信息
-                        if (!string.IsNullOrEmpty(entry.Message))
-                        {
-                            PyOutput += entry.Message + "\r\n";
-                        }
-                        ScanningIndex++;
-                    }
-
-                    Log.Debug("Updated ScanningIndex to {Index}, processing complete", ScanningIndex);
-                }
-                else
-                {
-                    Log.Warning("Training log is empty or malformed: {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                }
-
-                if (!isPyRunning && EpochState.CurrentEpoch < EpochState.TotalEpochs)
-                {
-                    var oldTotal = EpochState.TotalEpochs;
-                    EpochState.TotalEpochs = EpochState.CurrentEpoch;
-                    Log.Information("Training completed early. Updated total epochs from {OldTotal} to {NewTotal}", oldTotal, EpochState.TotalEpochs);
-                }
-            }
-            catch (JsonException ex)
-            {
-                Log.Error(ex, "Failed to parse training log JSON from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                throw;
-            }
-            catch (IOException ex)
-            {
-                Log.Error(ex, "Failed to read training log file at {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Unexpected error while processing training log from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Py文件执行时，处理检测训练的各种任务
-        /// </summary>
-        /// <returns></returns>
-        private async Task ScanningTheDetectionPyOutput(CancellationToken token)
-        {
-            Log.Information("Starting Python detection training output monitoring");
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        var logPath = App.TrainModel?.PyTrainLogOutputPath;
-                        if (string.IsNullOrEmpty(logPath))
-                        {
-                            Log.Warning("Detection training log path is null or empty, waiting...");
-                            await Task.Delay(3000, CancellationToken.None);
-                            continue;
-                        }
-
-                        if (!File.Exists(logPath))
-                        {
-                            Log.Debug("Detection training log file not found yet: {LogPath}", logPath);
-                            await Task.Delay(3000, CancellationToken.None);
-                            continue;
-                        }
-
-                        Log.Debug("Detection training log file found, reading output");
-                        await ReadDetectionPyOutputAtMeantime();
-                        await Task.Delay(3000, CancellationToken.None);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Log.Information("Python detection training output monitoring cancelled");
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Error occurred while monitoring Python detection training process");
-                        await Task.Delay(3000, CancellationToken.None);
-                    }
-                }
-            }
-            finally
-            {
-                Log.Information("Python detection training output monitoring stopped");
-            }
-        }
-
-        /// <summary>
-        /// 读取检测训练Py脚本输出的json，绘图，输出和控制进度条
-        /// </summary>
-        private async Task ReadDetectionPyOutputAtMeantime()
-        {
-            var logFilePath = App.TrainModel?.PyTrainLogOutputPath;
-
-            if (string.IsNullOrEmpty(logFilePath))
-            {
-                Log.Error("Cannot read Python detection output: PyTrainLogOutputPath is null or empty");
-                return;
-            }
-
-            Log.Debug("Waiting for detection training log file to be created: {LogPath}", logFilePath);
-
-            var reTryCounter = 0;
-            while (true)
-            {
-                if (reTryCounter > 3)
-                {
-                    Log.Error("Detection training log file could not be created after {RetryCount} attempts: {LogPath}", reTryCounter, logFilePath);
-                    await MessageBoxManager.GetMessageBoxStandard("检测训练失败", $"DetectionTrainer.py无法创建训练日志\n{logFilePath}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowAsync();
-                    return;
-                }
-
-                if (!File.Exists(logFilePath))
-                {
-                    await Task.Delay(1000);
-                    reTryCounter++;
-                    Log.Debug("Waiting for detection training log file, attempt {Attempt}", reTryCounter);
-                }
-                else
-                {
-                    Log.Information("Detection training log file found after {Attempt} attempts", reTryCounter);
-                    break;
-                }
-            }
-
-            try
-            {
-                string jsonStr;
-                using (var fileStream = new FileStream(App.TrainModel.PyTrainLogOutputPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var streamReader = new StreamReader(fileStream, Encoding.UTF8))
-                {
-                    jsonStr = await streamReader.ReadToEndAsync();
-                }
-                Log.Debug("Read detection training log content, length: {Length} characters", jsonStr.Length);
-
-                var pyExecuteOutput = JsonConvert.DeserializeObject<TrainingLog>(jsonStr);
-
-                if (pyExecuteOutput is { Entries.Count: > 0 })
-                {
-                    if (ScanningIndex >= pyExecuteOutput.Entries.Count)
-                    {
-                        Log.Debug("No new entries to process. ScanningIndex: {Index}, TotalEntries: {Count}", ScanningIndex, pyExecuteOutput.Entries.Count);
-                        return;
-                    }
-
-                    Log.Debug("Processing {NewEntries} new detection training log entries", pyExecuteOutput.Entries.Count - ScanningIndex);
-
-                    for (var i = ScanningIndex; i < pyExecuteOutput.Entries.Count; i++)
-                    {
-                        var entry = pyExecuteOutput.Entries[i];
-                        Log.Debug("Processing entry {EntryIndex}: Type={Type}, Epoch={Epoch}, Message={Message}",
-                            i, entry.Type, entry.Epoch, entry.Message?.Substring(0, Math.Min(50, entry.Message?.Length ?? 0)));
-
-                        // 处理检测特有的验证消息
-                        if (string.Equals(entry.Type, "DetectionValidation", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (ValidationLossValues != null)
-                            {
-                                var trainLoss = entry.Metrics?.TrainLoss;
-                                var valLoss = entry.Metrics?.ValidationLoss;
-
-                                // 在UI线程更新图表数据
-                                await Dispatcher.UIThread.InvokeAsync(() =>
-                                {
-                                    TrainLossValues.Add(new ObservableValue() { Value = trainLoss });
-                                    ValidationLossValues.Add(new ObservableValue() { Value = valLoss });
-                                    EpochState.CurrentEpoch = entry.Epoch;
-                                    
-                                    Log.Information("✅ Detection Epoch进度更新: {Current}/{Total}", 
-                                        EpochState.CurrentEpoch, 
-                                        EpochState.TotalEpochs);
-                                });
-
-                                Log.Information("Detection Epoch {Epoch} metrics - Train Loss: {TrainLoss:F4}, Val Loss: {ValLoss:F4}",
-                                    entry.Epoch, trainLoss, valLoss);
-                            }
-                            else
-                            {
-                                Log.Warning("Chart data series are null, cannot update detection validation metrics for epoch {Epoch}", entry.Epoch);
-                            }
-                        }
-
-                        // 打印输出信息
-                        if (!string.IsNullOrEmpty(entry.Message))
-                        {
-                            PyOutput += entry.Message + "\r\n";
-                        }
-                        ScanningIndex++;
-                    }
-
-                    Log.Debug("Updated ScanningIndex to {Index}, processing complete", ScanningIndex);
-                }
-                else
-                {
-                    Log.Warning("Detection training log is empty or malformed: {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                }
-
-                if (!isPyRunning && EpochState.CurrentEpoch < EpochState.TotalEpochs)
-                {
-                    var oldTotal = EpochState.TotalEpochs;
-                    EpochState.TotalEpochs = EpochState.CurrentEpoch;
-                    Log.Information("Detection training completed early. Updated total epochs from {OldTotal} to {NewTotal}", oldTotal, EpochState.TotalEpochs);
-                }
-            }
-            catch (JsonException ex)
-            {
-                Log.Error(ex, "Failed to parse detection training log JSON from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                throw;
-            }
-            catch (IOException ex)
-            {
-                Log.Error(ex, "Failed to read detection training log file at {LogPath}", App.TrainModel.PyTrainLogOutputPath);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Unexpected error while processing detection training log from {LogPath}", App.TrainModel.PyTrainLogOutputPath);
                 throw;
             }
         }
@@ -1455,8 +1070,10 @@ namespace AutoTrainer.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
-                // 注意：当前设计中没有单独的进度条属性
-                // 可以通过PyOutput显示进度信息
+                // 更新进度条
+                EpochState.CurrentEpoch = entry.Epoch;
+                EpochState.TotalEpochs = entry.TotalEpochs;
+                
                 PyOutput += $">>> Epoch {entry.Epoch}/{entry.TotalEpochs} ({entry.Percent:F1}%)\n";
             });
         }
@@ -1468,6 +1085,12 @@ namespace AutoTrainer.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
+                // 更新进度（在验证阶段也更新）
+                if (entry.Epoch > 0)
+                {
+                    EpochState.CurrentEpoch = entry.Epoch;
+                }
+                
                 // 更新图表 - 使用现有的ObservableValue集合
                 if (entry.Phase == "train")
                 {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace AutoTrainer.Models
 {
     /// <summary>
-    /// ±íÊ¾À´×Ô Python ½Å±¾µÄÍêÕûÑéÖ¤½á¹ûÓÐÐ§¸ºÔØ¡£
+    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ Python ï¿½Å±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½Ø¡ï¿½
     /// </summary>
     public class ValidationResult
     {
@@ -19,14 +19,14 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// °üº¬ËùÓÐÐÔÄÜÖ¸±ê¡£ÊôÐÔ¿ÉÎª¿Õ£¬ÒÔÖ§³ÖÁ½ÖÖÈÎÎñÀàÐÍ¡£
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ê¡£ï¿½ï¿½ï¿½Ô¿ï¿½Îªï¿½Õ£ï¿½ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½
     /// </summary>
     public class ValidationSummaryMetrics
     {
         [JsonProperty("time")]
         public double Time { get; set; }
 
-        // ·ÖÀàÖ¸±ê
+        // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½
         [JsonProperty("accuracy")]
         public double? Accuracy { get; set; }
 
@@ -36,7 +36,7 @@ namespace AutoTrainer.Models
         [JsonProperty("f1_macro")]
         public double? F1Score { get; set; }
 
-        // Ä¿±ê¼ì²âÖ¸±ê
+        // Ä¿ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½
         [JsonProperty("map50")]
         public double? Map50 { get; set; }
 
@@ -48,7 +48,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// ´æ´¢ÓÃÓÚÔÚÓÃ»§½çÃæÖÐ»æÖÆÍ¼±íµÄÔ­Ê¼Êý¾Ý¡£
+    /// ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½Ô­Ê¼ï¿½ï¿½ï¿½Ý¡ï¿½
     /// </summary>
     public class ChartData
     {
@@ -59,11 +59,11 @@ namespace AutoTrainer.Models
         public List<PointData> PrCurvePoints { get; set; }
 
         [JsonProperty("labels")]
-        public List<string> Labels { get; set; } // ÓÃÓÚ»ìÏý¾ØÕóÖá
+        public List<string> Labels { get; set; } // ï¿½ï¿½ï¿½Ú»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     }
 
     /// <summary>
-    /// ±íÊ¾Ò»¸ö¾ßÓÐ X ºÍ Y ×ø±êµÄµã¡£
+    /// ï¿½ï¿½Ê¾Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ X ï¿½ï¿½ Y ï¿½ï¿½ï¿½ï¿½Äµã¡£
     /// </summary>
     public class PointData
     {
@@ -75,7 +75,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// °üº¬µ¥ÕÅÍ¼ÏñµÄÑéÖ¤½á¹û¡£
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public class ImageResult
     {
@@ -86,6 +86,9 @@ namespace AutoTrainer.Models
         [JsonProperty("predicted_class")]
         public string PredictedClass { get; set; }
 
+        [JsonProperty("confidence")]
+        public double Confidence { get; set; }
+
         // For detection
         [JsonProperty("predicted_boxes")]
         public List<Box> PredictedBoxes { get; set; }
@@ -95,7 +98,7 @@ namespace AutoTrainer.Models
     }
 
     /// <summary>
-    /// ±íÊ¾Ò»¸ö´øÓÐ×ø±ê¡¢±êÇ©ºÍÖÃÐÅ¶ÈµÄ±ß½ç¿ò¡£
+    /// ï¿½ï¿½Ê¾Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê¡¢ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½Å¶ÈµÄ±ß½ï¿½ï¿½
     /// </summary>
     public class Box
     {

@@ -90,12 +90,6 @@ namespace AutoTrainer.Models
         /// </summary>
         [JsonProperty("custom_model_name")]
         public string? CustomModelName { get; set; }
-
-        /// <summary>
-        /// python训练脚本的日志输出路径
-        /// </summary>
-        [JsonProperty("py_train_log_output_path")]
-        public string? PyTrainLogOutputPath { get; set; }
         #endregion
     }
 

@@ -99,6 +99,56 @@ class BaseClassificationValidator(ABC):
         """
         pass
     
+    def _get_num_classes_from_model(self, model_path: str) -> int:
+        """
+        从模型checkpoint获取类别数
+        
+        Args:
+            model_path: 模型文件路径
+            
+        Returns:
+            类别数
+        """
+        try:
+            checkpoint = torch.load(model_path, map_location='cpu')
+            
+            if isinstance(checkpoint, dict):
+                # 优先从metadata读取
+                if 'num_classes' in checkpoint:
+                    num_classes = checkpoint['num_classes']
+                    print(f"从metadata读取类别数: {num_classes}", flush=True)
+                    return num_classes
+                
+                # 回退：从权重shape推断
+                if 'model_state_dict' in checkpoint:
+                    state_dict = checkpoint['model_state_dict']
+                elif 'state_dict' in checkpoint:
+                    state_dict = checkpoint['state_dict']
+                else:
+                    state_dict = checkpoint
+                
+                # 从分类头推断类别数
+                # 不同模型的分类头key不同
+                classifier_keys = [
+                    'classifier.1.weight',  # EfficientNet
+                    'classifier.3.weight',  # MobileNetV3
+                    'fc.weight',            # ResNet等
+                    'head.weight',          # Vision Transformer
+                ]
+                
+                for key in classifier_keys:
+                    if key in state_dict:
+                        num_classes = state_dict[key].shape[0]
+                        print(f"从权重shape推断类别数: {num_classes} (key: {key})", flush=True)
+                        return num_classes
+                
+                raise ValueError("无法从模型文件推断类别数")
+            
+            raise ValueError("模型文件格式不正确")
+            
+        except Exception as e:
+            raise RuntimeError(f"读取模型metadata失败: {e}")
+    
     def prepare_transforms(self):
         """准备数据预处理"""
         input_size = self.get_input_size()
@@ -150,17 +200,30 @@ class BaseClassificationValidator(ABC):
         """
         start_time = time.time()
         
+        model_path = self.config['model_weights_path']
+        
+        # 首先从模型metadata获取num_classes
+        num_classes_from_model = self._get_num_classes_from_model(model_path)
+        
         # 准备组件
         print("准备数据预处理...", flush=True)
         self.prepare_transforms()
         
         print("加载数据集...", flush=True)
         dataloader, class_names = self.prepare_dataloader()
-        num_classes = len(class_names)
+        num_classes_from_data = len(class_names)
+        
+        # 验证类别数是否一致
+        if num_classes_from_model != num_classes_from_data:
+            print(f"警告: 模型类别数({num_classes_from_model})与验证集类别数({num_classes_from_data})不一致", 
+                  flush=True)
+            print(f"将使用模型的类别数: {num_classes_from_model}", flush=True)
+        
+        num_classes = num_classes_from_model
         
         # 加载模型
-        model_path = self.config['model_weights_path']
         print(f"加载模型: {model_path}", flush=True)
+        print(f"类别数: {num_classes}", flush=True)
         self.model = self.load_model(model_path, num_classes)
         self.model.to(self.device)
         self.model.eval()
@@ -176,17 +239,21 @@ class BaseClassificationValidator(ABC):
                 images = images.to(self.device)
                 outputs = self.model(images)
                 
-                _, predicted = torch.max(outputs, 1)
+                # 获取softmax概率
+                probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                confidences, predicted = torch.max(probabilities, 1)
                 
                 all_preds.extend(predicted.cpu().numpy())
                 all_labels.extend(labels.numpy())
                 
-                # 记录每张图片的结果
+                # 记录每张图片的结果（包含置信度）
                 for i, img_path in enumerate(img_paths):
                     pred_class = class_names[predicted[i].item()]
+                    confidence = confidences[i].item()
                     image_results.append({
                         'path': img_path,
-                        'predicted_class': pred_class
+                        'predicted_class': pred_class,
+                        'confidence': round(confidence, 4)  # 保留4位小数
                     })
                 
                 if (batch_idx + 1) % 10 == 0:
