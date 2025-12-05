@@ -50,37 +50,37 @@ namespace AutoTrainer.ViewModels
 
     public partial class ClassifiedImageGroup : ObservableObject
     {
-        [ObservableProperty] private string className;
+        [ObservableProperty] private string className = string.Empty;
         [ObservableProperty] private ObservableCollection<ClassifiedImageItem> images = new();
     }
 
     public partial class ClassifiedImageItem : ObservableObject
     {
-        [ObservableProperty] private Bitmap image;
+        [ObservableProperty] private Bitmap image = null!;
         [ObservableProperty] private double confidence;
-        [ObservableProperty] private string confidenceText;
+        [ObservableProperty] private string confidenceText = string.Empty;
     }
 
     public partial class DetectedImageResult : ObservableObject
     {
-        [ObservableProperty] private Bitmap sourceImage;
-        [ObservableProperty] private string imagePath;
+        [ObservableProperty] private Bitmap sourceImage = null!;
+        [ObservableProperty] private string imagePath = string.Empty;
         [ObservableProperty] private int objectCount;
     }
 
     public partial class BoundingBox : ObservableObject
     {
         [ObservableProperty] private Rect rect;
-        [ObservableProperty] private IBrush stroke;
+        [ObservableProperty] private IBrush stroke = null!;
         [ObservableProperty] private double strokeThickness;
         [ObservableProperty] private bool isPrediction;
-        [ObservableProperty] private string label;
+        [ObservableProperty] private string label = string.Empty;
     }
     
     public partial class ValidationPreviewImage : ObservableObject
     {
-        [ObservableProperty] private Bitmap thumbnail;
-        [ObservableProperty] private string imagePath;
+        [ObservableProperty] private Bitmap thumbnail = null!;
+        [ObservableProperty] private string imagePath = string.Empty;
     }
     #endregion
 
@@ -157,6 +157,12 @@ namespace AutoTrainer.ViewModels
             ChartSeries = [];
             ChartXAxes = [];
             ChartYAxes = [];
+
+            // 初始化字段以避免CS8618警告
+            modelWeightsPath = string.Empty;
+            cocoAnnotationPath = string.Empty;
+            verificationOutput = string.Empty;
+
             ClearResults();
         }
 

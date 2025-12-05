@@ -465,9 +465,9 @@ namespace AutoTrainer.ViewModels
                                 var imagePath = imageItem.FilePath;
                                 var parentDir = Path.GetFileName(Path.GetDirectoryName(imagePath));
                                 
-                                if (validClasses.Contains(parentDir))
+                                if (validClasses.Contains(parentDir ?? string.Empty))
                                 {
-                                    imageItem.ImageClasses.Add(parentDir);
+                                    imageItem.ImageClasses.Add(parentDir ?? string.Empty);
                                 }
                             }
                         }

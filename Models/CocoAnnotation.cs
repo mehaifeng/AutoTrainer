@@ -8,6 +8,15 @@ namespace AutoTrainer.Models
     // 主数据集类
     public class CocoDataset
     {
+        public CocoDataset()
+        {
+            Info = new Info();
+            Licenses = new List<License>();
+            Images = new List<COCOImage>();
+            Annotations = new List<Annotation>();
+            Categories = new List<Category>();
+        }
+
         [JsonProperty("info")]
         public Info Info { get; set; }
 
@@ -27,6 +36,15 @@ namespace AutoTrainer.Models
     // 元信息
     public class Info
     {
+        public Info()
+        {
+            Description = string.Empty;
+            Url = string.Empty;
+            Version = string.Empty;
+            Contributor = string.Empty;
+            DateCreated = string.Empty;
+        }
+
         [JsonProperty("description")]
         public string Description { get; set; }
 
@@ -49,6 +67,12 @@ namespace AutoTrainer.Models
     // 许可信息
     public class License
     {
+        public License()
+        {
+            Url = string.Empty;
+            Name = string.Empty;
+        }
+
         [JsonProperty("url")]
         public string Url { get; set; }
 
@@ -63,6 +87,14 @@ namespace AutoTrainer.Models
     [JsonObject("Image")]
     public class COCOImage
     {
+        public COCOImage()
+        {
+            FileName = string.Empty;
+            FlickrUrl = string.Empty;
+            CocoUrl = string.Empty;
+            DateCaptured = string.Empty;
+        }
+
         [JsonProperty("id")]
         public int Id { get; set; }
 
@@ -91,6 +123,12 @@ namespace AutoTrainer.Models
     // 类别信息
     public class Category
     {
+        public Category()
+        {
+            Name = string.Empty;
+            Supercategory = string.Empty;
+        }
+
         [JsonProperty("id")]
         public int Id { get; set; }
 
@@ -104,6 +142,11 @@ namespace AutoTrainer.Models
     // 标注信息（核心）
     public class Annotation
     {
+        public Annotation()
+        {
+            Bbox = new List<double>();
+        }
+
         [JsonProperty("id")]
         public int Id { get; set; }
 
@@ -115,7 +158,7 @@ namespace AutoTrainer.Models
 
         // 分割：支持 polygon 和 RLE
         [JsonProperty("segmentation")]
-        public Segmentation Segmentation { get; set; }
+        public Segmentation? Segmentation { get; set; }
 
         [JsonProperty("area")]
         public double Area { get; set; }
@@ -130,6 +173,12 @@ namespace AutoTrainer.Models
     // 分割格式：支持多边形（List<List<double>>）或 RLE（JObject）
     public class Segmentation
     {
+        public Segmentation()
+        {
+            Polygons = new List<List<double>>();
+            Rle = new JObject();
+        }
+
         // 多边形：List<List<double>>，每个子列表是一个多边形轮廓
         [JsonProperty("polygons", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public List<List<double>> Polygons { get; set; }
@@ -147,13 +196,13 @@ namespace AutoTrainer.Models
             {
                 // 多边形格式
                 var polygons = token.ToObject<List<List<double>>>();
-                return new Segmentation { Polygons = polygons };
+                return new Segmentation { Polygons = polygons ?? new List<List<double>>() };
             }
             else if (token.Type == JTokenType.Object)
             {
                 // RLE 格式
                 var rle = token.ToObject<JObject>();
-                return new Segmentation { Rle = rle };
+                return new Segmentation { Rle = rle ?? new JObject() };
             }
 
             throw new JsonSerializationException("Invalid segmentation format");
@@ -163,14 +212,20 @@ namespace AutoTrainer.Models
     // 自定义 JsonConverter 用于 Segmentation
     public class SegmentationConverter : JsonConverter<Segmentation>
     {
-        public override Segmentation ReadJson(JsonReader reader, Type objectType, Segmentation existingValue, bool hasExistingValue, JsonSerializer serializer)
+        public override Segmentation ReadJson(JsonReader reader, Type objectType, Segmentation? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
             return Segmentation.FromJson(reader);
         }
 
-        public override void WriteJson(JsonWriter writer, Segmentation value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, Segmentation? value, JsonSerializer serializer)
         {
-            if (value.Polygons != null)
+            if (value == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            if (value.Polygons != null && value.Polygons.Count > 0)
             {
                 serializer.Serialize(writer, value.Polygons);
             }

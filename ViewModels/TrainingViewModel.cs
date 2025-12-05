@@ -27,10 +27,8 @@ namespace AutoTrainer.ViewModels
 {
     public partial class TrainingViewModel : ViewModelBase
     {
-        private bool isPyRunning = false;
         private CancellationTokenSource? cancellationTokenSource;
         private readonly CancellationTokenSource _refreshCts = new();
-        private int ScanningIndex = 0;
         
         [ObservableProperty]
         private bool isTraining = false;
@@ -106,17 +104,17 @@ namespace AutoTrainer.ViewModels
         /// CPU占用率
         /// </summary>
         [ObservableProperty]
-        private string cPURate;
+        private string cPURate = "0%";
         /// <summary>
         /// GPU占用率
         /// </summary>
         [ObservableProperty]
-        private string gPURate;
+        private string gPURate = "0%";
         /// <summary>
         /// RAM占用率
         /// </summary>
         [ObservableProperty]
-        private string rAMRate;
+        private string rAMRate = "0%";
 
         public ICartesianAxis[] XAxes { get; set; } = [
             new Axis
@@ -322,7 +320,6 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Log.Error(ex, "启动或完成训练过程失败");
-                isPyRunning = false;
                 IsTraining = false;
                 CanStopTraining = false;
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
@@ -350,7 +347,6 @@ namespace AutoTrainer.ViewModels
                     // 重置状态
                     IsTraining = false;
                     CanStopTraining = false;
-                    isPyRunning = false;
                     
                     Log.Information("训练已成功停止");
                     await MessageBoxManager.GetMessageBoxStandard("训练已停止", "训练已被用户终止", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
@@ -623,7 +619,6 @@ namespace AutoTrainer.ViewModels
         {
             Log.Information("开始分类训练流程");
 
-            ScanningIndex = 0;
             IsShowNextPage = false;
             IsTraining = true;
             CanStopTraining = true;
@@ -666,7 +661,6 @@ namespace AutoTrainer.ViewModels
 
             Log.Information("启动Python分类训练脚本(流式输出): {Script} 参数: {Arguments}", pythonScript, arguments);
 
-            isPyRunning = true;
 
             // 使用新的流式执行方法
             var result = await CliWrapHelper.ExecutePythonScriptWithStreamingAsync(
@@ -680,7 +674,6 @@ namespace AutoTrainer.ViewModels
             if (result.ExitCode == -999)
             {
                 Log.Information("分类训练被用户取消");
-                isPyRunning = false;
                 IsTraining = false;
                 CanStopTraining = false;
                 return;
@@ -691,14 +684,12 @@ namespace AutoTrainer.ViewModels
                 var errorMessage = result.Error ?? "Unknown error occurred during training";
                 Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
                 await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                isPyRunning = false;
                 IsTraining = false;
                 CanStopTraining = false;
                 return;
             }
 
             Log.Information("Python分类训练脚本成功完成");
-            isPyRunning = false;
             IsTraining = false;
             CanStopTraining = false;
             IsShowNextPage = true;
@@ -711,7 +702,6 @@ namespace AutoTrainer.ViewModels
         {
             Log.Information("开始检测训练流程");
 
-            ScanningIndex = 0;
             IsShowNextPage = false;
             IsTraining = true;
             CanStopTraining = true;
@@ -742,7 +732,6 @@ namespace AutoTrainer.ViewModels
 
             Log.Information("启动Python检测训练脚本(流式输出): {Script} 参数: {Arguments}", pythonScript, arguments);
 
-            isPyRunning = true;
 
             // 使用新的流式执行方法
             var result = await CliWrapHelper.ExecutePythonScriptWithStreamingAsync(
@@ -756,7 +745,6 @@ namespace AutoTrainer.ViewModels
             if (result.ExitCode == -999)
             {
                 Log.Information("检测训练被用户取消");
-                isPyRunning = false;
                 IsTraining = false;
                 CanStopTraining = false;
                 return;
@@ -767,14 +755,12 @@ namespace AutoTrainer.ViewModels
                 var errorMessage = result.Error ?? "Unknown error occurred during detection training";
                 Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
                 await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
-                isPyRunning = false;
                 IsTraining = false;
                 CanStopTraining = false;
                 return;
             }
 
             Log.Information("Python检测训练脚本成功完成");
-            isPyRunning = false;
             IsTraining = false;
             CanStopTraining = false;
             IsShowNextPage = true;
@@ -1213,7 +1199,6 @@ namespace AutoTrainer.ViewModels
                        $"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 
                 PyOutput += msg;
-                isPyRunning = false;
             });
 
             Log.Information("训练完成 - 最佳Epoch: {BestEpoch}, 用时: {Time}秒", entry.BestEpoch, entry.TotalTime);

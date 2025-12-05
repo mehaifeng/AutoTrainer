@@ -52,7 +52,7 @@ namespace AutoTrainer.Helpers
                     {
                         var directory = Path.GetDirectoryName(path);
                         Log.Debug("打开文件所在目录: {Directory}", directory);
-                        Process.Start("explorer.exe", directory);
+                        Process.Start("explorer.exe", directory ?? string.Empty);
                     }
                     else
                     {
@@ -72,7 +72,7 @@ namespace AutoTrainer.Helpers
                     {
                         var directory = Path.GetDirectoryName(path);
                         Log.Debug("在macOS上打开文件所在目录: {Directory}", directory);
-                        Process.Start("open", directory);
+                        Process.Start("open", directory ?? string.Empty);
                     }
                     else
                     {
@@ -87,7 +87,7 @@ namespace AutoTrainer.Helpers
                     {
                         var directory = Path.GetDirectoryName(path);
                         Log.Debug("在Linux上打开文件所在目录: {Directory}", directory);
-                        Process.Start("xdg-open", directory);
+                        Process.Start("xdg-open", directory ?? string.Empty);
                     }
                     else
                     {

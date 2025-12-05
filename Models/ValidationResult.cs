@@ -8,6 +8,13 @@ namespace AutoTrainer.Models
     /// </summary>
     public class ValidationResult
     {
+        public ValidationResult()
+        {
+            Metrics = new ValidationSummaryMetrics();
+            ChartData = new ChartData();
+            ImageResults = new List<ImageResult>();
+        }
+
         [JsonProperty("metrics")]
         public ValidationSummaryMetrics Metrics { get; set; }
 
@@ -52,6 +59,13 @@ namespace AutoTrainer.Models
     /// </summary>
     public class ChartData
     {
+        public ChartData()
+        {
+            ConfusionMatrix = new double[0][];
+            PrCurvePoints = new List<PointData>();
+            Labels = new List<string>();
+        }
+
         [JsonProperty("confusion_matrix")]
         public double[][] ConfusionMatrix { get; set; }
 
@@ -79,6 +93,14 @@ namespace AutoTrainer.Models
     /// </summary>
     public class ImageResult
     {
+        public ImageResult()
+        {
+            Path = string.Empty;
+            PredictedClass = string.Empty;
+            PredictedBoxes = new List<Box>();
+            GroundTruthBoxes = new List<Box>();
+        }
+
         [JsonProperty("path")]
         public string Path { get; set; }
 
@@ -102,6 +124,12 @@ namespace AutoTrainer.Models
     /// </summary>
     public class Box
     {
+        public Box()
+        {
+            Coords = new List<double>();
+            Label = string.Empty;
+        }
+
         // Format: [x_min, y_min, x_max, y_max]
         [JsonProperty("coords")]
         public List<double> Coords { get; set; }

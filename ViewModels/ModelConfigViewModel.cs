@@ -89,7 +89,7 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private string? pythonVenvPath;
         [ObservableProperty]
-        private ObservableCollection<string> pythonVenvPaths;
+        private ObservableCollection<string> pythonVenvPaths = new();
         [ObservableProperty]
         private string? pipApps;
         [ObservableProperty]
@@ -893,6 +893,12 @@ namespace AutoTrainer.ViewModels
         // 任务类型信息
         public class TaskTypeInfo
         {
+            public TaskTypeInfo()
+            {
+                Name = string.Empty;
+                Value = string.Empty;
+            }
+
             public string Name { get; set; }
             public string Value { get; set; }
         }

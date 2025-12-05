@@ -36,9 +36,9 @@ namespace AutoTrainer.Extension
                 foreach (var property in jObject)
                 {
                     string key = property.Key;
-                    JToken value = property.Value;
+                    JToken? value = property.Value;
 
-                    if (value.Type == JTokenType.Array)
+                    if (value != null && value.Type == JTokenType.Array)
                     {
                         result[key] = DeserializeAnnotationList((JArray)value);
                     }

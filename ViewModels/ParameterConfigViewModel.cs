@@ -648,7 +648,7 @@ namespace AutoTrainer.ViewModels
                             // 检查是否是分类训练集目录，进行ImageFolder格式检测
                             if (selectableText.Name == "TrainDir_Tb" && !IsDetectionTask)
                             {
-                                await CheckAndHandleImageFolderFormat(selectedFolder, showWarning: true);
+                                await CheckAndHandleImageFolderFormat(selectedFolder ?? string.Empty, showWarning: true);
                             }
                         }
                     }
@@ -669,17 +669,17 @@ namespace AutoTrainer.ViewModels
                             if (selectableText.Name == "ClassifyAnnotation_Tb" && !IsDetectionTask)
                             {
                                 // 分类标注文件
-                                await HandleAnnotationFileSelected(selectedPath);
+                                await HandleAnnotationFileSelected(selectedPath ?? string.Empty);
                             }
                             else if (selectableText.Name == "TrainAnnotation_Tb" && IsDetectionTask)
                             {
                                 // 检测训练标注文件
-                                await HandleDetectionAnnotationSelected(selectedPath);
+                                await HandleDetectionAnnotationSelected(selectedPath ?? string.Empty);
                             }
                             else if (selectableText.Name == "ValAnnotation_Tb" && IsDetectionTask)
                             {
                                 // 检测验证标注文件
-                                await HandleDetectionAnnotationSelected(selectedPath);
+                                await HandleDetectionAnnotationSelected(selectedPath ?? string.Empty);
                             }
                         }
                     }
