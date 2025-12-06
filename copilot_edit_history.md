@@ -1,5 +1,505 @@
 # Copilot 编辑历史记录
 
+## 📅 2024-12-06
+
+### 🔧 修改会话 #5: 修复 ONNX 导出 dynamic_axes 问题 ✅
+
+**目标**: 修复 PyTorch 2.0+ ONNX 导出时的 dynamic_axes 警告和错误
+
+#### 问题分析:
+
+**错误信息**:
+```
+UserWarning: 'dynamic_axes' is not recommended when dynamo=True
+Failed to convert 'dynamic_axes' to 'dynamic_shapes'
+```
+
+**原因**:
+- PyTorch 2.0+ 默认启用新的 dynamo 导出器
+- 新导出器要求使用 `dynamic_shapes` 而非 `dynamic_axes`
+- 但 `dynamic_shapes` API 更复杂，需要额外代码
+
+**解决方案**:
+- 添加 `dynamo=False` 参数，强制使用传统导出器
+- 传统导出器稳定、兼容性好、支持 `dynamic_axes`
+
+#### 已完成修改:
+
+##### 修改文件:
+
+1. **`PyScripts\Conversion\common\base_converter.py`** ✅
+   
+   **修改**: `convert_to_onnx()` 方法
+   
+   **新增参数**:
+   ```python
+   torch.onnx.export(
+       model,
+       dummy_input,
+       output_path,
+       # ... 其他参数
+       dynamic_axes=dynamic_axes,
+       verbose=False,
+       dynamo=False  # ← 新增：禁用 dynamo，使用传统导出器
+   )
+   ```
+
+2. **`docs\PyTorch_ONNX_Dynamo_Issue.md`** ✅
+   - **内容**: dynamo 参数详细说明
+   - **包含**: 
+     - 问题描述和解决方案
+     - 两种导出器对比
+     - 代码示例
+     - 为什么选择传统导出器
+
+#### 两种导出器对比:
+
+| 特性 | 传统导出器（dynamo=False） | Dynamo 导出器（dynamo=True） |
+|------|---------------------------|------------------------------|
+| 稳定性 | ✅ 高 | ⚠️ 较新 |
+| 兼容性 | ✅ 好 | ⚠️ 部分模型不支持 |
+| 动态轴 | `dynamic_axes` | `dynamic_shapes` |
+| 文档 | ✅ 完善 | ⚠️ 较少 |
+| 性能 | ✅ 满足需求 | ✅ 更优 |
+
+#### 选择理由:
+
+**使用传统导出器（dynamo=False）**:
+1. ✅ 稳定，经过充分测试
+2. ✅ 支持所有现有模型架构
+3. ✅ `dynamic_axes` 参数简单易用
+4. ✅ 社区支持和文档完善
+5. ✅ 一行代码即可修复问题
+
+#### 代码变更:
+
+**修改前**（报错）:
+```python
+torch.onnx.export(
+    model, dummy_input, output_path,
+    dynamic_axes={'input': {0: 'batch_size'}, ...}
+    # 默认 dynamo=True → 报错
+)
+```
+
+**修改后**（正常）:
+```python
+torch.onnx.export(
+    model, dummy_input, output_path,
+    dynamic_axes={'input': {0: 'batch_size'}, ...},
+    dynamo=False  # ← 一行修复
+)
+```
+
+#### 影响范围:
+
+- ✅ 所有分类模型转换（MobileNet, EfficientNet, ResNet）
+- ✅ 所有检测模型转换（Faster R-CNN）
+- ✅ ONNX 格式导出
+- ⚠️ TorchScript 不受影响
+
+#### 验证:
+
+安装 `onnxscript` 后，使用 `dynamo=False` 参数即可成功导出 ONNX 模型。
+
+---
+
+### 🔧 修改会话 #4: 修复转换器加载逻辑并添加 onnxscript 依赖 ✅
+
+**目标**: 修复转换器无法正确加载 checkpoint 的问题，并添加缺失的 Python 包依赖
+
+#### 问题分析:
+
+**问题 1**: 模块找不到 - `No module named 'Classification.resnet_converter'`
+- 🔍 **原因**: Visual Studio 中 Python 文件属性未设置"复制到输出目录"
+- ✅ **解决**: 用户手动设置所有 .py 文件的生成属性为"如果较新则复制"
+
+**问题 2**: 无法找到 classifier 层 - `ValueError: 无法在模型权重中找到classifier层`
+- 🔍 **原因**: 转换器期望直接从 `state_dict` 读取权重，但实际加载的是包装的 `checkpoint` 字典
+- ✅ **解决**: 修改所有转换器的 `load_model()` 方法，智能检测并处理两种格式
+
+**问题 3**: 缺少 onnxscript 包 - `ModuleNotFoundError: No module named 'onnxscript'`
+- 🔍 **原因**: PyTorch 2.0+ 导出 ONNX 需要 `onnxscript` 作为依赖
+- ✅ **解决**: 添加到 `Requirements.json` 并创建安装文档
+
+#### 已完成修改:
+
+##### 修改文件:
+
+1. **所有分类模型转换器** ✅
+   - `mobilenet_converter.py`
+   - `efficientnet_converter.py`
+   - `resnet_converter.py`
+   
+   **新增方法**: `_infer_num_classes(state_dict)`
+   
+   **修改逻辑**:
+   ```python
+   def load_model(self):
+       checkpoint = torch.load(self.model_path)
+       
+       # 智能检测格式
+       if 'model_state_dict' in checkpoint:
+           state_dict = checkpoint['model_state_dict']
+           num_classes = checkpoint.get('num_classes') or self._infer_num_classes(state_dict)
+       else:
+           state_dict = checkpoint
+           num_classes = self._infer_num_classes(state_dict)
+   ```
+
+2. **检测模型转换器** ✅
+   - `fasterrcnn_converter.py`
+   
+   **新增方法**: `_infer_num_classes(state_dict)`
+   
+   **特点**: 从 `roi_heads.box_predictor.cls_score.weight` 推断类别数
+
+3. **`Configs\Requirements.json`** ✅
+   - **新增**: `onnxscript` - PyTorch ONNX 导出必需依赖
+   - **更新**: description 字段添加说明
+   - **更新**: notes 字段添加安装指南
+
+4. **`docs\ONNX_Package_Installation.md`** ✅
+   - **内容**: 详细的 ONNX 包安装指南
+   - **包含**: 
+     - 快速安装命令
+     - 为什么需要 onnxscript
+     - 验证安装方法
+     - 常见问题和故障排查
+     - 版本兼容性说明
+
+#### 支持的 Checkpoint 格式:
+
+**格式 1 - 完整 checkpoint**（推荐，本软件训练的模型）:
+```python
+checkpoint = {
+    'epoch': 50,
+    'model_state_dict': {...},     # 模型权重
+    'metrics': {...},               # 训练指标
+    'model_name': 'mobilenet_v3_large',
+    'num_classes': 10
+}
+```
+
+**格式 2 - 纯 state_dict**（兼容外部模型）:
+```python
+checkpoint = {
+    'classifier.1.weight': tensor(...),
+    'classifier.1.bias': tensor(...),
+    ...
+}
+```
+
+#### 加载逻辑:
+
+1. ✅ **优先**: 从 `checkpoint['num_classes']` 读取
+2. ✅ **降级**: 从 `state_dict` 的 classifier/fc 层权重形状推断
+3. ✅ **兼容**: 支持纯 state_dict 格式（无 checkpoint 包装）
+
+#### 必需的 Python 包:
+
+**ONNX 转换核心包**:
+```bash
+pip install onnx==1.19.1      # ONNX 格式
+pip install onnxruntime        # ONNX 推理引擎
+pip install onnxscript         # PyTorch 2.0+ 导出依赖（必需！）
+pip install onnxsim            # ONNX 模型优化
+```
+
+**为什么需要 onnxscript?**
+- PyTorch 2.0+ 的 `torch.onnx.export()` 内部依赖此包
+- 不安装会报错: `ModuleNotFoundError: No module named 'onnxscript'`
+
+#### 安装指南:
+
+**快速安装**:
+```bash
+# 激活虚拟环境后
+pip install onnxscript
+```
+
+**批量安装**:
+```bash
+pip install onnx onnxruntime onnxscript onnxsim
+```
+
+**详细文档**: 
+- `docs/ONNX_Package_Installation.md`
+
+---
+
+### 🔧 修改会话 #3: 修正检测模型转换器和更新依赖 ✅
+
+**目标**: 修正检测模型 metadata 读取问题并更新 Python 包依赖
+
+#### 问题分析:
+- 🐛 **问题**: 检测模型转换时无法读取 model_name
+- 🔍 **原因**: 转换器期望 `checkpoint['metadata']['model_name']`，但训练时保存的是 `checkpoint['model_name']`
+- ✅ **解决**: 修正转换器代码，直接从 checkpoint 顶层读取
+
+#### 已完成修改:
+
+##### 修改文件:
+1. `PyScripts\Conversion\Detection\fasterrcnn_converter.py` ✅
+   - **修正**: `load_model()` 方法
+   - **修改前**: 从 `checkpoint['metadata']['num_classes']` 读取
+   - **修改后**: 从 `checkpoint['num_classes']` 直接读取
+   - **原因**: 训练时 ModelCheckpoint 直接保存在顶层，不使用 metadata 字典包装
+
+2. `Configs\Requirements.json` ✅
+   - **新增**: `onnxruntime` - ONNX 模型推理引擎
+   - **新增**: `onnxsim` - ONNX 模型简化工具
+   - **移除**: `tensorflow` - 改为可选包（按需安装）
+   - **移除**: `sng4onnx` - 不常用
+   - **新增**: `description` 字段 - 包说明
+   - **新增**: `optional_packages` 字段 - 可选包列表
+   - **新增**: `notes` 字段 - 安装说明
+
+3. `PyScripts\Utils\test_metadata.py` ✅
+   - **功能**: 测试脚本，验证模型 metadata 结构
+   - **用途**: 调试和验证不同模型的 checkpoint 格式
+   - **代码行数**: ~100行
+
+#### Checkpoint 格式说明:
+
+**统一格式** (分类和检测模型相同):
+```python
+checkpoint = {
+    'epoch': 10,
+    'model_state_dict': {...},
+    'metrics': {...},
+    'model_name': 'mobilenet_v3_large',  # 直接在顶层
+    'num_classes': 10                     # 直接在顶层
+}
+```
+
+**不使用** (避免混淆):
+```python
+# ✗ 错误格式（不使用）
+checkpoint = {
+    'metadata': {
+        'model_name': '...',
+        'num_classes': ...
+    }
+}
+```
+
+#### 依赖包说明:
+
+**核心包** (必需):
+- `torch`, `torchvision` - 深度学习框架
+- `onnx` - ONNX 格式支持
+- `onnxruntime` - ONNX 推理引擎
+- `onnxsim` - ONNX 模型优化
+
+**可选包** (按需):
+- `tensorrt` - NVIDIA GPU 加速
+- `openvino` - Intel 硬件加速
+- `coremltools` - Apple Core ML
+- `tensorflow` - TensorFlow 转换
+
+#### 测试工具:
+
+使用测试脚本验证模型格式:
+```bash
+python PyScripts/Utils/test_metadata.py models/your_model.pth
+```
+
+输出示例:
+```
+============================================================
+测试模型: models/mobilenet_v3_large.pth
+============================================================
+
+1. Checkpoint类型: <class 'dict'>
+2. Checkpoint键列表:
+   - epoch: 50
+   - metrics: <class 'dict'> (字典，2 个键)
+   - model_name: mobilenet_v3_large
+   - num_classes: 10
+
+3. model_name 检查:
+   ✓ 直接包含 'model_name': mobilenet_v3_large
+
+4. metadata 字典检查:
+   ✗ 不包含 'metadata' 字典
+
+5. num_classes 检查:
+   ✓ 直接包含 'num_classes': 10
+```
+
+---
+
+### 🔧 修改会话 #2: 模型名称自动读取优化 ✅
+
+**目标**: 从模型 metadata 中自动读取标准架构名称，而不是让用户手动输入
+
+#### 问题说明:
+- ❌ **原实现**: 用户手动输入或从文件名推断模型名称
+- ⚠️ **风险**: 用户可能输入错误的架构名称，导致转换失败
+- ✅ **解决方案**: 从模型 checkpoint 的 metadata 中读取 `model_name`
+
+#### 已完成修改:
+
+##### 修改文件:
+1. `ViewModels\ConvertToExportViewModel.cs` ✅
+   - **新增属性**: 
+     - `ModelNameStatus` - 显示模型名称读取状态
+     - `IsModelNameReadOnly` - 模型名称只读标志
+   - **新增方法**: `LoadModelNameFromMetadata()` - 从 metadata 读取模型名称
+   - **修改**: `BrowseModelFile()` - 选择文件后自动读取 metadata
+   - **增强**: `ValidateInputs()` - 检查模型是否为本软件训练
+   - **使用**: `CliWrapHelper.GetModelNameFromMetadataAsync()` 读取元数据
+
+2. `Views\UserControls\ConvertToExportView.axaml` ✅
+   - **修改**: 模型名称TextBox改为只读、灰色背景
+   - **新增**: 模型名称状态提示（显示读取结果）
+   - **优化**: 添加Watermark提示用户
+
+#### 工作流程:
+
+```
+用户选择模型文件
+  ↓
+自动调用 GetModelNameFromMetadataAsync()
+  ↓
+从 checkpoint['metadata']['model_name'] 读取
+  ↓
+成功 → 显示架构名称（如 mobilenet_v3_large）
+  ↓
+失败 → 提示"非本软件训练的模型"
+```
+
+#### 状态提示:
+- ✓ `"✓ 模型: mobilenet_v3_large"` - 成功读取
+- ✗ `"✗ 非本软件训练的模型"` - 无 metadata
+- ⚠️ `"错误：未配置 Python 环境"` - 环境问题
+- ⏳ `"正在读取模型信息..."` - 读取中
+
+#### 优势:
+- ✅ 自动识别，无需用户输入
+- ✅ 确保架构名称正确
+- ✅ 明确区分本软件训练的模型
+- ✅ 友好的错误提示
+
+---
+
+### 🔧 修改会话 #1: 模型转换层架构重构 ✅
+
+**目标**: 按照训练层和推理层的架构模式，重构模型转换脚本层，实现通用功能模块化和特定模型转换专一化
+
+#### 架构设计:
+
+**新目录结构**:
+```
+PyScripts/Conversion/
+├── common/                      # 通用模块
+│   ├── base_converter.py        # 转换基类
+│   ├── utils.py                 # 工具函数
+│   └── __init__.py
+├── Classification/              # 分类模型转换器
+│   ├── mobilenet_converter.py
+│   ├── efficientnet_converter.py
+│   ├── resnet_converter.py
+│   └── __init__.py
+├── Detection/                   # 检测模型转换器
+│   ├── fasterrcnn_converter.py
+│   └── __init__.py
+├── convert_model.py             # 统一入口脚本
+└── README.md                    # 架构文档
+```
+
+#### 已完成修改:
+
+##### 新增文件:
+1. `PyScripts\Conversion\common\base_converter.py` ✅
+   - **功能**: 转换器抽象基类
+   - **提供**: ONNX/TorchScript通用转换逻辑、模型验证、元数据保存
+   - **代码行数**: ~275行
+
+2. `PyScripts\Conversion\common\utils.py` ✅
+   - **功能**: 通用工具函数（配置加载、形状解析等）
+   - **代码行数**: ~115行
+
+3. `PyScripts\Conversion\Classification\mobilenet_converter.py` ✅
+   - **支持**: mobilenet_v2, mobilenet_v3_large, mobilenet_v3_small
+   - **特点**: 自动检测类别数，适配不同classifier结构
+   - **代码行数**: ~115行
+
+4. `PyScripts\Conversion\Classification\efficientnet_converter.py` ✅
+   - **支持**: efficientnet_b0-b7, efficientnet_v2_s/m/l
+   - **特点**: 根据模型版本自动调整输入尺寸（224-600）
+   - **代码行数**: ~135行
+
+5. `PyScripts\Conversion\Classification\resnet_converter.py` ✅
+   - **支持**: resnet18/34/50/101/152
+   - **代码行数**: ~95行
+
+6. `PyScripts\Conversion\Detection\fasterrcnn_converter.py` ✅
+   - **支持**: fasterrcnn_resnet50, fasterrcnn_mobilenet_v3_large_320/fpn
+   - **特点**: 从元数据或权重自动检测类别数，特殊处理检测模型ONNX导出
+   - **代码行数**: ~185行
+
+7. `PyScripts\Conversion\convert_model.py` ✅
+   - **功能**: 统一入口脚本，根据model_name自动路由到对应转换器
+   - **维护**: 模型到转换器的映射表（14个分类模型 + 3个检测模型）
+   - **代码行数**: ~145行
+
+8. `PyScripts\Conversion\README.md` ✅
+   - **内容**: 详细的架构文档、使用说明、最佳实践
+
+9. `Converters\StringUpperCaseConverter.cs` ✅
+   - **功能**: XAML值转换器，用于格式名称大写显示
+
+10. `docs\Conversion_Refactoring_Summary.md` ✅
+    - **内容**: 重构完成总结、文件清单、设计优势
+
+##### 修改文件:
+11. `ViewModels\ConvertToExportViewModel.cs` ✅
+    - **重构**: `ConvertToFormat()` 方法
+    - **修改**: 改用JSON配置文件传递参数，调用新的统一入口脚本
+    - **新增**: 配置文件自动生成和清理逻辑
+    - **完整实现**: 
+      - 文件浏览、参数配置
+      - 多格式转换任务管理
+      - 实时进度和日志更新
+      - 统计信息显示
+
+12. `Views\UserControls\ConvertToExportView.axaml` ✅
+    - **绑定**: 所有UI控件到ViewModel属性
+    - **修改**: 使用ItemsControl动态显示转换任务列表
+    - **优化**: 实时进度条、日志输出、统计信息
+
+13. `App.axaml` ✅
+    - **新增**: StringUpperCaseConverter资源注册
+
+##### 删除文件:
+14. `PyScripts\Conversion\ModelConverter.py` ✅
+    - **原因**: 旧单体脚本，功能已分散到模块化转换器
+
+#### 设计优势:
+
+✅ **模块化** - 通用功能抽象到BaseConverter，模型专用逻辑独立实现
+✅ **一致性** - 与训练层/推理层架构完全一致（common/Classification/Detection）
+✅ **可扩展性** - 新增模型只需3步：创建转换器类、实现load_model()、注册映射
+✅ **可维护性** - 清晰的职责分离、详细文档、完整错误处理
+
+#### 支持功能:
+
+**模型**: 14个分类模型 + 3个检测模型
+**格式**: ONNX (opset 11-17), TorchScript
+**预留**: TensorRT, OpenVINO, Core ML
+
+#### 代码质量:
+
+- ✅ Python代码通过语法检查
+- ✅ C#代码编译成功
+- ✅ 遵循PEP 8和.NET命名规范
+- ✅ 完整的类型注解和文档字符串
+- ✅ 异常处理和结构化日志
+
+---
+
 ## 📅 2025-12-03
 
 ### 🔧 修改会话 #1: 模型元数据完善

@@ -32,6 +32,7 @@
 	</Application.Styles>
 	<Application.Resources>
 		<converters:FileNameConverter x:Key="FileNameConverter"/>
+		<converters:StringUpperCaseConverter x:Key="StringUpperCaseConverter"/>
     </Application.Resources>
 	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 

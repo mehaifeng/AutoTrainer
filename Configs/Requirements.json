@@ -9,10 +9,42 @@
     "albumentations==2.0.8",
     "tqdm==4.67.1",
     "onnx==1.19.1",
-    "tensorflow==2.20.0",
+    "onnxruntime",
+    "onnxscript",
+    "onnxslim",
     "psutil==7.1.3",
     "sympy==1.14.0",
-    "six==1.17.0",
-    "sng4onnx==1.0.4"
+    "six==1.17.0"
+  ],
+  "description": {
+    "torch": "深度学习框架",
+    "torchvision": "计算机视觉模型和工具",
+    "opencv-python": "图像处理",
+    "pillow": "图像加载和处理",
+    "matplotlib": "数据可视化",
+    "scikit-learn": "机器学习工具",
+    "albumentations": "数据增强",
+    "tqdm": "进度条显示",
+    "onnx": "ONNX模型格式支持",
+    "onnxruntime": "ONNX模型推理引擎",
+    "onnxscript": "PyTorch ONNX导出支持（必需）",
+    "onnxslim": "ONNX模型优化和压缩工具（推荐）",
+    "psutil": "系统资源监控",
+    "sympy": "符号数学",
+    "six": "Python 2/3兼容性"
+  },
+  "optional_packages": {
+    "tensorrt": "NVIDIA GPU加速推理（需要CUDA）",
+    "openvino": "Intel硬件加速推理",
+    "coremltools": "Apple Core ML转换",
+    "tensorflow": "TensorFlow转换支持（可选）"
+  },
+  "notes": [
+    "torch和torchvision版本应匹配CUDA版本",
+    "ONNX转换需要: onnx, onnxruntime, onnxscript",
+    "onnxscript是PyTorch 2.0+导出ONNX的必需依赖",
+    "onnxslim用于模型优化，比onnxsim更高效",
+    "TensorRT/OpenVINO/CoreML为可选，按需安装",
+    "使用 pip install onnxslim 安装优化工具"
   ]
 }
