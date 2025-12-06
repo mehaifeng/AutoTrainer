@@ -15,11 +15,4 @@ public partial class ConvertToExportView : UserControl
         _viewmodel = new ConvertToExportViewModel();
         DataContext = _viewmodel;
     }
-    private void ConvertingOutput_Tb_TextChanged(object? sender, TextChangedEventArgs args)
-    {
-        if (ConvertingOutput_Tb != null && ConvertingOutput_Tb.Text != null)
-        {
-            ConvertingOutput_Tb.CaretIndex = ConvertingOutput_Tb.Text.Length;
-        }
-    }
 }

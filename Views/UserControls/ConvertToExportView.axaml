@@ -9,86 +9,514 @@
 			 x:Name="ConverterView"
 			 x:DataType="vm:ConvertToExportViewModel"
              x:Class="AutoTrainer.ConvertToExportView">
-	<Interaction.Behaviors>
-		<EventTriggerBehavior EventName="Loaded">
-			<InvokeCommandAction Command="{Binding LoadConverterPageCommand}"/>
-		</EventTriggerBehavior>
-	</Interaction.Behaviors>
-	<Grid HorizontalAlignment="Center">
-		<Grid RowDefinitions="*,1,Auto">
-			<Grid Grid.Row="0" RowDefinitions="Auto,Auto,80" VerticalAlignment="Center">
-				<Border
-					Grid.Row="0"
-					Grid.Column="0"
-					x:Name="PyTorchBorder"
-					CornerRadius="10"
-					HorizontalAlignment="Center"
-					VerticalAlignment="Top"
-					Margin="20"
-					BorderBrush="Black"
-					BorderThickness="1"
-					Width="250"
-					Height="150">
-					<Grid RowDefinitions="40,*">
-						<TextBlock
-							Text="PyTorch Model"
-							Width="110"
-							TextAlignment="Center"
-							FontWeight="Bold"
-							Foreground="White"
-							Background="Black"
-							HorizontalAlignment="Center"
-							VerticalAlignment="Center"/>
-						<TextBlock
-							Grid.Row="1"
-							Text="{Binding ModelName}"
-							HorizontalAlignment="Center"
-							VerticalAlignment="Center"/>
+	<Grid Margin="20">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="380"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- 左侧配置区域 -->
+		<ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+			<StackPanel Spacing="15">
+
+				<!-- 模型源配置 -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="模型源配置" FontWeight="Bold" FontSize="14"/>
+
+						<TextBlock Text="待转换模型路径" Foreground="#666" FontSize="12" Margin="0,5,0,0"/>
+						<Grid ColumnDefinitions="*,Auto">
+							<TextBox Grid.Column="0"
+                                   Text="E:\AIStuff\runs\AerialCarModel.pth"
+                                   IsReadOnly="True"
+                                   Background="#F5F5F5"/>
+							<Button Grid.Column="1"
+                                  Content="..."
+                                  Width="40"
+                                  Margin="5,0,0,0"
+                                  Background="#F0F0F0"/>
+						</Grid>
+
+						<TextBlock Text="模型类型名称" Foreground="#666" FontSize="12" Margin="0,10,0,0"/>
+						<TextBox Text="FaceDetection" Background="White"/>
+					</StackPanel>
+				</Border>
+
+				<!-- 导出格式选择 -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+					<StackPanel Spacing="12">
+						<TextBlock Text="导出格式选择" FontWeight="Bold" FontSize="14"/>
+
+						<!-- 通用格式 -->
+						<TextBlock Text="通用格式" Foreground="#888" FontSize="11" Margin="0,5,0,0"/>
+
+						<CheckBox Content="ONNX 格式" IsChecked="True"/>
+						<StackPanel Margin="25,3,0,0" Spacing="6">
+							<Grid ColumnDefinitions="Auto,*">
+								<TextBlock Grid.Column="0" Text="Opset 版本" Foreground="#666" FontSize="11" VerticalAlignment="Center"/>
+								<ComboBox Grid.Column="1" Width="150" HorizontalAlignment="Left" Margin="10,0,0,0" SelectedIndex="2">
+									<ComboBoxItem Content="opset 11"/>
+									<ComboBoxItem Content="opset 13"/>
+									<ComboBoxItem Content="opset 15 (推荐)"/>
+								</ComboBox>
+							</Grid>
+						</StackPanel>
+
+						<CheckBox Content="TorchScript 格式" IsChecked="True" Margin="0,8,0,0"/>
+
+						<!-- 硬件优化格式 -->
+						<Separator Background="#E0E0E0" Height="1" Margin="0,8,0,0"/>
+						<TextBlock Text="硬件优化格式" Foreground="#888" FontSize="11"/>
+
+						<CheckBox Content="TensorRT 格式 (NVIDIA GPU)" IsChecked="False"/>
+						<TextBlock Text="需要 NVIDIA GPU 和 TensorRT 运行时"
+                                 Foreground="#999"
+                                 FontSize="10"
+                                 Margin="25,2,0,0"/>
+
+						<CheckBox Content="OpenVINO 格式 (Intel 硬件)" IsChecked="False" Margin="0,8,0,0"/>
+						<TextBlock Text="适用于 Intel CPU/GPU/VPU"
+                                 Foreground="#999"
+                                 FontSize="10"
+                                 Margin="25,2,0,0"/>
+
+						<CheckBox Content="Core ML 格式 (iOS/macOS)" IsChecked="False" Margin="0,8,0,0"/>
+						<TextBlock Text="适用于 Apple 设备部署"
+                                 Foreground="#999"
+                                 FontSize="10"
+                                 Margin="25,2,0,0"/>
+					</StackPanel>
+				</Border>
+
+				<!-- 导出配置 -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="导出配置" FontWeight="Bold" FontSize="14"/>
+
+						<TextBlock Text="输出目录" Foreground="#666" FontSize="12" Margin="0,5,0,0"/>
+						<Grid ColumnDefinitions="*,Auto">
+							<TextBox Grid.Column="0"
+                                   Text="E:\AIStuff\exports\"
+                                   Background="White"/>
+							<Button Grid.Column="1"
+                                  Content="..."
+                                  Width="40"
+                                  Margin="5,0,0,0"
+                                  Background="#F0F0F0"/>
+						</Grid>
+
+						<CheckBox Content="优化模型大小 (FP16量化)" IsChecked="True" Margin="0,10,0,0"/>
+						<CheckBox Content="导出后自动验证" IsChecked="False" IsEnabled="False" Margin="0,3,0,0"/>
+						<TextBlock Text="此功能开发中..."
+                                 Foreground="#999"
+                                 FontSize="10"
+                                 Margin="25,0,0,0"/>
+					</StackPanel>
+				</Border>
+
+				<!-- 高级参数 -->
+				<Expander Header="高级参数" IsExpanded="False">
+					<Border BorderBrush="#E0E0E0"
+                          BorderThickness="1,0,1,1"
+                          CornerRadius="0,0,4,4"
+                          Padding="15"
+                          Background="#FAFAFA">
+						<StackPanel Spacing="10">
+
+							<TextBlock Text="输入尺寸 (示例输入)" Foreground="#666" FontSize="12"/>
+							<TextBlock Text="通常从训练配置自动获取，如需覆盖请手动修改"
+                                     Foreground="#999"
+                                     FontSize="10"
+                                     Margin="0,0,0,5"
+                                     TextWrapping="Wrap"/>
+							<Grid ColumnDefinitions="*,Auto,*,Auto,*">
+								<StackPanel Grid.Column="0">
+									<TextBlock Text="Batch" Foreground="#999" FontSize="10" HorizontalAlignment="Center"/>
+									<TextBox Text="1" TextAlignment="Center" Margin="0,2,0,0"/>
+								</StackPanel>
+								<TextBlock Grid.Column="1" Text="×" Margin="5,12,5,0" VerticalAlignment="Center" Foreground="#CCC"/>
+								<StackPanel Grid.Column="2">
+									<TextBlock Text="Channels" Foreground="#999" FontSize="10" HorizontalAlignment="Center"/>
+									<TextBox Text="3" TextAlignment="Center" Margin="0,2,0,0"/>
+								</StackPanel>
+								<TextBlock Grid.Column="3" Text="×" Margin="5,12,5,0" VerticalAlignment="Center" Foreground="#CCC"/>
+								<StackPanel Grid.Column="4">
+									<TextBlock Text="H × W" Foreground="#999" FontSize="10" HorizontalAlignment="Center"/>
+									<TextBox Text="640×640" TextAlignment="Center" Margin="0,2,0,0"/>
+								</StackPanel>
+							</Grid>
+
+							<Separator Background="#E0E0E0" Height="1" Margin="0,10"/>
+
+							<CheckBox Content="包含预处理步骤" IsChecked="False"/>
+							<TextBlock Text="将 resize、归一化等预处理嵌入到导出的模型中"
+                                     Foreground="#999"
+                                     FontSize="10"
+                                     Margin="25,0,0,0"
+                                     TextWrapping="Wrap"/>
+
+							<CheckBox Content="支持动态输入尺寸 (YOLO)" IsChecked="False" Margin="0,8,0,0"/>
+							<TextBlock Text="允许推理时使用不同的输入尺寸"
+                                     Foreground="#999"
+                                     FontSize="10"
+                                     Margin="25,0,0,0"
+                                     TextWrapping="Wrap"/>
+
+						</StackPanel>
+					</Border>
+				</Expander>
+
+				<!-- 操作按钮 -->
+				<Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+					<Button Grid.Column="0"
+                          Content="开始转换"
+                          Background="#8B7355"
+                          Foreground="White"
+                          Height="35"
+                          Margin="0,0,5,0"
+                          HorizontalContentAlignment="Center"/>
+					<Button Grid.Column="1"
+                          Content="取消"
+                          Background="#E0E0E0"
+                          Height="35"
+                          Margin="5,0,0,0"
+                          HorizontalContentAlignment="Center"/>
+				</Grid>
+
+			</StackPanel>
+		</ScrollViewer>
+
+		<!-- 右侧显示区域 -->
+		<Border Grid.Column="1"
+                BorderBrush="#E0E0E0"
+                BorderThickness="1"
+                CornerRadius="4"
+                Margin="15,0,0,0"
+                Background="White">
+			<Grid Margin="20">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+
+				<!-- 标题区域 -->
+				<StackPanel Grid.Row="0" Spacing="10">
+					<TextBlock Text="转换进度" FontSize="16" FontWeight="Bold"/>
+					<Separator Background="#E0E0E0" Height="1"/>
+				</StackPanel>
+
+				<!-- 进度显示区域 -->
+				<ScrollViewer Grid.Row="1" Margin="0,20,0,20" VerticalScrollBarVisibility="Auto">
+					<StackPanel Spacing="15">
+
+						<!-- ONNX 转换进度 -->
+						<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+							<StackPanel Spacing="10">
+								<Grid ColumnDefinitions="Auto,*,Auto,Auto">
+									<Border Grid.Column="0"
+                                          Background="#4CAF50"
+                                          CornerRadius="3"
+                                          Padding="6,2"
+                                          Margin="0,0,10,0">
+										<TextBlock Text="ONNX"
+                                                 Foreground="White"
+                                                 FontSize="10"
+                                                 FontWeight="Bold"/>
+									</Border>
+									<TextBlock Grid.Column="1"
+                                             Text="ONNX 格式转换"
+                                             FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="2"
+                                             Text="等待中"
+                                             Foreground="#999"
+                                             FontSize="12"
+                                             Margin="0,0,10,0"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="3"
+                                             Text="0%"
+                                             Foreground="#666"
+                                             FontSize="12"
+                                             VerticalAlignment="Center"/>
+								</Grid>
+
+								<ProgressBar Value="0"
+                                           Height="6"
+                                           Background="#F0F0F0"
+                                           Foreground="#4CAF50"
+                                           CornerRadius="3"/>
+
+								<TextBlock Text="E:\AIStuff\exports\FaceDetection.onnx"
+                                         Foreground="#666"
+                                         FontSize="11"/>
+
+								<Border Background="#F9F9F9"
+                                      CornerRadius="3"
+                                      Padding="10"
+                                      Height="70">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<TextBox Text="等待开始转换..."
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               IsReadOnly="True"
+                                               TextWrapping="Wrap"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#666"/>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- TorchScript 转换进度 -->
+						<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+							<StackPanel Spacing="10">
+								<Grid ColumnDefinitions="Auto,*,Auto,Auto">
+									<Border Grid.Column="0"
+                                          Background="#2196F3"
+                                          CornerRadius="3"
+                                          Padding="6,2"
+                                          Margin="0,0,10,0">
+										<TextBlock Text="TorchScript"
+                                                 Foreground="White"
+                                                 FontSize="10"
+                                                 FontWeight="Bold"/>
+									</Border>
+									<TextBlock Grid.Column="1"
+                                             Text="TorchScript 格式转换"
+                                             FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="2"
+                                             Text="等待中"
+                                             Foreground="#999"
+                                             FontSize="12"
+                                             Margin="0,0,10,0"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="3"
+                                             Text="0%"
+                                             Foreground="#666"
+                                             FontSize="12"
+                                             VerticalAlignment="Center"/>
+								</Grid>
+
+								<ProgressBar Value="0"
+                                           Height="6"
+                                           Background="#F0F0F0"
+                                           Foreground="#2196F3"
+                                           CornerRadius="3"/>
+
+								<TextBlock Text="E:\AIStuff\exports\FaceDetection.pt"
+                                         Foreground="#666"
+                                         FontSize="11"/>
+
+								<Border Background="#F9F9F9"
+                                      CornerRadius="3"
+                                      Padding="10"
+                                      Height="70">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<TextBox Text="等待开始转换..."
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               IsReadOnly="True"
+                                               TextWrapping="Wrap"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#666"/>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- TensorRT 转换进度 -->
+						<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Opacity="0.5">
+							<StackPanel Spacing="10">
+								<Grid ColumnDefinitions="Auto,*,Auto">
+									<Border Grid.Column="0"
+                                          Background="#76B900"
+                                          CornerRadius="3"
+                                          Padding="6,2"
+                                          Margin="0,0,10,0">
+										<TextBlock Text="TensorRT"
+                                                 Foreground="White"
+                                                 FontSize="10"
+                                                 FontWeight="Bold"/>
+									</Border>
+									<TextBlock Grid.Column="1"
+                                             Text="TensorRT 格式转换 (NVIDIA GPU)"
+                                             FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="2"
+                                             Text="未选择"
+                                             Foreground="#999"
+                                             FontSize="12"
+                                             VerticalAlignment="Center"/>
+								</Grid>
+
+								<ProgressBar Value="0"
+                                           Height="6"
+                                           Background="#F0F0F0"
+                                           Foreground="#76B900"
+                                           CornerRadius="3"/>
+
+								<TextBlock Text="E:\AIStuff\exports\FaceDetection.engine"
+                                         Foreground="#999"
+                                         FontSize="11"/>
+
+								<Border Background="#F9F9F9"
+                                      CornerRadius="3"
+                                      Padding="10"
+                                      Height="70">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<TextBox Text="未启用此格式导出"
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               IsReadOnly="True"
+                                               TextWrapping="Wrap"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#999"/>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- OpenVINO 转换进度 -->
+						<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Opacity="0.5">
+							<StackPanel Spacing="10">
+								<Grid ColumnDefinitions="Auto,*,Auto">
+									<Border Grid.Column="0"
+                                          Background="#0071C5"
+                                          CornerRadius="3"
+                                          Padding="6,2"
+                                          Margin="0,0,10,0">
+										<TextBlock Text="OpenVINO"
+                                                 Foreground="White"
+                                                 FontSize="10"
+                                                 FontWeight="Bold"/>
+									</Border>
+									<TextBlock Grid.Column="1"
+                                             Text="OpenVINO 格式转换 (Intel)"
+                                             FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="2"
+                                             Text="未选择"
+                                             Foreground="#999"
+                                             FontSize="12"
+                                             VerticalAlignment="Center"/>
+								</Grid>
+
+								<ProgressBar Value="0"
+                                           Height="6"
+                                           Background="#F0F0F0"
+                                           Foreground="#0071C5"
+                                           CornerRadius="3"/>
+
+								<TextBlock Text="E:\AIStuff\exports\FaceDetection.xml"
+                                         Foreground="#999"
+                                         FontSize="11"/>
+
+								<Border Background="#F9F9F9"
+                                      CornerRadius="3"
+                                      Padding="10"
+                                      Height="70">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<TextBox Text="未启用此格式导出"
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               IsReadOnly="True"
+                                               TextWrapping="Wrap"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#999"/>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Core ML 转换进度 -->
+						<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Opacity="0.5">
+							<StackPanel Spacing="10">
+								<Grid ColumnDefinitions="Auto,*,Auto">
+									<Border Grid.Column="0"
+                                          Background="#555555"
+                                          CornerRadius="3"
+                                          Padding="6,2"
+                                          Margin="0,0,10,0">
+										<TextBlock Text="Core ML"
+                                                 Foreground="White"
+                                                 FontSize="10"
+                                                 FontWeight="Bold"/>
+									</Border>
+									<TextBlock Grid.Column="1"
+                                             Text="Core ML 格式转换 (Apple)"
+                                             FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+									<TextBlock Grid.Column="2"
+                                             Text="未选择"
+                                             Foreground="#999"
+                                             FontSize="12"
+                                             VerticalAlignment="Center"/>
+								</Grid>
+								<ProgressBar Value="0"
+                                           Height="6"
+                                           Background="#F0F0F0"
+                                           Foreground="#555555"
+                                           CornerRadius="3"/>
+
+								<TextBlock Text="E:\AIStuff\exports\FaceDetection.mlmodel"
+                                         Foreground="#999"
+                                         FontSize="11"/>
+
+								<Border Background="#F9F9F9"
+                                      CornerRadius="3"
+                                      Padding="10"
+                                      Height="70">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<TextBox Text="未启用此格式导出"
+                                               Background="Transparent"
+                                               BorderThickness="0"
+                                               IsReadOnly="True"
+                                               TextWrapping="Wrap"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#999"/>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+				</ScrollViewer>
+				<!-- 底部统计信息 -->
+				<Border Grid.Row="2"
+                      Background="#F5F5F5"
+                      CornerRadius="4"
+                      Padding="15">
+					<Grid ColumnDefinitions="*,*,*,*,*">
+						<StackPanel Grid.Column="0">
+							<TextBlock Text="转换状态" Foreground="#666" FontSize="11"/>
+							<TextBlock Text="准备就绪" FontWeight="SemiBold" FontSize="13" Margin="0,3,0,0"/>
+						</StackPanel>
+						<StackPanel Grid.Column="1">
+							<TextBlock Text="已完成" Foreground="#666" FontSize="11"/>
+							<TextBlock Text="0/2" FontWeight="SemiBold" FontSize="13" Margin="0,3,0,0"/>
+						</StackPanel>
+						<StackPanel Grid.Column="2">
+							<TextBlock Text="成功/失败" Foreground="#666" FontSize="11"/>
+							<TextBlock Text="0/0" FontWeight="SemiBold" FontSize="13" Margin="0,3,0,0"/>
+						</StackPanel>
+						<StackPanel Grid.Column="3">
+							<TextBlock Text="总耗时" Foreground="#666" FontSize="11"/>
+							<TextBlock Text="0s" FontWeight="SemiBold" FontSize="13" Margin="0,3,0,0"/>
+						</StackPanel>
+						<StackPanel Grid.Column="4">
+							<TextBlock Text="输出文件" Foreground="#666" FontSize="11"/>
+							<TextBlock Text="0 个" FontWeight="SemiBold" FontSize="13" Margin="0,3,0,0"/>
+						</StackPanel>
 					</Grid>
 				</Border>
-				<StackPanel
-					Grid.Row="1"
-					Width="180"
-					HorizontalAlignment="Center"
-					Orientation="Vertical">
-					<Button
-						BorderThickness="0"
-						HorizontalAlignment="Center"
-						IsEnabled="{Binding IsEnableConvert}"
-						Command="{Binding ConvertToONNXCommand}"
-						Content="Convert to ONNX"
-						Margin="0,0,0,15"/>
-					<Button
-						BorderThickness="0"
-						HorizontalAlignment="Center"
-						IsEnabled="{Binding IsEnableConvert}"
-						Command="{Binding ConvertToTensorFlowCommand}"
-						Content="Convert to TensorFlow"/>
-				</StackPanel>
-				<Border Grid.Row="2">
-					<ProgressBar
-						Width="80"
-						IsIndeterminate="True"
-						BorderThickness="1"
-						IsVisible="{Binding IsConverting}"
-						Foreground="WhiteSmoke"/>
-				</Border>
+
 			</Grid>
-			<GridSplitter Grid.Row="1" Height="1" HorizontalAlignment="Stretch" Background="LightGray" Margin="0,0,0,5"/>
-			<StackPanel Grid.Row="2" Margin="5">
-				<TextBlock Text="转换输出" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
-				<TextBox
-					x:Name="ConvertingOutput_Tb"
-					Grid.Row="2"
-					HorizontalAlignment="Stretch"
-					VerticalContentAlignment="Stretch"
-					MinHeight="150"
-					AcceptsReturn="True"
-					TextWrapping="Wrap"
-					TextChanged="ConvertingOutput_Tb_TextChanged"
-					CaretIndex="{Binding CaretEndIndex}"
-					Text="{Binding ConvertingOutput}"/>
-			</StackPanel>
-		</Grid>
+		</Border>
 	</Grid>
 </UserControl>
