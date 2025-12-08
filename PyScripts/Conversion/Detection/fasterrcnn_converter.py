@@ -59,10 +59,13 @@ class FasterRCNNConverter(BaseConverter):
             state_dict = checkpoint['model_state_dict']
             # 从checkpoint中读取类别数
             if 'num_classes' in checkpoint:
-                num_classes = checkpoint['num_classes']
-                self.logger.info(f"从checkpoint元数据读取类别数: {num_classes}")
+                num_classes_no_bg = checkpoint['num_classes']
+                self.logger.info(f"从checkpoint元数据读取类别数（不含背景）: {num_classes_no_bg}")
+                # 检测模型需要 +1 来包含背景类
+                num_classes = num_classes_no_bg + 1
+                self.logger.info(f"实际模型类别数（含背景）: {num_classes}")
             else:
-                # 从state_dict推断
+                # 从state_dict推断（已经含背景）
                 num_classes = self._infer_num_classes(state_dict)
         else:
             # 直接是state_dict
@@ -89,16 +92,18 @@ class FasterRCNNConverter(BaseConverter):
         """
         从state_dict推断类别数
         
+        注意：从权重推断的类别数已经包含背景类
+        
         Args:
             state_dict: 模型权重字典
             
         Returns:
-            类别数
+            类别数（含背景）
         """
         # 尝试从box_predictor权重推断
         if 'roi_heads.box_predictor.cls_score.weight' in state_dict:
             num_classes = state_dict['roi_heads.box_predictor.cls_score.weight'].shape[0]
-            self.logger.info(f"从权重推断类别数: {num_classes}")
+            self.logger.info(f"从权重推断类别数（含背景）: {num_classes}")
             return num_classes
         else:
             # 默认COCO类别数

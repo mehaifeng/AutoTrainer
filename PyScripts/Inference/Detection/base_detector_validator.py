@@ -60,11 +60,15 @@ class BaseDetectionValidator(ABC):
         """
         从模型checkpoint获取类别数和类别映射
         
+        注意：检测模型的类别数不含背景类
+        - metadata 中的 num_classes: 不含背景（如3）
+        - 权重 shape: 含背景（如4或5，取决于模型架构）
+        
         Args:
             model_path: 模型文件路径
             
         Returns:
-            (num_classes, categories_dict) - 类别数和类别映射字典
+            (num_classes_with_bg, categories_dict) - 含背景的类别数和类别映射字典
         """
         try:
             checkpoint = torch.load(model_path, map_location='cpu')
@@ -72,12 +76,17 @@ class BaseDetectionValidator(ABC):
             if isinstance(checkpoint, dict):
                 # 优先从metadata读取
                 if 'num_classes' in checkpoint:
-                    num_classes = checkpoint['num_classes']
-                    print(f"从metadata读取类别数: {num_classes}", flush=True)
+                    num_classes_no_bg = checkpoint['num_classes']
+                    print(f"从metadata读取类别数（不含背景）: {num_classes_no_bg}", flush=True)
+                    
+                    # 检测模型需要 +1 来包含背景类
+                    # Faster R-CNN 的分类头输出 num_classes + 1 (包含背景)
+                    num_classes_with_bg = num_classes_no_bg + 1
+                    print(f"模型实际类别数（含背景）: {num_classes_with_bg}", flush=True)
                     
                     # 尝试读取类别名称（如果有）
                     categories = checkpoint.get('categories', {})
-                    return num_classes, categories
+                    return num_classes_with_bg, categories
                 
                 # 回退：从权重shape推断
                 if 'model_state_dict' in checkpoint:
@@ -87,13 +96,13 @@ class BaseDetectionValidator(ABC):
                 else:
                     state_dict = checkpoint
                 
-                # 从分类头推断类别数
+                # 从分类头推断类别数（已经含背景）
                 for key in ['roi_heads.box_predictor.cls_score.weight',
                            'head.classification_head.cls_logits.weight']:
                     if key in state_dict:
-                        num_classes = state_dict[key].shape[0]
-                        print(f"从权重shape推断类别数: {num_classes}", flush=True)
-                        return num_classes, {}
+                        num_classes_with_bg = state_dict[key].shape[0]
+                        print(f"从权重shape推断类别数（含背景）: {num_classes_with_bg}", flush=True)
+                        return num_classes_with_bg, {}
             
             raise ValueError("无法从模型文件推断类别数")
             
