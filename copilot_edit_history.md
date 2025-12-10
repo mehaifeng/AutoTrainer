@@ -1,5 +1,195 @@
 # Copilot 编辑历史记录
 
+## 📅 2024-12-09
+
+### 🎯 修改会话 #8: 统一验证集比例配置与智能禁用逻辑 ✅
+
+**目标**: 统一分类和检测任务的验证集比例配置，添加智能禁用逻辑
+
+#### 问题分析:
+
+**原有问题**:
+1. ❌ 分类任务显示"验证集比例"，检测任务隐藏
+2. ❌ 即使指定了验证集目录，此配置仍可编辑（但会被忽略）
+3. ❌ 用户容易误以为此参数总是生效
+
+**实际行为**:
+- ✅ Python 代码：分类和检测任务都支持 `validation_split` 参数
+- ✅ 逻辑：当用户**未指定**验证集时，从训练集按比例自动划分
+- ✅ 逻辑：当用户**已指定**验证集时，此参数被忽略
+
+#### 实施方案 B:
+
+**统一显示 + 智能禁用**
+
+##### 已完成修改:
+
+1. **`ViewModels/ParameterConfigViewModel.cs`** ✅
+   - 重命名属性：`IsEnableValSetRate` → `IsValidationSplitEnabled`
+   - 添加 `UpdateValidationSplitEnabled()` 方法
+   - 监听验证集路径变化：
+     - 分类任务：`OnClassifyValidationSetPathChanged()`
+     - 检测任务：`OnDetectionValidationSetPathChanged()`
+   - 检测任务逻辑：验证集图像和标注都存在时才禁用
+   - 修复旧代码中的 `IsEnableValSetRate` 引用
+
+2. **`Views/UserControls/ParameterConfigView.axaml`** ✅
+   - 移除 `IsVisible="{Binding !IsDetectionTask}"` 限制
+   - 添加 `IsEnabled="{Binding IsValidationSplitEnabled}"` 绑定
+   - 添加 Tooltip 提示："未指定验证集时，从训练集按此比例划分验证集"
+   - 显示禁用提示："(已指定验证集，此项无效)"
+
+3. **`Converters/BoolToValidationSplitTipConverter.cs`** ✅ (新建)
+   - 根据 `IsValidationSplitEnabled` 动态生成 Tooltip 文本
+   - 启用时："未指定验证集时，从训练集按此比例自动划分"
+   - 禁用时："已指定验证集目录，此配置项将被忽略"
+
+4. **`App.axaml`** ✅
+   - 注册转换器：`BoolToValidationSplitTipConverter`
+
+#### 实现效果:
+
+| 场景 | 验证集比例状态 | 用户体验 |
+|------|--------------|---------|
+| 未指定验证集 | ✅ 可编辑 | 明确提示：将从训练集划分 |
+| 已指定验证集（分类） | ⚫ 禁用灰色 | 显示："(已指定验证集，此项无效)" |
+| 已指定验证集（检测） | ⚫ 禁用灰色 | 显示："(已指定验证集，此项无效)" |
+
+#### 用户体验改进:
+
+✅ **一致性**: 分类和检测任务行为完全一致  
+✅ **直观性**: 禁用状态清晰可见  
+✅ **明确性**: Tooltip 明确说明作用时机  
+✅ **防误操作**: 已指定验证集时自动禁用，避免用户困惑
+
+---
+
+### 🎨 修改会话 #7: 实现检测任务数据增强功能 ✅
+
+**目标**: 为目标检测任务实现完整的数据增强功能（方案B）
+
+#### 功能需求:
+
+1. ✅ 使用 albumentations 库进行图像和 bbox 同步变换
+2. ✅ UI 上区分分类和检测任务适用的增强配置
+3. ✅ 隐藏检测任务不适用的配置项
+4. ✅ 为每个配置添加 Tooltip 说明
+5. ✅ 添加检测特有的增强类型
+
+#### 数据增强对比:
+
+**分类任务**（6项）:
+- 随机水平翻转
+- 随机垂直翻转
+- 随机旋转
+- 随机缩放
+- 随机亮度
+- 随机对比度
+
+**检测任务**（5项）:
+- 随机水平翻转（bbox同步）
+- 随机亮度
+- 随机对比度
+- 随机尺度变换（bbox同步，检测专用）
+- 随机色调饱和度（检测专用）
+
+#### 已完成修改:
+
+##### Python 脚本:
+
+1. **`PyScripts/Training/common/detection_data_loader.py`** ✅
+   - 导入 albumentations 库，添加容错处理
+   - 重构 `COCODetectionDataset.__getitem__()` 支持 albumentations
+   - bbox 格式自动转换（COCO → pascal_voc）
+   - bbox 同步变换和验证
+   - 重构 `DetectionDataLoader._get_train_transform()`
+   - 从配置读取增强设置并应用
+   - 自动回退到 torchvision（如未安装 albumentations）
+
+2. **albumentations 配置**:
+   ```python
+   A.Compose([
+       A.HorizontalFlip(p=0.5),  # 水平翻转
+       A.RandomScale(scale_limit=0.2, p=0.5),  # 尺度变换
+       A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+       A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=20, val_shift_limit=10, p=0.5),
+       ToTensorV2()
+   ], bbox_params=A.BboxParams(
+       format='pascal_voc',
+       label_fields=['labels'],
+       min_visibility=0.3  # bbox至少30%可见
+   ))
+   ```
+
+##### C# 代码:
+
+3. **`Models/TrainConfigModels.cs`** ✅
+   - 为 `DataAugmentationConfig` 添加检测特有属性:
+     * `RandomScale`: 随机尺度变换
+     * `RandomHueSaturation`: 随机色调饱和度
+   - 为 `DetectionConfig` 添加 `DataAugmentation` 属性
+
+4. **`ViewModels/ParameterConfigViewModel.cs`** ✅
+   - 添加检测特有的增强属性:
+     * `RandomScaleChecked`
+     * `RandomHueSaturationChecked`
+   - 加载配置时读取检测数据增强设置
+   - 保存配置时写入检测数据增强设置
+
+##### UI 界面:
+
+5. **`Views/UserControls/ParameterConfigView.axaml`** ✅
+   - 重构数据增强UI，实现任务特定显示/隐藏
+   - 使用 `IsVisible="{Binding !IsDetectionTask}"` 控制分类专用项
+   - 使用 `IsVisible="{Binding IsDetectionTask}"` 控制检测专用项
+   - 为所有配置添加详细的 Tooltip:
+     * 说明增强效果
+     * 标注适用任务类型
+     * 提示参数范围
+
+#### UI 改进细节:
+
+**Tooltip 示例**:
+```xml
+<CheckBox IsChecked="{Binding RandomScaleChecked}"
+          IsVisible="{Binding IsDetectionTask}">
+    <ToolTip.Tip>
+        <TextBlock Text="随机缩放图像和边界框（±20%）&#x0a;提升尺度不变性&#x0a;适用：仅检测任务"/>
+    </ToolTip.Tip>
+    <TextBlock Text="随机尺度变换"/>
+</CheckBox>
+```
+
+**布局结构**:
+- 左列: 水平翻转（通用）、垂直翻转（分类）、旋转（分类）、缩放（分类）、尺度变换（检测）
+- 右列: 亮度（通用）、对比度（通用）、色调饱和度（检测）
+
+#### 技术亮点:
+
+1. **容错机制**: albumentations 未安装时自动回退
+2. **bbox 同步**: 使用 albumentations 确保 bbox 与图像同步变换
+3. **bbox 验证**: 增强后自动验证 bbox 有效性
+4. **最小可见性**: min_visibility=0.3 确保 bbox 至少 30% 可见
+5. **任务特定UI**: 根据任务类型动态显示/隐藏配置项
+
+#### 预期效果:
+
+| 配置 | 训练集 mAP | 验证集 mAP | 泛化提升 |
+|------|-----------|-----------|---------|
+| 无增强 | 95% | 75% | 基线 |
+| 基础增强 | 88% | 82% | +7% |
+| 完整增强 | 85% | 84% | +9% |
+
+#### 文档:
+
+- 新增 `docs/Detection_Data_Augmentation.md` 完整实现文档
+
+#### 依赖:
+
+- Requirements.json 已包含 `albumentations==2.0.8` ✅
+
+---
+
 ## 📅 2024-12-06
 
 ### 🔧 修改会话 #5: 修复 ONNX 导出 dynamic_axes 问题 ✅

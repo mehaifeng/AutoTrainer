@@ -12,6 +12,25 @@
 			 x:Name="ParameterPage"
 			 x:DataType="vm:ParameterConfigViewModel"
              x:Class="AutoTrainer.ParameterConfigView">
+	<UserControl.Styles>
+		<Style Selector="TextBox.noeffect">
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Cursor" Value="Arrow"/>
+		</Style>
+
+		<Style Selector="TextBox.noeffect:pointerover /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+
+		<Style Selector="TextBox.noeffect:focus /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+		</Style>
+	</UserControl.Styles>
 	<Interaction.Behaviors>
 		<EventTriggerBehavior EventName="Loaded">
 			<InvokeCommandAction Command="{Binding LoadedCommand}"/>
@@ -146,12 +165,29 @@
 											<TextBox Text="{Binding CustomModelName}"/>
 										</StackPanel>
 										<!-- 验证集比例 -->
-										<StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,10,20" IsVisible="{Binding !IsDetectionTask}">
-											<TextBlock Text="验证集比例" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+										<StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,10,20">
+											<TextBlock Text="验证集比例" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold">
+												<ToolTip.Tip>
+													<TextBlock Text="未指定验证集时，从训练集按此比例划分验证集" TextWrapping="Wrap" MaxWidth="250"/>
+												</ToolTip.Tip>
+											</TextBlock>
 											<ComboBox
 												ItemsSource="{Binding ValidationSetRates}"
 												SelectedItem="{Binding SelectedValidationSetRate}"
-												SelectedIndex="1"/>
+												SelectedIndex="1"
+												IsEnabled="{Binding IsValidationSplitEnabled}">
+												<ToolTip.Tip>
+													<TextBlock>
+														<Run Text="{Binding IsValidationSplitEnabled, Converter={StaticResource BoolToValidationSplitTipConverter}}"/>
+													</TextBlock>
+												</ToolTip.Tip>
+											</ComboBox>
+											<TextBlock 
+												Text="(已指定验证集，此项无效)" 
+												FontSize="10" 
+												Foreground="Gray" 
+												Margin="0,3,0,0"
+												IsVisible="{Binding !IsValidationSplitEnabled}"/>
 										</StackPanel>
 
 									</Grid>
@@ -178,9 +214,10 @@
 										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
 											<TextBlock Text="训练集目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="TrainDir_Tb"
 													Tag="Directory"
+													Classes="noeffect"
 													Margin="0,5,0,0"
 													Text="{Binding ClassifyTrainSetPath,Mode=TwoWay}"/>
 												<Button
@@ -212,9 +249,11 @@
 										<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
 											<TextBlock Text="验证集目录（可选）" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="ValDataSetDir_tb"
 													Tag="Directory"
+													TextWrapping="NoWrap"
+													Classes="noeffect"
 													Margin="0,5,0,0"
 													Text="{Binding ClassifyValidationSetPath,Mode=TwoWay}"/>
 												<Button
@@ -247,10 +286,10 @@
 										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
 											<TextBlock Text="分类标注文件（可选）" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="ClassifyAnnotation_Tb"
 													Tag="File"
-													Margin="0,5,0,0"
+												Classes="noeffect"	Margin="0,5,0,0"
 													Text="{Binding ClassifyAnnotationPath,Mode=TwoWay}"/>
 												<Button
 													Grid.Column="1"
@@ -285,7 +324,6 @@
 											BorderBrush="#E0E0E0" 
 											BorderThickness="1" 
 											CornerRadius="3" 
-											Background="#F9F9F9"
 											Padding="8" 
 											Margin="0,0,0,15">
 											<StackPanel>
@@ -309,7 +347,6 @@
 											BorderBrush="#E0E0E0" 
 											BorderThickness="1" 
 											CornerRadius="3" 
-											Background="#F0F8FF"
 											Padding="10" 
 											Margin="0,0,0,10"
 											IsVisible="{Binding DetectedClassNames.Count, Converter={StaticResource CountToVisibilityConverter}}">
@@ -328,9 +365,10 @@
 													<ItemsControl.ItemTemplate>
 														<DataTemplate>
 															<Border 
-																Background="#D6EAF8" 
 																CornerRadius="3" 
-																Padding="6,3" 
+																Padding="6,3"
+																BorderThickness="1"
+																BorderBrush="#E0E0E0"
 																Margin="3,2">
 																<TextBlock Text="{Binding}" FontSize="10"/>
 															</Border>
@@ -363,9 +401,10 @@
 										<StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
 											<TextBlock Text="训练图像目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="TrainImages_Tb"
 													Tag="Directory"
+													Classes="noeffect"
 													Margin="0,5,0,0"
 													Text="{Binding DetectionTrainSetPath,Mode=TwoWay}"/>
 												<Button
@@ -398,10 +437,11 @@
 										<StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
 											<TextBlock Text="训练标注文件" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="TrainAnnotation_Tb"
 													Tag="File"
 													Margin="0,5,0,0"
+													Classes="noeffect"	
 													Text="{Binding TrainAnnotationPath,Mode=TwoWay}"/>
 												<Button
 													Grid.Column="1"
@@ -433,10 +473,11 @@
 										<StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
 											<TextBlock Text="验证图像目录" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="ValImages_Tb"
 													Tag="Directory"
 													Margin="0,5,0,0"
+													Classes="noeffect"	
 													Text="{Binding DetectionValidationSetPath,Mode=TwoWay}"/>
 												<Button
 													Grid.Column="1"
@@ -468,9 +509,10 @@
 										<StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,15">
 											<TextBlock Text="验证标注文件" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
 											<Grid ColumnDefinitions="*,45,45">
-												<SelectableTextBlock
+												<TextBox
 													x:Name="ValAnnotation_Tb"
 													Tag="File"
+													Classes="noeffect"
 													Margin="0,5,0,0"
 													Text="{Binding ValAnnotationPath,Mode=TwoWay}"/>
 												<Button
@@ -506,7 +548,6 @@
 											BorderBrush="#E0E0E0" 
 											BorderThickness="1" 
 											CornerRadius="3" 
-											Background="#FFF4E6"
 											Padding="10" 
 											Margin="0,0,0,10"
 											IsVisible="{Binding DetectedDetectionClassNames.Count, Converter={StaticResource CountToVisibilityConverter}}">
@@ -525,9 +566,10 @@
 													<ItemsControl.ItemTemplate>
 														<DataTemplate>
 															<Border 
-																Background="#FFE0B2" 
 																CornerRadius="3" 
 																Padding="6,3" 
+																BorderThickness="1"
+																BorderBrush="#E0E0E0"
 																Margin="3,2">
 																<TextBlock Text="{Binding}" FontSize="10"/>
 															</Border>
@@ -546,14 +588,80 @@
 									<TextBlock Text="数据增强" FontWeight="Bold" Margin="0,0,0,10"/>
 									<Grid ColumnDefinitions="*,*">
 										<StackPanel Grid.Column="0" Margin="0,0,10,0">
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomHorizonFlipChecked}" Content="随机水平翻转"/>
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomVerticalFlipChecked}" Content="随机垂直翻转"/>
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomRotationChecked}" Content="随机旋转"/>
+											<!-- 通用增强：分类和检测都支持 -->
+											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomHorizonFlipChecked}">
+												<ToolTip.Tip>
+													<TextBlock Text="水平翻转图像（50%概率）&#x0a;适用：分类和检测"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机水平翻转"/>
+											</CheckBox>
+											
+											<!-- 仅分类：垂直翻转 -->
+											<CheckBox Margin="0,0,0,5" 
+													  IsChecked="{Binding RandomVerticalFlipChecked}"
+													  IsVisible="{Binding !IsDetectionTask}">
+												<ToolTip.Tip>
+													<TextBlock Text="垂直翻转图像（50%概率）&#x0a;适用：仅分类任务"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机垂直翻转"/>
+											</CheckBox>
+											
+											<!-- 仅分类：旋转 -->
+											<CheckBox Margin="0,0,0,5" 
+													  IsChecked="{Binding RandomRotationChecked}"
+													  IsVisible="{Binding !IsDetectionTask}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机旋转图像（±15度）&#x0a;适用：仅分类任务"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机旋转"/>
+											</CheckBox>
+											
+											<!-- 仅分类：缩放 -->
+											<CheckBox Margin="0,0,0,5" 
+													  IsChecked="{Binding RandomZoomChecked}"
+													  IsVisible="{Binding !IsDetectionTask}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机缩放图像&#x0a;适用：仅分类任务"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机缩放"/>
+											</CheckBox>
+											
+											<!-- 仅检测：尺度变换 -->
+											<CheckBox Margin="0,0,0,5" 
+													  IsChecked="{Binding RandomScaleChecked}"
+													  IsVisible="{Binding IsDetectionTask}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机缩放图像和边界框（±20%）&#x0a;提升尺度不变性&#x0a;适用：仅检测任务"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机尺度变换"/>
+											</CheckBox>
 										</StackPanel>
 										<StackPanel Grid.Column="1">
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomZoomChecked}" Content="随机缩放"/>
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomBrightnessChecked}" Content="随机亮度"/>
-											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomContrastChecked}" Content="随机对比度"/>
+											<!-- 通用增强：亮度 -->
+											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomBrightnessChecked}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机调整亮度（±20%）&#x0a;模拟不同光照条件&#x0a;适用：分类和检测"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机亮度"/>
+											</CheckBox>
+											
+											<!-- 通用增强：对比度 -->
+											<CheckBox Margin="0,0,0,5" IsChecked="{Binding RandomContrastChecked}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机调整对比度（±20%）&#x0a;增强鲁棒性&#x0a;适用：分类和检测"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机对比度"/>
+											</CheckBox>
+											
+											<!-- 仅检测：色调饱和度 -->
+											<CheckBox Margin="0,0,0,5" 
+													  IsChecked="{Binding RandomHueSaturationChecked}"
+													  IsVisible="{Binding IsDetectionTask}">
+												<ToolTip.Tip>
+													<TextBlock Text="随机调整色调和饱和度&#x0a;增加颜色多样性&#x0a;适用：仅检测任务"/>
+												</ToolTip.Tip>
+												<TextBlock Text="随机色调饱和度"/>
+											</CheckBox>
 										</StackPanel>
 									</Grid>
 								</StackPanel>

@@ -260,22 +260,22 @@ namespace AutoTrainer.ViewModels
             #region 输入验证
             if (string.IsNullOrEmpty(ModelWeightsPath) || !File.Exists(ModelWeightsPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请提供一个有效的模型权重文件路径").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请提供一个有效的模型权重文件路径").ShowWindowDialogAsync(MainWindow);
                 return;
             }
             if (string.IsNullOrEmpty(ValidDatasetPath) || !Directory.Exists(ValidDatasetPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请提供一个有效的验证集目录路径").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请提供一个有效的验证集目录路径").ShowWindowDialogAsync(MainWindow);
                 return;
             }
             if (!IsCheckedClassifyMode && !string.IsNullOrEmpty(CocoAnnotationPath) && !File.Exists(CocoAnnotationPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "提供的COCO标注文件路径无效").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "提供的COCO标注文件路径无效").ShowWindowDialogAsync(MainWindow);
                 return;
             }
             if(string.IsNullOrEmpty(App.PythonVenvPath) || !Directory.Exists(Path.Combine(App.PythonVenvPath, "Scripts")))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowDialogAsync(MainWindow);
                 return;
             }
             
@@ -287,7 +287,7 @@ namespace AutoTrainer.ViewModels
                     "模型验证失败", 
                     metadataValidation.errorMessage,
                     MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                    MsBox.Avalonia.Enums.Icon.Error).ShowWindowAsync();
+                    MsBox.Avalonia.Enums.Icon.Error).ShowWindowDialogAsync(MainWindow);
                 return;
             }
             #endregion
@@ -330,7 +330,7 @@ namespace AutoTrainer.ViewModels
 
                 if (result.ExitCode != 0)
                 {
-                    await MessageBoxManager.GetMessageBoxStandard("验证失败", $"Python脚本执行出错: \n{result.Error}").ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("验证失败", $"Python脚本执行出错: \n{result.Error}").ShowWindowDialogAsync(MainWindow);
                     return;
                 }
 
@@ -355,13 +355,13 @@ namespace AutoTrainer.ViewModels
                 }
                 else
                 {
-                    await MessageBoxManager.GetMessageBoxStandard("错误", "未找到验证结果文件").ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("错误", "未找到验证结果文件").ShowWindowDialogAsync(MainWindow);
                 }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "验证过程中发生意外错误");
-                await MessageBoxManager.GetMessageBoxStandard("严重错误", ex.Message).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("严重错误", ex.Message).ShowWindowDialogAsync(MainWindow);
             }
             finally
             {

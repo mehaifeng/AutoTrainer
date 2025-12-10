@@ -337,13 +337,14 @@
 						</Grid>
 					</Border>
 				</Grid>
-				<GridSplitter Grid.Row="1"/>
+				<GridSplitter Grid.Row="1" Height="2" VerticalAlignment="Center"/>
 				<!--输出文本框和执行按钮-->
 				<Border Grid.Row="2">
 					<Grid>
 						<!--输出-->
 						<TextBox
 							x:Name="Outout_tb"
+							FontFamily="Consolas"
 							AcceptsReturn="True"
 							TextWrapping="Wrap"
 							MinHeight="80"

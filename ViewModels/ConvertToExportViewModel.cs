@@ -1,8 +1,9 @@
 ﻿using AutoTrainer.Helpers;
+using AutoTrainer.Views;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Platform.Storage;
 using Avalonia.Notification;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MsBox.Avalonia;
@@ -275,7 +276,7 @@ namespace AutoTrainer.ViewModels
                         "未配置 Python 虚拟环境，无法读取模型信息。\n请先在模型仓库页配置 Python 环境。",
                         MsBox.Avalonia.Enums.ButtonEnum.Ok,
                         MsBox.Avalonia.Enums.Icon.Warning
-                    ).ShowWindowAsync();
+                    ).ShowWindowDialogAsync(MainWindow);
                     return;
                 }
 
@@ -304,7 +305,7 @@ namespace AutoTrainer.ViewModels
                         "本软件训练的模型会在 metadata 中保存标准架构名称（如 mobilenet_v3_large）。",
                         MsBox.Avalonia.Enums.ButtonEnum.Ok,
                         MsBox.Avalonia.Enums.Icon.Info
-                    ).ShowWindowAsync();
+                    ).ShowWindowDialogAsync(MainWindow);
                 }
             }
             catch (Exception ex)
@@ -318,7 +319,7 @@ namespace AutoTrainer.ViewModels
                     $"读取模型信息时发生错误：\n{ex.Message}",
                     MsBox.Avalonia.Enums.ButtonEnum.Ok,
                     MsBox.Avalonia.Enums.Icon.Error
-                ).ShowWindowAsync();
+                ).ShowWindowDialogAsync(MainWindow);
             }
         }
 
@@ -467,7 +468,7 @@ namespace AutoTrainer.ViewModels
                     $"转换过程中发生错误:\n{ex.Message}",
                     MsBox.Avalonia.Enums.ButtonEnum.Ok,
                     MsBox.Avalonia.Enums.Icon.Error
-                ).ShowWindowAsync();
+                ).ShowWindowDialogAsync(MainWindow);
             }
         }
 
@@ -488,9 +489,11 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task<bool> ValidateInputs()
         {
+            var mainWindow = MainWindow;
+            
             if (string.IsNullOrEmpty(ModelPath) || !File.Exists(ModelPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请选择一个有效的模型权重文件").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请选择一个有效的模型权重文件").ShowWindowDialogAsync(mainWindow);
                 return false;
             }
 
@@ -500,25 +503,25 @@ namespace AutoTrainer.ViewModels
                     "错误", 
                     "无法获取模型架构名称。\n\n" +
                     "该模型可能不是本软件训练的。本软件训练的模型会在 metadata 中保存标准架构名称。"
-                ).ShowWindowAsync();
+                ).ShowWindowDialogAsync(mainWindow);
                 return false;
             }
 
             if (string.IsNullOrEmpty(OutputDirectory))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请选择输出目录").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请选择输出目录").ShowWindowDialogAsync(mainWindow);
                 return false;
             }
 
             if (string.IsNullOrEmpty(App.PythonVenvPath) || !Directory.Exists(App.PythonVenvPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowDialogAsync(mainWindow);
                 return false;
             }
 
             if (!ConversionTasks.Any(t => t.IsSelected))
             {
-                await MessageBoxManager.GetMessageBoxStandard("错误", "请至少选择一个导出格式").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("错误", "请至少选择一个导出格式").ShowWindowDialogAsync(mainWindow);
                 return false;
             }
 

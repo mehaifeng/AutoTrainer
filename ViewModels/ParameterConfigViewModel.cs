@@ -260,6 +260,11 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private string? classifyValidationSetPath;
 
+        partial void OnClassifyValidationSetPathChanged(string? value)
+        {
+            UpdateValidationSplitEnabled();
+        }
+
         /// <summary>
         /// 分类任务标注文件地址
         /// </summary>
@@ -328,10 +333,10 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private string selectedOptimizer;
         /// <summary>
-        /// 是否显示验证集比例设置
+        /// 验证集比例是否可用（未指定验证集时可用）
         /// </summary>
         [ObservableProperty]
-        private bool isEnableValSetRate;
+        private bool isValidationSplitEnabled = true;
         /// <summary>
         /// 验证集比例集合
         /// </summary>
@@ -466,6 +471,19 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool randomZoomChecked = false;
 
+        // 检测任务特有的数据增强
+        /// <summary>
+        /// 随机尺度变换是否选中（检测专用）
+        /// </summary>
+        [ObservableProperty]
+        private bool randomScaleChecked = false;
+        
+        /// <summary>
+        /// 随机色调饱和度是否选中（检测专用）
+        /// </summary>
+        [ObservableProperty]
+        private bool randomHueSaturationChecked = false;
+
         // 检测任务特有属性
         /// <summary>
         /// 训练图像路径
@@ -478,6 +496,11 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         private string? detectionValidationSetPath;
+
+        partial void OnDetectionValidationSetPathChanged(string? value)
+        {
+            UpdateValidationSplitEnabled();
+        }
 
         /// <summary>
         /// 训练标注文件路径
@@ -586,6 +609,16 @@ namespace AutoTrainer.ViewModels
                 TrainAnnotationPath = App.TrainModel?.Detection?.TrainAnnotationPath;
                 ValAnnotationPath = App.TrainModel?.Detection?.ValAnnotationPath;
 
+                // 加载检测任务的数据增强配置
+                if (App.TrainModel?.Detection?.DataAugmentation != null)
+                {
+                    RandomHorizonFlipChecked = App.TrainModel.Detection.DataAugmentation.RandomHorizonFlip;
+                    RandomBrightnessChecked = App.TrainModel.Detection.DataAugmentation.RandomBrightness;
+                    RandomContrastChecked = App.TrainModel.Detection.DataAugmentation.RandomContrast;
+                    RandomScaleChecked = App.TrainModel.Detection.DataAugmentation.RandomScale;
+                    RandomHueSaturationChecked = App.TrainModel.Detection.DataAugmentation.RandomHueSaturation;
+                }
+
                 // 如果已有训练标注文件，加载类别信息
                 if (!string.IsNullOrEmpty(TrainAnnotationPath) && File.Exists(TrainAnnotationPath))
                 {
@@ -613,10 +646,10 @@ namespace AutoTrainer.ViewModels
             }
         }
         [RelayCommand]
-        private async Task EditPath(SelectableTextBlock selectableText)
+        private async Task EditPath(TextBox textbox)
         {
             var mainWindow = App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow as SelectTrainingTypeView
+                ? desktop.MainWindow as MainWindow
                 : null;
             if (mainWindow != null)
             {
@@ -624,7 +657,7 @@ namespace AutoTrainer.ViewModels
                 if (toplevel != null)
                 {
                     // 根据控件的Tag属性判断是选择目录还是文件
-                    var pathType = selectableText.Tag as string;
+                    var pathType = textbox.Tag as string;
                     var isDirectory = true; // 默认为目录选择
 
                     if (!string.IsNullOrEmpty(pathType))
@@ -643,10 +676,10 @@ namespace AutoTrainer.ViewModels
                         if (folders.Count > 0)
                         {
                             var selectedFolder = folders[0].TryGetLocalPath();
-                            selectableText.Text = selectedFolder;
+                            textbox.Text = selectedFolder;
 
                             // 检查是否是分类训练集目录，进行ImageFolder格式检测
-                            if (selectableText.Name == "TrainDir_Tb" && !IsDetectionTask)
+                            if (textbox.Name == "TrainDir_Tb" && !IsDetectionTask)
                             {
                                 await CheckAndHandleImageFolderFormat(selectedFolder ?? string.Empty, showWarning: true);
                             }
@@ -663,20 +696,20 @@ namespace AutoTrainer.ViewModels
                         if (files.Count > 0)
                         {
                             var selectedPath = files[0].TryGetLocalPath();
-                            selectableText.Text = selectedPath;
+                            textbox.Text = selectedPath;
 
                             // 处理标注文件选择
-                            if (selectableText.Name == "ClassifyAnnotation_Tb" && !IsDetectionTask)
+                            if (textbox.Name == "ClassifyAnnotation_Tb" && !IsDetectionTask)
                             {
                                 // 分类标注文件
                                 await HandleAnnotationFileSelected(selectedPath ?? string.Empty);
                             }
-                            else if (selectableText.Name == "TrainAnnotation_Tb" && IsDetectionTask)
+                            else if (textbox.Name == "TrainAnnotation_Tb" && IsDetectionTask)
                             {
                                 // 检测训练标注文件
                                 await HandleDetectionAnnotationSelected(selectedPath ?? string.Empty);
                             }
-                            else if (selectableText.Name == "ValAnnotation_Tb" && IsDetectionTask)
+                            else if (textbox.Name == "ValAnnotation_Tb" && IsDetectionTask)
                             {
                                 // 检测验证标注文件
                                 await HandleDetectionAnnotationSelected(selectedPath ?? string.Empty);
@@ -686,18 +719,18 @@ namespace AutoTrainer.ViewModels
 
                     if (!string.IsNullOrEmpty(ClassifyValidationSetPath))
                     {
-                        IsEnableValSetRate = false;
+                        UpdateValidationSplitEnabled();
                     }
                 }
             }
         }
         [RelayCommand]
-        private void ClearPath(SelectableTextBlock selectableText)
+        private void ClearPath(TextBox textbox)
         {
-            selectableText.Text = string.Empty;
+            textbox.Text = string.Empty;
             if (string.IsNullOrEmpty(ClassifyValidationSetPath))
             {
-                IsEnableValSetRate = true;
+                UpdateValidationSplitEnabled();
             }
         }
         /// <summary>
@@ -786,6 +819,13 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.Detection.TrainAnnotationPath = TrainAnnotationPath;
                 App.TrainModel.Detection.ValAnnotationPath = ValAnnotationPath;
                 App.TrainModel.Detection.AnnotationFormat = SelectedAnnotationFormat;
+
+                // 检测任务数据增强配置
+                App.TrainModel.Detection.DataAugmentation.RandomHorizonFlip = RandomHorizonFlipChecked;
+                App.TrainModel.Detection.DataAugmentation.RandomBrightness = RandomBrightnessChecked;
+                App.TrainModel.Detection.DataAugmentation.RandomContrast = RandomContrastChecked;
+                App.TrainModel.Detection.DataAugmentation.RandomScale = RandomScaleChecked;
+                App.TrainModel.Detection.DataAugmentation.RandomHueSaturation = RandomHueSaturationChecked;
 
                 // 检测损失函数配置
                 App.TrainModel.Detection.DetectionLoss = new DetectionLossConfig
@@ -935,6 +975,25 @@ namespace AutoTrainer.ViewModels
 
             // Keypoint R-CNN 显示关键点参数
             IsShowKeypointParameters = modelName.Contains("keypointrcnn");
+        }
+
+        /// <summary>
+        /// 更新验证集比例是否可用
+        /// 逻辑：当用户指定了验证集目录时，验证集比例不可用
+        /// </summary>
+        private void UpdateValidationSplitEnabled()
+        {
+            if (IsDetectionTask)
+            {
+                // 检测任务：检查验证集图像路径和标注路径
+                IsValidationSplitEnabled = string.IsNullOrWhiteSpace(DetectionValidationSetPath) || 
+                                          string.IsNullOrWhiteSpace(ValAnnotationPath);
+            }
+            else
+            {
+                // 分类任务：检查验证集路径
+                IsValidationSplitEnabled = string.IsNullOrWhiteSpace(ClassifyValidationSetPath);
+            }
         }
 
         /// <summary>

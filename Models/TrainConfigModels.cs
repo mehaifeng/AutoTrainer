@@ -169,10 +169,13 @@ namespace AutoTrainer.Models
 
         [JsonProperty("detection_loss_config")]
         public DetectionLossConfig DetectionLoss { get; set; } = new();
+        
+        [JsonProperty("data_augmentation")]
+        public DataAugmentationConfig DataAugmentation { get; set; } = new();
     }
 
     /// <summary>
-    /// 数据增强配置
+    /// 数据增强配置（分类和检测通用）
     /// </summary>
     public class DataAugmentationConfig
     {
@@ -193,6 +196,13 @@ namespace AutoTrainer.Models
 
         [JsonProperty("random_zoom")]
         public bool RandomZoom { get; set; }
+        
+        // 检测任务特有
+        [JsonProperty("random_scale")]
+        public bool RandomScale { get; set; }
+        
+        [JsonProperty("random_hue_saturation")]
+        public bool RandomHueSaturation { get; set; }
     }
 
     /// <summary>

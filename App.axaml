@@ -33,6 +33,7 @@
 	<Application.Resources>
 		<converters:FileNameConverter x:Key="FileNameConverter"/>
 		<converters:StringUpperCaseConverter x:Key="StringUpperCaseConverter"/>
+		<converters:BoolToValidationSplitTipConverter x:Key="BoolToValidationSplitTipConverter"/>
     </Application.Resources>
 	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 

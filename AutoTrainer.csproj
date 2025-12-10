@@ -145,15 +145,13 @@
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
     <PackageReference Include="SkiaSharp" Version="3.119.2-preview.1" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.1" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
     <PackageReference Include="Xaml.Behaviors.Avalonia" Version="11.3.8.2" />
     <PackageReference Include="Xaml.Behaviors.Interactivity" Version="11.3.8.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Views\SelectTrainingTypeView.axaml.cs">
-      <DependentUpon>SelectTrainingTypeView.axaml</DependentUpon>
-    </Compile>
     <Compile Update="Views\UserControls\DatasetAnnotationView.axaml.cs">
       <DependentUpon>DatasetAnnotationView.axaml</DependentUpon>
     </Compile>

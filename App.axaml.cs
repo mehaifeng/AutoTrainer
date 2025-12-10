@@ -2,6 +2,7 @@ using AutoTrainer.Models;
 using AutoTrainer.ViewModels;
 using AutoTrainer.Views;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
@@ -48,8 +49,8 @@ namespace AutoTrainer
                         DetectionLoss = new DetectionLossConfig()
                     }
                 };
-                Log.Debug("TrainModel 初始化完成，路径 - 模型输出: {ModelOutput}, Python训练日志: {PyTrainLogs}, 变异数据: {MutationData}",
-                    ModelOutputFolderPath, PyTrainLogsFolderPath, MutationDataPath);
+                Log.Debug("TrainModel 初始化完成，路径 - 模型输出: {ModelOutput}, Python训练日志: {PyTrainLogs}",
+                    ModelOutputFolderPath, PyTrainLogsFolderPath);
 
                 string osDescription = RuntimeInformation.OSDescription;
                 string osArchitecture = RuntimeInformation.OSArchitecture.ToString();
@@ -138,7 +139,7 @@ namespace AutoTrainer
                 // Line below is needed to remove Avalonia data validation.
                 // Without this line you will get duplicate validations from both Avalonia and CT
                 BindingPlugins.DataValidators.RemoveAt(0);
-                desktop.MainWindow = new SelectTrainingTypeView();
+                desktop.MainWindow = new MainWindow();
             }
             base.OnFrameworkInitializationCompleted();
         }

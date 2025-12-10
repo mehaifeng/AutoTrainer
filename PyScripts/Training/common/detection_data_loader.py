@@ -1,6 +1,7 @@
 """
 COCO格式检测数据加载器
 支持COCO格式的目标检测数据集加载和预处理
+支持数据增强：使用 albumentations 库进行图像和 bbox 的同步变换
 """
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -10,6 +11,15 @@ import json
 import os
 from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
+
+try:
+    import albumentations as A
+    from albumentations.pytorch import ToTensorV2
+    ALBUMENTATIONS_AVAILABLE = True
+except ImportError:
+    ALBUMENTATIONS_AVAILABLE = False
+    print("警告: albumentations 未安装，数据增强功能将被禁用")
+    print("安装命令: pip install albumentations")
 
 
 class COCODetectionDataset(Dataset):
@@ -137,25 +147,95 @@ class COCODetectionDataset(Dataset):
             areas.append(ann.get('area', w * h))
             iscrowd.append(ann.get('iscrowd', 0))
         
-        # 转换为tensor
-        if len(boxes) > 0:
-            boxes = torch.as_tensor(boxes, dtype=torch.float32)
-            labels = torch.as_tensor(labels, dtype=torch.int64)
-            areas = torch.as_tensor(areas, dtype=torch.float32)
-            iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
-            
-            # 额外验证：确保标签在有效范围内
-            assert labels.min() >= 1, f"标签必须 >= 1（0是背景类），得到 min={labels.min()}"
-            assert not torch.isnan(boxes).any(), "boxes 包含 NaN"
-            assert not torch.isinf(boxes).any(), "boxes 包含 Inf"
-            assert (boxes[:, 2] > boxes[:, 0]).all(), "x_max 必须 > x_min"
-            assert (boxes[:, 3] > boxes[:, 1]).all(), "y_max 必须 > y_min"
+        # 应用变换（albumentations 或 torchvision）
+        if self.transforms is not None:
+            # 检查是否是 albumentations 变换
+            if ALBUMENTATIONS_AVAILABLE and isinstance(self.transforms, A.Compose):
+                # 转换为 numpy 数组（albumentations 需要）
+                image_np = np.array(image)
+                
+                # 准备 albumentations 格式的数据
+                # albumentations 使用 [x_min, y_min, x_max, y_max] 格式，与 COCO 转换后一致
+                transformed = self.transforms(
+                    image=image_np,
+                    bboxes=boxes,
+                    labels=labels
+                )
+                
+                # 提取变换后的数据
+                image = transformed['image']  # 已经是 tensor
+                boxes = transformed['bboxes']  # list of boxes
+                labels = transformed['labels']  # list of labels
+                
+                # 如果有框被裁剪掉（albumentations 会自动移除）
+                if len(boxes) == 0:
+                    # 创建空的 tensor
+                    boxes_tensor = torch.zeros((0, 4), dtype=torch.float32)
+                    labels_tensor = torch.zeros((0,), dtype=torch.int64)
+                    areas_tensor = torch.zeros((0,), dtype=torch.float32)
+                    iscrowd_tensor = torch.zeros((0,), dtype=torch.int64)
+                else:
+                    # 转换为 tensor
+                    boxes_tensor = torch.as_tensor(boxes, dtype=torch.float32)
+                    labels_tensor = torch.as_tensor(labels, dtype=torch.int64)
+                    
+                    # 重新计算 area（增强后可能改变）
+                    widths = boxes_tensor[:, 2] - boxes_tensor[:, 0]
+                    heights = boxes_tensor[:, 3] - boxes_tensor[:, 1]
+                    areas_tensor = widths * heights
+                    
+                    # iscrowd 保持原样（假设都是0）
+                    iscrowd_tensor = torch.zeros((len(boxes),), dtype=torch.int64)
+                    
+                    # 验证增强后的 bbox
+                    assert labels_tensor.min() >= 1, f"标签必须 >= 1，得到 min={labels_tensor.min()}"
+                    assert not torch.isnan(boxes_tensor).any(), "boxes 包含 NaN"
+                    assert not torch.isinf(boxes_tensor).any(), "boxes 包含 Inf"
+                    assert (boxes_tensor[:, 2] > boxes_tensor[:, 0]).all(), "x_max 必须 > x_min"
+                    assert (boxes_tensor[:, 3] > boxes_tensor[:, 1]).all(), "y_max 必须 > y_min"
+                
+                boxes = boxes_tensor
+                labels = labels_tensor
+                areas = areas_tensor
+                iscrowd = iscrowd_tensor
+                
+            else:
+                # 传统 torchvision 变换（仅图像）
+                image = self.transforms(image)
+                
+                # 转换为tensor
+                if len(boxes) > 0:
+                    boxes = torch.as_tensor(boxes, dtype=torch.float32)
+                    labels = torch.as_tensor(labels, dtype=torch.int64)
+                    areas = torch.as_tensor(areas, dtype=torch.float32)
+                    iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
+                    
+                    # 额外验证：确保标签在有效范围内
+                    assert labels.min() >= 1, f"标签必须 >= 1（0是背景类），得到 min={labels.min()}"
+                    assert not torch.isnan(boxes).any(), "boxes 包含 NaN"
+                    assert not torch.isinf(boxes).any(), "boxes 包含 Inf"
+                    assert (boxes[:, 2] > boxes[:, 0]).all(), "x_max 必须 > x_min"
+                    assert (boxes[:, 3] > boxes[:, 1]).all(), "y_max 必须 > y_min"
+                else:
+                    # 如果没有有效标注，创建空的tensor
+                    boxes = torch.zeros((0, 4), dtype=torch.float32)
+                    labels = torch.zeros((0,), dtype=torch.int64)
+                    areas = torch.zeros((0,), dtype=torch.float32)
+                    iscrowd = torch.zeros((0,), dtype=torch.int64)
         else:
-            # 如果没有有效标注，创建空的tensor
-            boxes = torch.zeros((0, 4), dtype=torch.float32)
-            labels = torch.zeros((0,), dtype=torch.int64)
-            areas = torch.zeros((0,), dtype=torch.float32)
-            iscrowd = torch.zeros((0,), dtype=torch.int64)
+            # 没有变换，手动转换
+            image = T.ToTensor()(image)
+            
+            if len(boxes) > 0:
+                boxes = torch.as_tensor(boxes, dtype=torch.float32)
+                labels = torch.as_tensor(labels, dtype=torch.int64)
+                areas = torch.as_tensor(areas, dtype=torch.float32)
+                iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
+            else:
+                boxes = torch.zeros((0, 4), dtype=torch.float32)
+                labels = torch.zeros((0,), dtype=torch.int64)
+                areas = torch.zeros((0,), dtype=torch.float32)
+                iscrowd = torch.zeros((0,), dtype=torch.int64)
         
         # 构建target字典
         target = {
@@ -165,10 +245,6 @@ class COCODetectionDataset(Dataset):
             'area': areas,
             'iscrowd': iscrowd
         }
-        
-        # 应用变换
-        if self.transforms is not None:
-            image = self.transforms(image)
         
         return image, target
     
@@ -197,13 +273,96 @@ class DetectionDataLoader:
         self.val_transform = self._get_val_transform()
         
     def _get_train_transform(self):
-        """获取训练数据变换"""
-        # 注意：TorchVision的检测模型（Faster R-CNN等）会在内部进行标准化
-        # 因此这里只需要ToTensor()即可，不要额外标准化
-        return T.Compose([
-            T.ToTensor(),
-            # 不使用 Normalize！检测模型内部会处理
+        """
+        获取训练数据变换
+        
+        如果启用数据增强且 albumentations 可用，使用 albumentations
+        否则回退到简单的 ToTensor
+        """
+        # 从配置中读取数据增强设置
+        augmentation = self.config.get('data_augmentation', {})
+        
+        # 检查是否启用任何增强
+        any_augmentation_enabled = any([
+            augmentation.get('random_horizon_flip', False),
+            augmentation.get('random_brightness', False),
+            augmentation.get('random_contrast', False),
+            augmentation.get('random_scale', False),
+            augmentation.get('random_hue_saturation', False),
         ])
+        
+        # 如果启用了增强且 albumentations 可用
+        if any_augmentation_enabled and ALBUMENTATIONS_AVAILABLE:
+            transform_list = []
+            
+            # 1. 随机水平翻转
+            if augmentation.get('random_horizon_flip', False):
+                transform_list.append(A.HorizontalFlip(p=0.5))
+                print("✓ 启用数据增强: 随机水平翻转")
+            
+            # 2. 随机缩放 (检测特有)
+            if augmentation.get('random_scale', False):
+                transform_list.append(
+                    A.RandomScale(scale_limit=0.2, p=0.5)  # ±20% 缩放
+                )
+                print("✓ 启用数据增强: 随机缩放 (±20%)")
+            
+            # 3. 随机亮度和对比度
+            if augmentation.get('random_brightness', False) or augmentation.get('random_contrast', False):
+                brightness_limit = 0.2 if augmentation.get('random_brightness', False) else 0.0
+                contrast_limit = 0.2 if augmentation.get('random_contrast', False) else 0.0
+                
+                if brightness_limit > 0 or contrast_limit > 0:
+                    transform_list.append(
+                        A.RandomBrightnessContrast(
+                            brightness_limit=brightness_limit,
+                            contrast_limit=contrast_limit,
+                            p=0.5
+                        )
+                    )
+                    if brightness_limit > 0 and contrast_limit > 0:
+                        print("✓ 启用数据增强: 随机亮度对比度 (±20%)")
+                    elif brightness_limit > 0:
+                        print("✓ 启用数据增强: 随机亮度 (±20%)")
+                    else:
+                        print("✓ 启用数据增强: 随机对比度 (±20%)")
+            
+            # 4. 随机色调饱和度 (检测特有)
+            if augmentation.get('random_hue_saturation', False):
+                transform_list.append(
+                    A.HueSaturationValue(
+                        hue_shift_limit=10,      # 色调偏移 ±10
+                        sat_shift_limit=20,      # 饱和度 ±20
+                        val_shift_limit=10,      # 明度 ±10
+                        p=0.5
+                    )
+                )
+                print("✓ 启用数据增强: 随机色调饱和度")
+            
+            # 转换为 PyTorch Tensor（必须）
+            transform_list.append(ToTensorV2())
+            
+            # 创建 albumentations Compose
+            # bbox_params 指定 bbox 格式和标签字段
+            return A.Compose(
+                transform_list,
+                bbox_params=A.BboxParams(
+                    format='pascal_voc',  # [x_min, y_min, x_max, y_max]
+                    label_fields=['labels'],
+                    min_area=0,
+                    min_visibility=0.3  # bbox至少30%可见才保留
+                )
+            )
+        else:
+            # 回退到简单变换
+            if any_augmentation_enabled and not ALBUMENTATIONS_AVAILABLE:
+                print("警告: 数据增强已启用但 albumentations 未安装，将使用简单变换")
+                print("安装命令: pip install albumentations")
+            
+            # TorchVision的检测模型会在内部进行标准化
+            return T.Compose([
+                T.ToTensor(),
+            ])
         
     def _get_val_transform(self):
         """获取验证数据变换"""

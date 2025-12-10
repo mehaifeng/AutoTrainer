@@ -29,7 +29,8 @@ namespace AutoTrainer.ViewModels
     {
         private CancellationTokenSource? cancellationTokenSource;
         private readonly CancellationTokenSource _refreshCts = new();
-        
+        private SystemPerformanceInfoHelper systemPerformanceInfoHelper = new();
+
         [ObservableProperty]
         private bool isTraining = false;
         
@@ -44,6 +45,7 @@ namespace AutoTrainer.ViewModels
                 InitialPlot();
                 Log.Debug("TrainingViewModel 初始化成功完成");
 
+                
                 // 启动性能监控循环
                 _ = RefreshSystemInfo();
             }
@@ -127,7 +129,7 @@ namespace AutoTrainer.ViewModels
         public ICartesianAxis[] YAxes { get; set; } = [
             new Axis
             {
-                Name = "Accuracy & Loss Rate",
+                Name = "Accuracy _ Loss Rate",
             }
         ];
         #endregion
@@ -274,7 +276,7 @@ namespace AutoTrainer.ViewModels
                 if (App.TrainModel == null)
                 {
                     Log.Error("无法开始训练: TrainModel 为空");
-                    await MessageBoxManager.GetMessageBoxStandard("训练失败", "训练模型配置为空", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("训练失败", "训练模型配置为空", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                     return;
                 }
 
@@ -293,7 +295,7 @@ namespace AutoTrainer.ViewModels
                                 "警告",
                                 $"模型输出目录中已存在同名文件: {modelBaseName}.pth 或 {modelBaseName}.pt\n继续训练可能会覆盖旧文件。",
                                 MsBox.Avalonia.Enums.ButtonEnum.Ok,
-                                MsBox.Avalonia.Enums.Icon.Warning).ShowWindowAsync();
+                                MsBox.Avalonia.Enums.Icon.Warning).ShowWindowDialogAsync(MainWindow);
                         }
                     }
                 }
@@ -322,7 +324,7 @@ namespace AutoTrainer.ViewModels
                 Log.Error(ex, "启动或完成训练过程失败");
                 IsTraining = false;
                 CanStopTraining = false;
-                await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("训练失败", $"训练过程中发生错误: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
             }
         }
         
@@ -349,12 +351,12 @@ namespace AutoTrainer.ViewModels
                     CanStopTraining = false;
                     
                     Log.Information("训练已成功停止");
-                    await MessageBoxManager.GetMessageBoxStandard("训练已停止", "训练已被用户终止", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("训练已停止", "训练已被用户终止", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                 }
                 catch (Exception ex)
                 {
                     Log.Error(ex, "停止训练时发生错误");
-                    await MessageBoxManager.GetMessageBoxStandard("错误", $"停止训练失败: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("错误", $"停止训练失败: {ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                 }
             }
             else
@@ -376,7 +378,7 @@ namespace AutoTrainer.ViewModels
                 if (App.TrainModel == null)
                 {
                     Log.Warning("App.TrainModel 为空，无法设置验证页面初始状态");
-                    await MessageBoxManager.GetMessageBoxStandard("错误", "训练模型配置为空，无法导航到验证页面").ShowWindowAsync();
+                    await MessageBoxManager.GetMessageBoxStandard("错误", "训练模型配置为空，无法导航到验证页面").ShowWindowDialogAsync(MainWindow);
                     return;
                 }
 
@@ -391,7 +393,7 @@ namespace AutoTrainer.ViewModels
             catch (Exception ex)
             {
                 Log.Error(ex, "导航到下一页失败");
-                await MessageBoxManager.GetMessageBoxStandard("严重错误", $"导航到验证页面失败: {ex.Message}").ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("严重错误", $"导航到验证页面失败: {ex.Message}").ShowWindowDialogAsync(MainWindow);
             }
         }
         #endregion
@@ -405,23 +407,16 @@ namespace AutoTrainer.ViewModels
         {
             while (true)
             {
-                const int intervalMs = 3000; // 3 秒刷新一次
+                const int intervalMs = 1000; // 3 秒刷新一次
 
                 while (!_refreshCts.IsCancellationRequested)
                 {
                     try
                     {
-                        // 并行获取三项指标，减少总耗时
-                        var cpuTask = GetCpuRateAsync();
-                        var gpuTask = GetGpuRateAsync();
-                        var ramTask = GetRamRateAsync();
-
-                        await Task.WhenAll(cpuTask, gpuTask, ramTask);
-
-                        // 写入 ObservableProperty（UI 自动更新）
-                        CPURate = (await cpuTask).ToString() + "%";
-                        GPURate = (await gpuTask).ToString() + "%";
-                        RAMRate = (await ramTask).ToString() + "%";
+                        var sysInfo = await systemPerformanceInfoHelper.GetSystemInfoAsync();
+                        CPURate = sysInfo.Item1;
+                        GPURate = sysInfo.Item2;
+                        RAMRate = sysInfo.Item3;
                     }
                     catch (Exception ex)
                     {
@@ -437,181 +432,7 @@ namespace AutoTrainer.ViewModels
                 }
             }
         }
-        /// <summary>
-        /// 获取CPU占用率
-        /// </summary>
-        /// <returns></returns>
-        private static async Task<int> GetCpuRateAsync()
-        {
-            // Windows: PowerShell Get-Counter (实时 CPU %)
-            // Linux/macOS: 使用 top -bn1
-            string cmd;
-            if (OperatingSystem.IsWindows())
-            {
-                cmd = @"powershell.exe -Command ""(Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue""";
-            }
-            else
-            {
-                cmd = @"top -bn1 | grep '%Cpu' | awk '{print $2}' | cut -d',' -f1";  // 只取 user %，避免逗号
-            }
-
-            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
-            if (result.ExitCode != 0) return 0;
-
-            string output = result.Output?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(output)) return 0;
-
-            // Windows: 直接浮点数，如 12.345
-            // Linux/macOS: 12.3
-            if (float.TryParse(output, out var percent))
-                return (int)Math.Round(percent);
-
-            return 0;
-        }
-        /// <summary>
-        /// 获取RAM占用率
-        /// </summary>
-        /// <returns></returns>
-        private static async Task<int> GetRamRateAsync()
-        {
-            string cmd;
-            if (OperatingSystem.IsWindows())
-            {
-                // PowerShell: 计算 (Total - Free) / Total * 100
-                cmd = @"powershell.exe -Command ""$total = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory; $free = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory * 1KB; [math]::Round(100 * (1 - $free / $total), 0)""";
-            }
-            else
-            {
-                // Linux/macOS: free -m，计算 used / total * 100
-                cmd = @"free -m | awk 'NR==2{printf ""%d"", $3*100/$2}'";
-            }
-
-            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
-            if (result.ExitCode != 0) return 0;
-
-            string output = result.Output?.Trim() ?? string.Empty;
-            if (string.IsNullOrEmpty(output)) return 0;
-
-            if (int.TryParse(output, out var percent))
-                return Math.Max(0, Math.Min(100, percent));  // 限制 0-100
-
-            return 0;
-        }
-        /// <summary>
-        /// 获取GPU占用率
-        /// </summary>
-        /// <returns></returns>
-        private static async Task<int> GetGpuRateAsync()
-        {
-            // 只在检测到 nvidia-smi 时尝试
-            string checkCmd = OperatingSystem.IsWindows()
-                ? "where nvidia-smi"
-                : "which nvidia-smi";
-
-            var check = await CliWrapHelper.ExecuteLine(checkCmd, enableVerboseLogging: false);
-            if (check.ExitCode != 0) return -1; // -1 表示不支持
-
-            string cmd = @"nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits";
-            var result = await CliWrapHelper.ExecuteLine(cmd, enableVerboseLogging: false);
-            if (result.ExitCode != 0) return -1;
-
-            var line = result.Output?.Trim();
-            if (int.TryParse(line, out var percent))
-                return percent;
-
-            return -1;
-        }
-        /// <summary>
-        /// 图像增强
-        /// </summary>
-        private void ImageEnhancement()
-        {
-            Log.Debug("开始图像增强过程");
-            try
-            {
-                var dataAug = App.TrainModel.Classification?.DataAugmentation ?? new DataAugmentationConfig();
-                bool[] checks =
-                [
-                    dataAug.RandomRotation,
-                    dataAug.RandomZoom,
-                    dataAug.RandomBrightness,
-                    dataAug.RandomContrast,
-                    dataAug.RandomHorizonFlip,
-                    dataAug.RandomVerticalFlip
-                ];
-
-                var enabledAugmentations = new List<string>();
-                if (dataAug.RandomRotation) enabledAugmentations.Add("Rotation");
-                if (dataAug.RandomZoom) enabledAugmentations.Add("Zoom");
-                if (dataAug.RandomBrightness) enabledAugmentations.Add("Brightness");
-                if (dataAug.RandomContrast) enabledAugmentations.Add("Contrast");
-                if (dataAug.RandomHorizonFlip) enabledAugmentations.Add("HorizontalFlip");
-                if (dataAug.RandomVerticalFlip) enabledAugmentations.Add("VerticalFlip");
-
-                if (checks.All(t => !t))
-                {
-                    Log.Information("未启用图像增强，跳过图像增强");
-                    return;
-                }
-
-                Log.Information("启用图像增强: {Augmentations}", string.Join(", ", enabledAugmentations));
-                PyOutput += "\n正在图像增强...";
-                //先读取训练数据，然后增强图像，生成新的训练数据
-                var dataSetPath = App.TrainModel.Classification?.TrainDataPath;
-                if (dataSetPath != null)
-                {
-                    Log.Debug("为数据集开始图像增强: {DataSetPath}", dataSetPath);
-                    var dataSetClassify = Directory.GetDirectories(dataSetPath);
-                    var augemnetDataFolder = Path.Combine(Environment.CurrentDirectory, "DataSet", "AugmentTrainingData");
-
-                    Log.Debug("准备增强输出文件夹: {AugmentFolder}", augemnetDataFolder);
-                    Directory.CreateDirectory(augemnetDataFolder);
-                    Directory.Delete(augemnetDataFolder, true);
-                    Directory.CreateDirectory(augemnetDataFolder);
-
-                    Log.Information("处理 {ClassCount} 个图像类进行增强", dataSetClassify.Length);
-                    var totalImagesProcessed = 0;
-
-                    for (int i = 0; i < dataSetClassify.Length; i++)
-                    {
-                        var className = Path.GetFileName(dataSetClassify[i]);
-                        var augemnetTypeFolder = Path.Combine(augemnetDataFolder, className);
-                        Directory.CreateDirectory(augemnetTypeFolder);
-                        var imageFiles = Directory.GetFiles(dataSetClassify[i]);
-
-                        Log.Debug("处理类 {ClassName} ({CurrentClass}/{TotalClasses}) 包含 {ImageCount} 张图像",
-                            className, i + 1, dataSetClassify.Length, imageFiles.Length);
-
-                        foreach (var imageFile in imageFiles)
-                        {
-                            try
-                            {
-                                ImageAugmentation.AugmentImageOne(i, checks, imageFile, augemnetTypeFolder, 1);
-                                totalImagesProcessed++;
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Warning(ex, "图像增强失败: {ImagePath}", imageFile);
-                            }
-                        }
-                    }
-                    Log.Information("图像增强完成。处理了 {TotalImages} 张图像，跨越 {ClassCount} 个类",
-                        totalImagesProcessed, dataSetClassify.Length);
-                    App.TrainModel.Classification ??= new ClassificationConfig();
-                    App.TrainModel.Classification.TrainDataPath = augemnetDataFolder;
-                    Log.Debug("更新训练数据路径为: {NewPath}", augemnetDataFolder);
-                }
-                else
-                {
-                    Log.Warning("训练数据路径为空，无法执行图像增强");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "图像增强失败");
-                throw;
-            }
-        }
+        
         /// <summary>
         /// 开始分类训练流程
         /// </summary>
@@ -628,23 +449,8 @@ namespace AutoTrainer.ViewModels
             cancellationTokenSource = new CancellationTokenSource();
 
             Log.Debug("初始化图表和输出信息");
-            #region 初始化图标和输出信息
-            await Task.Run(() =>
-            {
-                try
-                {
-                    Log.Debug("开始图像增强过程");
-                    ImageEnhancement();
-                    Log.Debug("图像增强成功完成");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "图像增强失败");
-                    throw;
-                }
-            });
 
-            PyOutput += "\n图像增强结束";
+            #region 初始化图标和输出信息
             InitialPlot();
             PyOutput = string.Empty;
             #endregion
@@ -683,7 +489,7 @@ namespace AutoTrainer.ViewModels
             {
                 var errorMessage = result.Error ?? "Unknown error occurred during training";
                 Log.Error("Python分类训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
-                await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                 IsTraining = false;
                 CanStopTraining = false;
                 return;
@@ -713,7 +519,7 @@ namespace AutoTrainer.ViewModels
             // 验证检测任务必需的路径
             if (string.IsNullOrEmpty(App.TrainModel.Detection?.TrainImagesPath) || string.IsNullOrEmpty(App.TrainModel.Detection?.TrainAnnotationPath))
             {
-                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", "请设置训练图像路径和标注文件路径", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                 return;
             }
 
@@ -754,7 +560,7 @@ namespace AutoTrainer.ViewModels
             {
                 var errorMessage = result.Error ?? "Unknown error occurred during detection training";
                 Log.Error("Python检测训练脚本失败，退出码 {ExitCode}: {Error}", result.ExitCode, errorMessage);
-                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowAsync();
+                await MessageBoxManager.GetMessageBoxStandard("检测训练失败", errorMessage, MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                 IsTraining = false;
                 CanStopTraining = false;
                 return;

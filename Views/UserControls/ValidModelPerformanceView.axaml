@@ -345,6 +345,7 @@
 							Text="{Binding VerificationOutput}"
 							IsReadOnly="True"
 							TextWrapping="Wrap"
+							FontFamily="Consolas"
 							Margin="10"/>
                     </ScrollViewer>
                 </TabItem>
