@@ -366,6 +366,16 @@ namespace AutoTrainer.ViewModels
         }
         
         /// <summary>
+        /// 清空输出日志
+        /// </summary>
+        [RelayCommand]
+        private void ClearOutput()
+        {
+            Log.Debug("清空训练输出日志");
+            PyOutput = string.Empty;
+        }
+        
+        /// <summary>
         /// 转到下一页
         /// </summary>
         /// <returns></returns>
@@ -941,6 +951,10 @@ namespace AutoTrainer.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
+                // 更新总轮数为当前早停的轮数，使进度条显示为100%
+                EpochState.TotalEpochs = entry.Epoch;
+                EpochState.CurrentEpoch = entry.Epoch;
+                
                 PyOutput += $"\n⏸️ 早停触发 (Epoch {entry.Epoch})\n";
                 PyOutput += $"   原因: {entry.Reason}\n";
                 PyOutput += $"   最佳Epoch: {entry.BestEpoch}\n";
@@ -949,6 +963,9 @@ namespace AutoTrainer.ViewModels
                     PyOutput += $"   {metric.Key}: {metric.Value:F6}\n";
                 }
                 PyOutput += "\n";
+                
+                Log.Information("训练早停于第 {Epoch} 轮，进度条已更新为 {Current}/{Total}", 
+                    entry.Epoch, entry.Epoch, entry.Epoch);
             });
         }
 

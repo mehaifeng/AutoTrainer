@@ -96,5 +96,28 @@ namespace AutoTrainer.Models
         private int? currentEpoch = 0;
         [ObservableProperty] 
         private int? totalEpochs = 100;
+        
+        /// <summary>
+        /// 进度百分比
+        /// </summary>
+        public double ProgressPercentage
+        {
+            get
+            {
+                if (TotalEpochs == null || TotalEpochs == 0 || CurrentEpoch == null)
+                    return 0;
+                return (double)CurrentEpoch.Value / TotalEpochs.Value * 100;
+            }
+        }
+        
+        partial void OnCurrentEpochChanged(int? value)
+        {
+            OnPropertyChanged(nameof(ProgressPercentage));
+        }
+        
+        partial void OnTotalEpochsChanged(int? value)
+        {
+            OnPropertyChanged(nameof(ProgressPercentage));
+        }
     }
 }

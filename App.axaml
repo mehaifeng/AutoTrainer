@@ -5,7 +5,7 @@
 			 xmlns:converters="using:AutoTrainer.Converters"
 			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:themes="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
 	<Application.Styles>
 		<!--<Style Selector="TextBox">
 			<Setter Property="FontFamily">
