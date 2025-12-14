@@ -21,6 +21,7 @@ using Microsoft.Extensions.Primitives;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace AutoTrainer.ViewModels
 {
@@ -68,16 +69,6 @@ namespace AutoTrainer.ViewModels
             "six",
             "onnx-graphsurgeon",
             "sng4onnx"];
-        private readonly HashSet<string> excludedPaths =
-        [
-            @"Windows",
-            @"Documents and Settings",
-            @"Program Files",
-            @"Program Files (x86)",
-            @"ProgramData",
-            @"System Volume Information",
-            @"$RECYCLE.BIN"
-        ];
         private List<string> missingApps = [];
         StringBuilder sb = new StringBuilder();
         #endregion
@@ -324,49 +315,91 @@ namespace AutoTrainer.ViewModels
         /// <returns></returns>
         private bool ShouldSkipDirectory(string path)
         {
-            if (path.StartsWith("C:\\Users\\", StringComparison.OrdinalIgnoreCase))
+            // 针对 Linux/macOS 系统根目录的精确匹配
+            var unixSystemDirs = new[] 
+            { 
+                "/proc", "/sys", "/dev", "/boot", "/root", 
+                "/bin", "/sbin", "/lib", "/lib64", 
+                "/tmp", "/var/tmp", "/run", "/snap" 
+            };
+            
+            if (!OperatingSystem.IsWindows())
             {
-                return true;
-            }
-
-            return excludedPaths.Any(excluded =>
-                path.Contains(excluded, StringComparison.OrdinalIgnoreCase));
-        }
-        /// <summary>
-        /// 扫描Venv目录
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        private async Task ScanDirectory(string path)
-        {
-            await Task.Run(async () =>
-            {
-                try
+                // Linux/macOS: 只匹配根级系统目录或其直接子目录
+                foreach (var sysDir in unixSystemDirs)
                 {
-                    if (ShouldSkipDirectory(path)) return;
-                    foreach (var dir in Directory.GetDirectories(path))
+                    if (path == sysDir || path.StartsWith(sysDir + "/", StringComparison.Ordinal))
                     {
-                        if (ShouldSkipDirectory(dir)) continue;
-                        ScanningFolder = dir;
-                        // 检查是否为venv目录
-                        if (IsVenvDirectory(dir))
-                        {
-                            sb.AppendLine($"找到虚拟环境：{dir}");
-                            PythonVenvPaths.Add(dir);
-                            PythonVenvPath ??= dir;
-                            Outputs = sb.ToString();
-                        }
-                        ScanDirectory(dir).Wait();
+                        return true;
                     }
                 }
-                catch (UnauthorizedAccessException) { }
-                catch (DirectoryNotFoundException) { }
-                catch (IOException) { }
-                catch (Exception ex)
+            }
+            
+            // Windows: 使用 Contains 匹配（如 C:\Windows\System32）
+            var windowsExcludedPaths = new[] 
+            { 
+                "Windows", "Documents and Settings", 
+                "Program Files", "Program Files (x86)", 
+                "ProgramData", "System Volume Information", 
+                "$RECYCLE.BIN", "$WinREAgent" 
+            };
+            
+            if (OperatingSystem.IsWindows())
+            {
+                return windowsExcludedPaths.Any(excluded =>
+                    path.Contains(excluded, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            return false;
+        }
+        /// <summary>
+        /// 扫描Venv目录（递归，同步方法避免死锁）
+        /// </summary>
+        /// <param name="path"></param>
+        private void ScanDirectoryRecursive(string path)
+        {
+            try
+            {
+                if (ShouldSkipDirectory(path)) return;
+                
+                foreach (var dir in Directory.GetDirectories(path))
                 {
-                    await MessageBoxManager.GetMessageBoxStandard("扫描识别", $"警告：扫描目录 {path} 时出错：{ex.Message}\n", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
+                    if (ShouldSkipDirectory(dir)) continue;
+                    
+                    ScanningFolder = dir;
+                    
+                    // 检查是否为venv目录
+                    if (IsVenvDirectory(dir))
+                    {
+                        sb.AppendLine($"找到虚拟环境：{dir}");
+                        PythonVenvPaths.Add(dir);
+                        PythonVenvPath ??= dir;
+                        Outputs = sb.ToString();
+                        
+                        // 找到 venv 后不再递归进入其子目录（venv内部不会再有venv）
+                        continue;
+                    }
+                    
+                    // 递归扫描子目录（同步调用，避免 .Wait() 死锁）
+                    ScanDirectoryRecursive(dir);
                 }
-            });
+            }
+            catch (UnauthorizedAccessException) 
+            { 
+                // 静默忽略无权限目录
+            }
+            catch (DirectoryNotFoundException) 
+            { 
+                // 静默忽略不存在的目录
+            }
+            catch (IOException) 
+            { 
+                // 静默忽略IO错误
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "扫描目录 {Path} 时出错", path);
+            }
         }
         /// <summary>
         /// 是否为Venv目录
@@ -377,15 +410,52 @@ namespace AutoTrainer.ViewModels
         {
             try
             {
-                // 检查典型的venv目录特征
+                // 检查 pyvenv.cfg 文件（所有平台都有）
                 var pyvenvCfg = Path.Combine(path, "pyvenv.cfg");
-                var scriptsDir = Path.Combine(path, "Scripts");
-                var binDir = Path.Combine(path, "bin");
-                var libDir = Path.Combine(path, "Lib", "site-packages");
+                if (!File.Exists(pyvenvCfg))
+                {
+                    return false;
+                }
 
-                return (File.Exists(pyvenvCfg) &&
-                       (Directory.Exists(scriptsDir) || Directory.Exists(binDir)) &&
-                       Directory.Exists(libDir));
+                // 检查可执行文件目录（Windows: Scripts/, Linux/macOS: bin/）
+                var executableDir = OperatingSystem.IsWindows()
+                    ? Path.Combine(path, "Scripts")
+                    : Path.Combine(path, "bin");
+
+                if (!Directory.Exists(executableDir))
+                {
+                    return false;
+                }
+
+                // 检查 site-packages 目录
+                // Windows: Lib/site-packages
+                // Linux/macOS: lib/pythonX.Y/site-packages
+                if (OperatingSystem.IsWindows())
+                {
+                    var libDir = Path.Combine(path, "Lib", "site-packages");
+                    return Directory.Exists(libDir);
+                }
+                else
+                {
+                    // Linux/macOS: 查找 lib/python*/site-packages
+                    var libDir = Path.Combine(path, "lib");
+                    if (!Directory.Exists(libDir))
+                    {
+                        return false;
+                    }
+
+                    // 查找任何 pythonX.Y 目录
+                    foreach (var dir in Directory.GetDirectories(libDir, "python*"))
+                    {
+                        var sitePackages = Path.Combine(dir, "site-packages");
+                        if (Directory.Exists(sitePackages))
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
             }
             catch (Exception)
             {
@@ -569,30 +639,73 @@ namespace AutoTrainer.ViewModels
         public async Task ScanningVenv()
         {
             IsScanningVenv = true;
+            
+            // 在扫描开始前清空集合（只清空一次）
+            PythonVenvPaths.Clear();
+            sb.Clear();
+            Outputs = string.Empty;
+            
             try
             {
-                var drives = DriveInfo.GetDrives()
-                    .Where(d => d.DriveType == DriveType.Fixed)
-                    .Select(d => d.RootDirectory.FullName);
-
-                foreach (var drive in drives)
+                IEnumerable<string> searchRoots;
+                
+                if (OperatingSystem.IsWindows())
                 {
-                    try
-                    {
-                        PythonVenvPaths = [];
-                        await ScanDirectory(drive);
-                    }
-                    catch (Exception ex)
-                    {
-                        await MessageBoxManager.GetMessageBoxStandard("扫描识别",$"扫描驱动器 {drive} 时出错：{ex.Message}\n",MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
-                    }
+                    // Windows: 扫描所有固定磁盘驱动器
+                    searchRoots = DriveInfo.GetDrives()
+                        .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
+                        .Select(d => d.RootDirectory.FullName);
                 }
+                else
+                {
+                    // Linux/macOS: 只扫描主要的用户和应用目录
+                    // 避免扫描虚拟文件系统挂载点（/sys, /proc 等）
+                    var potentialRoots = new[] { "/home", "/Users", "/opt", "/usr/local" };
+                    searchRoots = potentialRoots.Where(Directory.Exists);
+                    
+                    sb.AppendLine("Linux/macOS 系统，将扫描以下目录:");
+                    foreach (var root in searchRoots)
+                    {
+                        sb.AppendLine($"  - {root}");
+                    }
+                    sb.AppendLine();
+                    Outputs = sb.ToString();
+                }
+
+                // 在后台线程执行扫描，避免阻塞UI
+                await Task.Run(() =>
+                {
+                    foreach (var drive in searchRoots)
+                    {
+                        try
+                        {
+                            sb.AppendLine($"正在扫描: {drive}");
+                            Outputs = sb.ToString();
+                            
+                            // 使用同步递归方法扫描（避免死锁）
+                            ScanDirectoryRecursive(drive);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "扫描目录 {Drive} 时出错", drive);
+                            sb.AppendLine($"扫描 {drive} 时出错：{ex.Message}");
+                            Outputs = sb.ToString();
+                        }
+                    }
+                });
+                
+                sb.AppendLine($"\n扫描完成！共找到 {PythonVenvPaths.Count} 个虚拟环境");
+                Outputs = sb.ToString();
             }
             catch (Exception ex)
             {
-                await MessageBoxManager.GetMessageBoxStandard($"发生错误：{ex.Message}", "错误").ShowWindowDialogAsync(MainWindow);
+                Log.Error(ex, "扫描虚拟环境时发生错误");
+                await MessageBoxManager.GetMessageBoxStandard("错误", $"发生错误：{ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
             }
-            IsScanningVenv = false;
+            finally
+            {
+                IsScanningVenv = false;
+            }
         }
         /// <summary>
         /// 创建Venv环境

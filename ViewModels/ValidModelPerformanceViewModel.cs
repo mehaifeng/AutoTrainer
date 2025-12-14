@@ -273,7 +273,7 @@ namespace AutoTrainer.ViewModels
                 await MessageBoxManager.GetMessageBoxStandard("错误", "提供的COCO标注文件路径无效").ShowWindowDialogAsync(MainWindow);
                 return;
             }
-            if(string.IsNullOrEmpty(App.PythonVenvPath) || !Directory.Exists(Path.Combine(App.PythonVenvPath, "Scripts")))
+            if(string.IsNullOrEmpty(App.PythonVenvPath) || !await CliWrapHelper.IsVenvValid(App.PythonVenvPath))
             {
                 await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowDialogAsync(MainWindow);
                 return;
