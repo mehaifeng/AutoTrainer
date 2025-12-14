@@ -506,8 +506,6 @@ class DetectionDataLoader:
             images.append(image)
             targets.append(target)
         
-        # 将图像堆叠成tensor
-        images = torch.stack(images, dim=0)
-        
-        # targets保持为列表，因为每个图像的目标数量不同
+        # 检测模型需要图像列表，不是batch tensor
+        # ToTensor() 已将图像转换为 float [0, 1] 范围
         return images, targets
