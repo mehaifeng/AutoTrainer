@@ -142,7 +142,7 @@
 												Width="26"
 												Height="26"
 												Background="{x:Null}"
-                                                Command="{Binding DataContext.RemoveClassCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                Command="{Binding $parent[ListBox].DataContext.RemoveClassCommand}"
                                                 CommandParameter="{Binding .}"
                                                 ToolTip.Tip="删除类别">
 												<!--删除图标-->

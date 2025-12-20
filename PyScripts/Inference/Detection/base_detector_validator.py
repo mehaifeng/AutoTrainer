@@ -16,6 +16,25 @@ from typing import Dict, List, Tuple, Any
 from abc import ABC, abstractmethod
 from pycocotools.coco import COCO
 
+# 导入训练工具以确保设备兼容性
+training_common_path = Path(__file__).parent.parent.parent / "Training" / "common"
+sys.path.insert(0, str(training_common_path))
+try:
+    from utils import get_device
+    HAS_UTILS = True
+except ImportError:
+    HAS_UTILS = False
+    # 回退方案：基本设备检测
+    def get_device():
+        if torch.cuda.is_available():
+            return torch.device('cuda')
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return torch.device('mps')
+        else:
+            return torch.device('cpu')
+finally:
+    sys.path.pop(0)
+
 
 class BaseDetectionValidator(ABC):
     """检测验证器基类"""
@@ -30,7 +49,7 @@ class BaseDetectionValidator(ABC):
         with open(config_path, 'r') as f:
             self.config = json.load(f)
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = get_device()
         self.model = None
         self.coco = None
         self.categories = {}

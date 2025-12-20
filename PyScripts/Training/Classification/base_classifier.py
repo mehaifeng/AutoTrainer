@@ -201,7 +201,7 @@ class BaseClassificationTrainer:
             
         # 计算epoch指标
         epoch_loss = running_loss / len(self.train_loader.dataset)
-        epoch_acc = running_corrects.double() / len(self.train_loader.dataset)
+        epoch_acc = running_corrects.float() / len(self.train_loader.dataset)
         
         return {
             'loss': epoch_loss,
@@ -236,7 +236,7 @@ class BaseClassificationTrainer:
                 
         # 计算epoch指标
         epoch_loss = running_loss / len(self.val_loader.dataset)
-        epoch_acc = running_corrects.double() / len(self.val_loader.dataset)
+        epoch_acc = running_corrects.float() / len(self.val_loader.dataset)
         
         return {
             'loss': epoch_loss,

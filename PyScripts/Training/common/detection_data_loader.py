@@ -11,6 +11,11 @@ import json
 import os
 from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
+import sys
+
+# 添加utils模块
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils import should_pin_memory
 
 try:
     import albumentations as A
@@ -427,7 +432,7 @@ class DetectionDataLoader:
             shuffle=True,
             num_workers=num_workers,
             collate_fn=self._collate_fn,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         val_loader = DataLoader(
@@ -436,7 +441,7 @@ class DetectionDataLoader:
             shuffle=False,
             num_workers=num_workers,
             collate_fn=self._collate_fn,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         return train_loader, val_loader
