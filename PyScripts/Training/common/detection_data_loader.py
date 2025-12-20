@@ -506,8 +506,6 @@ class DetectionDataLoader:
             images.append(image)
             targets.append(target)
         
-        # 将图像堆叠成tensor
-        images = torch.stack(images, dim=0)
-        
+        # 保持images为列表格式，因为Faster R-CNN接受List[Tensor]以支持不同尺寸的图像
         # targets保持为列表，因为每个图像的目标数量不同
         return images, targets

@@ -221,13 +221,13 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task GetPython()
         {
-            var command = OperatingSystem.IsWindows() ? "where python" : "which python";
+            var command = OperatingSystem.IsWindows() ? "where python3" : "which python3";
             var result = await CliWrapHelper.ExecuteLine(command);
             if (result.ExitCode == 0)
             {
                 if (!string.IsNullOrEmpty(result.Output))
                 {
-                    var splitChart = OperatingSystem.IsWindows() ? "\r\n" : OperatingSystem.IsLinux()? "\n" : "\r";
+                    var splitChart = OperatingSystem.IsWindows() ? "\r\n" : "\n";
                     var validPythons = new List<string>();
                     //所有的Python路径
                     var pythonPaths = result.Output.Split(splitChart);
@@ -243,7 +243,8 @@ namespace AutoTrainer.ViewModels
                         }
                         else
                         {
-                            var validResult = await CliWrapHelper.ExecuteLine(path + " --version");
+                            var testCommand = string.Concat(path, " --version");
+                            var validResult = await CliWrapHelper.ExecuteLine(testCommand);
                             if (validResult.Error != null && validResult.Output != null)
                             {
                                 if (validResult.Error.Contains("Python"))
@@ -606,9 +607,9 @@ namespace AutoTrainer.ViewModels
             string venvName = DateTime.Now.ToString("yyMMddHHmmss_Venv");
             IsEnablePythonConfigView = false;
             StringBuilder sb = new StringBuilder();
-            sb.Append($"cd /d{venvFolder}");
+            sb.Append($"cd {venvFolder}");
             sb.Append(" && ");
-            sb.Append($"python -m venv {venvName}");
+            sb.Append($"python3 -m venv {venvName}");
             var command = sb.ToString();
             var result = await CliWrapHelper.ExecuteLine(command, onOutputReceived:HandleOutput);
             if (result.ExitCode == 0)

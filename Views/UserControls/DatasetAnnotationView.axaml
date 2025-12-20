@@ -121,6 +121,7 @@
 							</Button>
 
                             <ListBox
+                                x:Name="ListBoxClassItem"
                                 MaxHeight="150"
                                 ItemsSource="{Binding ClassNames}"
                                 SelectedItem="{Binding SelectedClassName}"
@@ -141,7 +142,7 @@
 												Width="26"
 												Height="26"
 												Background="{x:Null}"
-                                                Command="{Binding $parent[ListBox].DataContext.RemoveClassCommand}"
+                                                Command="{Binding DataContext.RemoveClassCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding .}"
                                                 ToolTip.Tip="删除类别">
 												<!--删除图标-->

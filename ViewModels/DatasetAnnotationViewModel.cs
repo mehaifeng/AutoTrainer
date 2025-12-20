@@ -657,7 +657,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void RemoveClass(string className)
         {
-            if (ClassNames.Contains(className) && ClassNames.Count > 1)
+            if (ClassNames.Contains(className) && ClassNames.Count >= 1)
             {
                 ClassNames.Remove(className);
 
