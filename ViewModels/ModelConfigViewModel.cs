@@ -625,6 +625,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task ExecutePy()
         {
+            ThemeManager.Toggle();
             if (IsCheckedVenv && !string.IsNullOrEmpty(PythonVenvPath))
             {
                 missingApps = [];

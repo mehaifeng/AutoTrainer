@@ -6,42 +6,134 @@
 			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:themes="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
              RequestedThemeVariant="Default">
-	<Application.Styles>
-		<!--<Style Selector="TextBox">
-			<Setter Property="FontFamily">
-				Source Han Sans CN Normal
-			</Setter>
-		</Style>
-		<Style Selector="TextBlock">
-			<Setter Property="FontFamily">
-				Source Han Sans CN Normal
-			</Setter>
-		</Style>
-		<Style Selector="RadioButton">
-			<Setter Property="FontFamily">
-				Source Han Sans CN Normal
-			</Setter>
-		</Style>
-		<Style Selector="AccessText">
-			<Setter Property="FontFamily">
-				Source Han Sans CN Normal
-			</Setter>
-		</Style>-->
-		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
-		<StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
-	</Application.Styles>
-	<Application.Resources>
-		<converters:FileNameConverter x:Key="FileNameConverter"/>
-		<converters:StringUpperCaseConverter x:Key="StringUpperCaseConverter"/>
-		<converters:BoolToValidationSplitTipConverter x:Key="BoolToValidationSplitTipConverter"/>
+             
+    <!-- Application Resources -->
+    <Application.Resources>
+        <converters:FileNameConverter x:Key="FileNameConverter"/>
+        <converters:StringUpperCaseConverter x:Key="StringUpperCaseConverter"/>
+        <converters:BoolToValidationSplitTipConverter x:Key="BoolToValidationSplitTipConverter"/>
+        
+        <!-- 主题颜色定义 -->
+        <!-- 浅色主题颜色 -->
+        <Color x:Key="PrimaryColor">#2196F3</Color>
+        <Color x:Key="AccentColor">#FF9800</Color>
+        <Color x:Key="SuccessColor">#4CAF50</Color>
+        <Color x:Key="WarningColor">#FF9800</Color>
+        <Color x:Key="ErrorColor">#F44336</Color>
+        
+        <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
     </Application.Resources>
-	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    
+    <!-- Application Styles -->
+	<Application.Styles>
+        <!-- Fluent Theme with custom colors -->
+        <themes:FluentTheme>
+            <themes:FluentTheme.Palettes>
+                <!-- Light Theme -->
+                <themes:ColorPaletteResources x:Key="Light" 
+                                              Accent="#2196F3"
+                                              AltHigh="White"
+                                              AltLow="White"
+                                              AltMedium="White"
+                                              AltMediumHigh="White"
+                                              AltMediumLow="White"
+                                              BaseHigh="Black"
+                                              BaseLow="#CCCCCC"
+                                              BaseMedium="#999999"
+                                              BaseMediumHigh="#666666"
+                                              BaseMediumLow="#B3B3B3"
+                                              ChromeAltLow="#999999"
+                                              ChromeBlackHigh="Black"
+                                              ChromeBlackLow="#CCCCCC"
+                                              ChromeBlackMedium="#999999"
+                                              ChromeBlackMediumLow="#B3B3B3"
+                                              ChromeDisabledHigh="#CCCCCC"
+                                              ChromeDisabledLow="#999999"
+                                              ChromeGray="#808080"
+                                              ChromeHigh="#CCCCCC"
+                                              ChromeLow="#F0F0F0"
+                                              ChromeMedium="#E6E6E6"
+                                              ChromeMediumLow="#F0F0F0"
+                                              ChromeWhite="White"
+                                              ListLow="#E6E6E6"
+                                              ListMedium="#CCCCCC"
+                                              RegionColor="#FAFAFA"
+                                              ErrorText="#F44336"
+                                              />
+                
+                <!-- Dark Theme -->
+                <themes:ColorPaletteResources x:Key="Dark" 
+                                              Accent="#42A5F5"
+                                              AltHigh="Black"
+                                              AltLow="Black"
+                                              AltMedium="Black"
+                                              AltMediumHigh="Black"
+                                              AltMediumLow="Black"
+                                              BaseHigh="White"
+                                              BaseLow="#333333"
+                                              BaseMedium="#9A9A9A"
+                                              BaseMediumHigh="#B4B4B4"
+                                              BaseMediumLow="#676767"
+                                              ChromeAltLow="#B4B4B4"
+                                              ChromeBlackHigh="Black"
+                                              ChromeBlackLow="#B4B4B4"
+                                              ChromeBlackMedium="Black"
+                                              ChromeBlackMediumLow="Black"
+                                              ChromeDisabledHigh="#333333"
+                                              ChromeDisabledLow="#858585"
+                                              ChromeGray="#808080"
+                                              ChromeHigh="#767676"
+                                              ChromeLow="#171717"
+                                              ChromeMedium="#1F1F1F"
+                                              ChromeMediumLow="#2C2C2C"
+                                              ChromeWhite="White"
+                                              ListLow="#1F1F1F"
+                                              ListMedium="#333333"
+                                              RegionColor="#121212"
+                                              ErrorText="#EF5350"
+                                              />
+            </themes:FluentTheme.Palettes>
+        </themes:FluentTheme>
+        
+        <!-- 通知组件样式 -->
+		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
+        
+        <!-- 图标库样式 -->
+		<StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
+        
+        <!-- 自定义样式 -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="16,8"/>
+        </Style>
+        
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="16,8"/>
+        </Style>
+        
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource SystemAltHighColor}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemBaseMediumLowColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        
+        <!-- 保持原有控件样式兼容性 -->
+        <StyleInclude Source="avares://AutoTrainer/Resources/ControlStyles.axaml"/>
+	</Application.Styles>
 
+    <!-- Data Templates -->
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
-  
-    <Application.Styles>
-        <themes:FluentTheme/>
-    </Application.Styles>
 </Application>

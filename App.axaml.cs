@@ -11,6 +11,7 @@ using Serilog;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using AutoTrainer.Helpers;
 
 namespace AutoTrainer
 {

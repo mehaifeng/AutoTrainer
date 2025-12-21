@@ -34,6 +34,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Brushes = Avalonia.Media.Brushes;
 using Path = System.IO.Path;
 
 namespace AutoTrainer.ViewModels
@@ -326,14 +327,7 @@ namespace AutoTrainer.ViewModels
         private void SelectDetectionRectType()
         {
             IsCheckDetectionRectType = true;
-            NotifyManager.CreateMessage()
-                .Accent("#161616")
-                .Background("#e5e4e2")
-                .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                .HasBadge("Info")
-                .HasMessage("已切换到识别框标签模式")
-                .Dismiss().WithDelay(2000, t => { })
-                .Queue();
+            NotifyManager.ShowInfo("已切换到识别框标签模式", 2);
 
             // 如果有导入的COCO数据，重新处理标注
             ReprocessAnnotationsFromCOCOData();
@@ -346,14 +340,7 @@ namespace AutoTrainer.ViewModels
         private void SelectInstanceSegmentType()
         {
             IsCheckDetectionRectType = false;
-            NotifyManager.CreateMessage()
-                .Accent("#161616")
-                .Background("#e5e4e2")
-                .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                .HasBadge("Info")
-                .HasMessage("已切换到实例分割标签模式")
-                .Dismiss().WithDelay(2000, t => { })
-                .Queue();
+            NotifyManager.ShowInfo("已切换到实例分割标签模式", 2);
 
             // 如果有导入的COCO数据，重新处理标注
             ReprocessAnnotationsFromCOCOData();
@@ -414,19 +401,19 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 检查并解析ImageFolder格式
         /// </summary>
-        private async Task CheckAndParseImageFolderFormat(string folderPath)
+        private Task CheckAndParseImageFolderFormat(string folderPath)
         {
             try
             {
                 if (!Directory.Exists(folderPath))
-                    return;
+                    return Task.CompletedTask;
 
                 var subDirs = Directory.GetDirectories(folderPath);
                 
                 if (subDirs.Length < 2)
                 {
                     Log.Information("目录不符合ImageFolder格式（至少需要2个类别文件夹）");
-                    return;
+                    return Task.CompletedTask;
                 }
 
                 var validClasses = new List<string>();
@@ -476,14 +463,7 @@ namespace AutoTrainer.ViewModels
                     // 更新类别数
                     App.TrainModel.NumClasses = validClasses.Count;
 
-                    NotifyManager.CreateMessage()
-                        .Accent("#1E88E5")
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("成功")
-                        .HasMessage($"检测到ImageFolder格式，共 {validClasses.Count} 个类别：{string.Join(", ", validClasses)}")
-                        .Dismiss().WithDelay(6000, t => { })
-                        .Queue();
+                    NotifyManager.ShowSuccess($"检测到ImageFolder格式，共 {validClasses.Count} 个类别：{string.Join(", ", validClasses)}", 6);
 
                     Log.Information($"检测到ImageFolder格式，{validClasses.Count} 个类别: {string.Join(", ", validClasses)}");
                 }
@@ -496,6 +476,8 @@ namespace AutoTrainer.ViewModels
             {
                 Log.Error(ex, "检查ImageFolder格式时出错");
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -511,14 +493,7 @@ namespace AutoTrainer.ViewModels
                 // 检查是否已导入图片
                 if (!ImageList.Any())
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Warning")
-                        .HasMessage("请先导入图片目录，然后再导入COCO标注文件。")
-                        .Dismiss().WithDelay(4000, t => { })
-                        .Queue();
+                    NotifyManager.ShowWarning("请先导入图片目录，然后再导入COCO标注文件。", 4);
                     return;
                 }
 
@@ -560,27 +535,13 @@ namespace AutoTrainer.ViewModels
 
                     await Task.Run(() => ImportCOCOData(COCOAnnotationPath));
 
-                    NotifyManager.CreateMessage()
-                        .Accent("#161616")
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Success")
-                        .HasMessage($"COCO标注文件导入成功：{System.IO.Path.GetFileName(COCOAnnotationPath)}")
-                        .Dismiss().WithDelay(5000, t => { })
-                        .Queue();
+                    NotifyManager.ShowSuccess($"COCO标注文件导入成功：{Path.GetFileName(COCOAnnotationPath)}");
                 }
             }
             catch (Exception ex)
             {
                 Log.Error($"导入COCO标注失败: {ex.Message}");
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Error")
-                    .HasMessage($"导入失败：{ex.Message}")
-                    .Dismiss().WithDelay(6000, t => { })
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"导入失败：{ex.Message}", ex.Message, 6);
             }
             finally
             {
@@ -836,65 +797,35 @@ namespace AutoTrainer.ViewModels
             if (CurrentImageAnnotations.Any())
             {
                 // If there are annotations, they are already saved in memory.
-                NotifyManager.CreateMessage()
-                    .Accent("#161616")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Info")
-                    .HasMessage("当前图片的标注已在内存中，切换图片时会自动保存。")
-                    .Dismiss().WithDelay(3000, t => { })
-                    .Queue();
+                NotifyManager.ShowInfo("当前图片的标注已在内存中，切换图片时会自动保存。");
             }
             else
             {
                 // If there are no annotations, save the image to the folders of its assigned classes.
                 if (CurrentImageClasses.Count == 0)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Warning")
-                        .HasMessage("请先使用右侧的 '+' 按钮为此图片添加分类。")
-                        .Dismiss().WithDelay(4000, t => { })
-                        .Queue();
+                    NotifyManager.ShowWarning("请先使用右侧的 '+' 按钮为此图片添加分类。");
                     return;
                 }
 
                 try
                 {
-                    var classifiedImagesPath = System.IO.Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
+                    var classifiedImagesPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
                     foreach (var className in CurrentImageClasses)
                     {
-                        var classPath = System.IO.Path.Combine(classifiedImagesPath, className);
+                        var classPath = Path.Combine(classifiedImagesPath, className);
                         Directory.CreateDirectory(classPath);
-                        var destFileName = System.IO.Path.Combine(classPath, CurrentImageFileName);
+                        var destFileName = Path.Combine(classPath, CurrentImageFileName);
                         File.Copy(CurrentImagePath, destFileName, true); // true to overwrite
                     }
-
-                    NotifyManager.CreateMessage()
-                        .Accent("#161616")
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Success")
-                        .HasMessage($"图片已分类到: {string.Join(", ", CurrentImageClasses)}")
-                        .Dismiss().WithButton("打开总目录", button =>
-                        {
-                            FileDirectoryHelper.OpenInExplorer(classifiedImagesPath, false);
-                        })
-                        .Dismiss().WithDelay(6000, t => { })
-                        .Queue();
+                    NotifyManager.ShowSuccessWithButton($"图片已分类到: {string.Join(", ", CurrentImageClasses)}","打开目录",() =>
+                    {
+                        FileDirectoryHelper.OpenInExplorer(classifiedImagesPath, false);
+                    });
                 }
                 catch (Exception ex)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Error")
-                        .HasMessage($"分类保存失败: {ex.Message}")
-                        .Dismiss().WithDelay(6000, t => { })
-                        .Queue();
+                    NotifyManager.ShowErrorWithCopy($"分类保存失败: {ex.Message}",ex.Message);
                 }
             }
         }
@@ -913,39 +844,16 @@ namespace AutoTrainer.ViewModels
                 {
                     return;
                 }
-                var annotationPath = System.IO.Path.Combine(Imagesfolder??string.Empty, DefaultCocoAnnotationFileName??string.Empty);
+                var annotationPath = Path.Combine(Imagesfolder??string.Empty, DefaultCocoAnnotationFileName??string.Empty);
                 AllImageAnnotations.SaveToFile(annotationPath);
-                NotifyManager.CreateMessage()
-                    .Accent("#161616")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Info")
-                    .HasMessage($"保存标注配置完成：{annotationPath}")
-                    .Dismiss().WithButton("打开文件夹", button =>
-                    {
-                        FileDirectoryHelper.OpenInExplorer(annotationPath, true);
-                    })
-                    .Dismiss().WithDelay(6000, t => { })
-                    .Queue();
+                NotifyManager.ShowSuccessWithButton($"保存标注配置完成：{annotationPath}", "打开目录", () =>
+                {
+                    FileDirectoryHelper.OpenInExplorer(annotationPath, true);
+                });
             }
             catch (Exception ex)
             {
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Error")
-                    .HasMessage($"保存失败：{ex.Message}")
-                    .Dismiss().WithButton("复制信息", button =>
-                    {
-                        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                        {
-                            var clipboard = desktop.MainWindow?.Clipboard;
-                            clipboard?.SetTextAsync(ex.Message);  // 复制纯文本
-                        }
-                    })
-                    .Dismiss().WithDelay(6000, t => { })
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"保存失败：{ex.Message}",ex.Message);
                 ProgressState = $"保存失败: {ex.Message}";
             }
         }
@@ -1020,15 +928,7 @@ namespace AutoTrainer.ViewModels
 
                     if (successCount == -1)
                     {
-                        NotifyManager.CreateMessage()
-                            .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                            .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                            .Background("#e5e4e2")
-                            .HasBadge("Error")
-                            .HasMessage("读取文件失败。")
-                            .Dismiss().WithDelay(6000, t => { })
-                            .Queue();
-                        return;
+                        NotifyManager.ShowError("读取文件失败");
                     }
 
                     //向主集合添加新类
@@ -1062,27 +962,12 @@ namespace AutoTrainer.ViewModels
                             CurrentImageClasses.Add(cls);
                         }
                     }
-
-                    NotifyManager.CreateMessage()
-                        .Accent("#161616")
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Info")
-                        .HasMessage($"导入结果: {successCount}条成功, {errorCount}条失败。新增类别: {newClasses.Count}个。")
-                        .Dismiss().WithDelay(6000)
-                        .Queue();
+                    NotifyManager.ShowInfo($"导入结果: {successCount}条成功, {errorCount}条失败。新增类别: {newClasses.Count}个。");
                 }
             }
             catch (Exception ex)
             {
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Error")
-                    .HasMessage($"导入失败: {ex.Message}")
-                    .Dismiss().WithDelay(6000)
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"导入失败: {ex.Message}",ex.Message);
             }
         }
 
@@ -1099,14 +984,7 @@ namespace AutoTrainer.ViewModels
                 // 检查是否有图片和标注数据
                 if (!ImageList.Any())
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Warning")
-                        .HasMessage("没有图片数据可导出。")
-                        .Dismiss().WithDelay(4000, t => { })
-                        .Queue();
+                    NotifyManager.ShowWarning("没有图片数据可导出。");
                     return;
                 }
 
@@ -1114,14 +992,7 @@ namespace AutoTrainer.ViewModels
                 var hasAnnotations = AllImageAnnotations.Any() || ImageList.Any(img => img.IsAnnotated);
                 if (!hasAnnotations)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Warning")
-                        .HasMessage("没有标注数据可导出。")
-                        .Dismiss().WithDelay(4000, t => { })
-                        .Queue();
+                    NotifyManager.ShowWarning("没有标注数据可导出。");
                     return;
                 }
 
@@ -1131,14 +1002,7 @@ namespace AutoTrainer.ViewModels
 
                 if (hasUnsupportedAnnotations)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasBadge("Warning")
-                        .HasMessage("当前只支持矩形框和多边形标注的COCO导出，点标注将被忽略。")
-                        .Dismiss().WithDelay(5000, t => { })
-                        .Queue();
+                    NotifyManager.ShowWarning("当前只支持矩形框和多边形标注的COCO导出，点标注将被忽略。");
                 }
 
                 var topLevel = TopLevel.GetTopLevel(control);
@@ -1163,34 +1027,19 @@ namespace AutoTrainer.ViewModels
 
                 await Task.Run(() => ExportToCOCOFormat(savePath));
 
-                NotifyManager.CreateMessage()
-                    .Accent("#161616")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Success")
-                    .HasMessage($"COCO标注文件导出成功：{savePath}")
-                    .Dismiss().WithButton("打开文件夹", button =>
-                    {
-                        var folder = System.IO.Path.GetDirectoryName(savePath);
-                        if (!string.IsNullOrEmpty(folder))
-                            FileDirectoryHelper.OpenInExplorer(folder, false);
-                    })
-                    .Dismiss().WithDelay(6000, t => { })
-                    .Queue();
+                NotifyManager.ShowSuccessWithButton($"COCO标注文件导出成功：{savePath}","打开目录", () =>
+                {
+                    var folder = Path.GetDirectoryName(savePath);
+                    if (!string.IsNullOrEmpty(folder))
+                        FileDirectoryHelper.OpenInExplorer(folder, false);
+                });
             }
             catch (Exception ex)
             {
                 Log.Error($"导出COCO标注失败: {ex.Message}");
                 Debug.WriteLine($"导出COCO标注失败: {ex.Message}");
 
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Error")
-                    .HasMessage($"导出失败：{ex.Message}")
-                    .Dismiss().WithDelay(6000, t => { })
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"导出失败：{ex.Message}",ex.Message);
             }
             finally
             {
@@ -1206,7 +1055,7 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private async Task CroppingImgAsDataSet()
         {
-            string baseOutputPath = System.IO.Path.Combine(Environment.CurrentDirectory, "CroppedImages");
+            string baseOutputPath = Path.Combine(Environment.CurrentDirectory, "CroppedImages");
             Directory.CreateDirectory(baseOutputPath);
             IsCroppingInProgress = true;
             IsShowCroppingText = false;
@@ -1220,7 +1069,7 @@ namespace AutoTrainer.ViewModels
                         if (string.IsNullOrEmpty(imageItem.FilePath) || !File.Exists(imageItem.FilePath))
                             continue;
                         // 获取当前图片的标注数据
-                        var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                        var fileName = Path.GetFileName(imageItem.FilePath);
                         // 根据是否应用为模板选择标注数据源
                         List<AnnotationItem> annotations = IsApplyAsTemplate
                             ? [.. CurrentImageAnnotations]
@@ -1252,7 +1101,7 @@ namespace AutoTrainer.ViewModels
                                     continue;
 
                                 var className = annotation.ClassName ?? "Unknown";
-                                var outputPath = System.IO.Path.Combine(baseOutputPath, className);
+                                var outputPath = Path.Combine(baseOutputPath, className);
                                 Directory.CreateDirectory(outputPath);
 
                                 var cropRectangle = new SixLabors.ImageSharp.Rectangle(
@@ -1295,8 +1144,8 @@ namespace AutoTrainer.ViewModels
                                     finalImage = maskedImage;
                                 }
 
-                                var croppedFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}_{annotation.InstanceGuid}.png";
-                                var savePath = System.IO.Path.Combine(outputPath, croppedFileName);
+                                var croppedFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_{annotation.InstanceGuid}.png";
+                                var savePath = Path.Combine(outputPath, croppedFileName);
 
                                 await finalImage.SaveAsPngAsync(savePath);
 
@@ -1318,18 +1167,10 @@ namespace AutoTrainer.ViewModels
                     App.TrainModel.Classification.TrainDataPath = baseOutputPath;
                     Dispatcher.UIThread.Invoke(() =>
                     {
-                        NotifyManager.CreateMessage()
-                        .Accent("#161616")
-                        .Background("#e5e4e2")
-                        .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                        .HasMessage($"裁剪完成，数据集已创建并设置为训练路径。共裁剪 {FinishedCroppingCount} 张图片")
-                        .HasBadge("Info")
-                        .Dismiss().WithButton("查看分类总目录", button =>
+                        NotifyManager.ShowSuccessWithButton($"裁剪完成，数据集已创建并设置为训练路径。共裁剪 {FinishedCroppingCount} 张图片","打开目录", () =>
                         {
                             FileDirectoryHelper.OpenInExplorer(baseOutputPath, false);
-                        })
-                        .Dismiss().WithDelay(6000)
-                        .Queue();
+                        });
                     });
                 }
                 catch (Exception ex)
@@ -1353,18 +1194,11 @@ namespace AutoTrainer.ViewModels
         {
             if (!ImageList.Any())
             {
-                NotifyManager.CreateMessage()
-                    .HasBadge("Warning")
-                    .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .Background("#e5e4e2")
-                    .HasMessage("请先导入图片。")
-                    .Dismiss().WithDelay(6000)
-                    .Queue();
+                NotifyManager.ShowWarning("请先导入图片");
                 return;
             }
 
-            string baseOutputPath = System.IO.Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
+            string baseOutputPath = Path.Combine(Environment.CurrentDirectory, "DataSet", "ClassifiedImages");
             Directory.CreateDirectory(baseOutputPath);
             IsBatchProcessing = true;
             ProgressState = "开始批量生成分类数据集...";
@@ -1387,9 +1221,9 @@ namespace AutoTrainer.ViewModels
 
                         foreach (var className in imageItem.ImageClasses)
                         {
-                            var classPath = System.IO.Path.Combine(baseOutputPath, className);
+                            var classPath = Path.Combine(baseOutputPath, className);
                             Directory.CreateDirectory(classPath);
-                            var destFileName = System.IO.Path.Combine(classPath, imageItem.FileName);
+                            var destFileName = Path.Combine(classPath, imageItem.FileName);
                             try
                             {
                                 File.Copy(imageItem.FilePath, destFileName, true); // true to overwrite
@@ -1408,26 +1242,14 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.Classification ??= new ClassificationConfig();
                 App.TrainModel.Classification.TrainDataPath = baseOutputPath;
                 App.TrainModel.NumClasses = Directory.GetDirectories(baseOutputPath).Length;
-                NotifyManager.CreateMessage()
-                    .Accent("#161616")
-                    .HasBadge("Info")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasMessage($"批量生成成功！数据集已设置为训练路径。")
-                    .Dismiss().WithButton("打开目录", button => FileDirectoryHelper.OpenInExplorer(baseOutputPath, false))
-                    .Dismiss().WithDelay(6000)
-                    .Queue();
+                NotifyManager.ShowInfoWithButton("批量生成成功！数据集已设置为训练路径。","打开目录", () =>
+                {
+                    FileDirectoryHelper.OpenInExplorer(baseOutputPath);
+                });
             }
             catch (Exception ex)
             {
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .HasBadge("Error")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasMessage($"批量生成失败: {ex.Message}")
-                    .Dismiss().WithDelay(6000)
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"批量生成失败: {ex.Message}",ex.Message);
             }
             finally
             {
@@ -1505,7 +1327,7 @@ namespace AutoTrainer.ViewModels
                 SelectedClassForAction = null; // 重置类别选择
                 var imageItem = ImageList[CurrentImageIndex];
                 CurrentImagePath = imageItem.FilePath;
-                CurrentImageFileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                CurrentImageFileName = Path.GetFileName(imageItem.FilePath);
                 try
                 {
                     CurrentImage = new Bitmap(imageItem.FilePath);
@@ -1562,7 +1384,7 @@ namespace AutoTrainer.ViewModels
             else
             {
                 // 如果没有标注数据，再看看本地是否有保存的标注文件
-                var annotationPath = System.IO.Path.Combine(Imagesfolder??string.Empty, COCOAnnotationPath??string.Empty);
+                var annotationPath = Path.Combine(Imagesfolder??string.Empty, COCOAnnotationPath??string.Empty);
                 if (File.Exists(annotationPath))
                 {
                     try
@@ -1914,7 +1736,7 @@ namespace AutoTrainer.ViewModels
                 cocoDataset.Images.Add(cocoImage);
 
                 // 获取该图像的标注
-                var fileName = System.IO.Path.GetFileName(imageItem.FilePath);
+                var fileName = Path.GetFileName(imageItem.FilePath);
                 var annotations = AllImageAnnotations.TryGetValue(fileName, out var imageAnnotations)
                     ? imageAnnotations
                     : new List<AnnotationItem>();
@@ -2126,15 +1948,7 @@ namespace AutoTrainer.ViewModels
         {
             if (_lastImportedCocoDataset == null)
             {
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Orange.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Warning")
-                    .HasMessage("没有已导入的COCO标注数据")
-                    .Dismiss().WithDelay(3000, t => { })
-                    .Queue();
-                return;
+                NotifyManager.ShowWarning("没有已导入的COCO标注数据");
             }
 
             try
@@ -2144,7 +1958,7 @@ namespace AutoTrainer.ViewModels
                 var categoryIdMap = new Dictionary<int, string>();
 
                 // 重新构建映射
-                foreach (var image in _lastImportedCocoDataset.Images)
+                foreach (var image in _lastImportedCocoDataset?.Images)
                 {
                     imageIdMap[image.Id] = image.FileName;
                 }
@@ -2204,26 +2018,11 @@ namespace AutoTrainer.ViewModels
                     LoadAnnotationsForCurrentImage();
                     UpdateStatistics();
                 });
-
-                NotifyManager.CreateMessage()
-                    .Accent("#161616")
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Success")
-                    .HasMessage($"已按{GetModeDescription()}重新处理标注")
-                    .Dismiss().WithDelay(3000, t => { })
-                    .Queue();
+                NotifyManager.ShowSuccess($"已按{GetModeDescription()}重新处理标注");
             }
             catch (Exception ex)
             {
-                NotifyManager.CreateMessage()
-                    .Accent(Avalonia.Media.Brushes.Red.Color.ToString())
-                    .Background("#e5e4e2")
-                    .Foreground(Avalonia.Media.Brushes.Black.Color.ToString())
-                    .HasBadge("Error")
-                    .HasMessage($"重新处理标注失败: {ex.Message}")
-                    .Dismiss().WithDelay(5000, t => { })
-                    .Queue();
+                NotifyManager.ShowErrorWithCopy($"重新处理标注失败: {ex.Message}",ex.Message);
             }
         }
 

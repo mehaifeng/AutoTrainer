@@ -273,7 +273,7 @@ namespace AutoTrainer.ViewModels
                 await MessageBoxManager.GetMessageBoxStandard("错误", "提供的COCO标注文件路径无效").ShowWindowDialogAsync(MainWindow);
                 return;
             }
-            if(string.IsNullOrEmpty(App.PythonVenvPath) || !Directory.Exists(Path.Combine(App.PythonVenvPath, "Scripts")))
+            if(string.IsNullOrEmpty(App.PythonVenvPath) || !IsValidPythonVenv(App.PythonVenvPath))
             {
                 await MessageBoxManager.GetMessageBoxStandard("错误", "请先在模型仓库页配置一个有效的Python虚拟环境").ShowWindowDialogAsync(MainWindow);
                 return;
@@ -691,6 +691,26 @@ namespace AutoTrainer.ViewModels
 
             // Reset output log
             VerificationOutput = string.Empty;
+        }
+        
+        /// <summary>
+        /// 验证Python虚拟环境是否有效（跨平台）
+        /// </summary>
+        private static bool IsValidPythonVenv(string venvPath)
+        {
+            if (!Directory.Exists(venvPath))
+                return false;
+            
+            // Windows: 检查 Scripts 文件夹
+            // Mac/Linux: 检查 bin 文件夹
+            if (OperatingSystem.IsWindows())
+            {
+                return Directory.Exists(Path.Combine(venvPath, "Scripts"));
+            }
+            else
+            {
+                return Directory.Exists(Path.Combine(venvPath, "bin"));
+            }
         }
         
         /// <summary>
