@@ -415,46 +415,12 @@ namespace AutoTrainer.ViewModels
                 // 显示完成通知
                 if (successTasks > 0)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent("#4CAF50")
-                        .Background("#e5f5e9")
-                        .Foreground("#1B5E20")
-                        .HasBadge("成功")
-                        .HasMessage($"成功转换 {successTasks} 个格式")
-                        .Dismiss().WithButton("打开目录", button =>
-                        {
-                            try
-                            {
-                                // 打开导出目录
-                                if (Directory.Exists(OutputDirectory))
-                                {
-                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                                    {
-                                        FileName = OutputDirectory,
-                                        UseShellExecute = true,
-                                        Verb = "open"
-                                    });
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error(ex, "打开导出目录失败");
-                            }
-                        })
-                        .Dismiss().WithDelay(TimeSpan.FromSeconds(5))
-                        .Queue();
+                    NotifyManager.ShowSuccessWithDirectory($"成功转换 {successTasks} 个格式", OutputDirectory, 5);
                 }
                 
                 if (failedTasks > 0)
                 {
-                    NotifyManager.CreateMessage()
-                        .Accent("#FF5252")
-                        .Background("#ffebee")
-                        .Foreground("#C62828")
-                        .HasBadge("警告")
-                        .HasMessage($"{failedTasks} 个格式转换失败，请查看日志")
-                        .Dismiss().WithDelay(TimeSpan.FromSeconds(5))
-                        .Queue();
+                    NotifyManager.ShowWarning($"{failedTasks} 个格式转换失败，请查看日志", 5);
                 }
             }
             catch (Exception ex)

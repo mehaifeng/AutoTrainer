@@ -17,6 +17,27 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix
 
+# 导入训练工具以确保设备兼容性
+training_common_path = Path(__file__).parent.parent.parent / "Training" / "common"
+sys.path.insert(0, str(training_common_path))
+try:
+    from utils import should_pin_memory, get_device
+    HAS_UTILS = True
+except ImportError:
+    HAS_UTILS = False
+    # 回退方案
+    def should_pin_memory():
+        return torch.cuda.is_available()
+    def get_device():
+        if torch.cuda.is_available():
+            return torch.device('cuda')
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return torch.device('mps')
+        else:
+            return torch.device('cpu')
+finally:
+    sys.path.pop(0)
+
 
 class ImageFolderDataset(Dataset):
     """图片文件夹数据集"""
@@ -74,7 +95,7 @@ class BaseClassificationValidator(ABC):
         with open(config_path, 'r') as f:
             self.config = json.load(f)
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = get_device()
         self.model = None
         self.transform = None
         
@@ -183,7 +204,7 @@ class BaseClassificationValidator(ABC):
             batch_size=batch_size,
             shuffle=False,
             num_workers=4,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         print(f"找到 {len(dataset.classes)} 个类别: {', '.join(dataset.classes)}", flush=True)

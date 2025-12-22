@@ -10,6 +10,7 @@ from pathlib import Path
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from PIL import Image
+from .utils import should_pin_memory
 
 
 class ClassificationDataLoader:
@@ -111,7 +112,7 @@ class ClassificationDataLoader:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         # 加载验证数据
@@ -122,7 +123,7 @@ class ClassificationDataLoader:
                 batch_size=batch_size,
                 shuffle=False,
                 num_workers=num_workers,
-                pin_memory=True
+                pin_memory=should_pin_memory()
             )
         else:
             # 如果没有验证集，使用训练集的一部分
@@ -139,7 +140,7 @@ class ClassificationDataLoader:
                 batch_size=batch_size,
                 shuffle=True,
                 num_workers=num_workers,
-                pin_memory=True
+                pin_memory=should_pin_memory()
             )
             
             val_loader = DataLoader(
@@ -147,7 +148,7 @@ class ClassificationDataLoader:
                 batch_size=batch_size,
                 shuffle=False,
                 num_workers=num_workers,
-                pin_memory=True
+                pin_memory=should_pin_memory()
             )
             
         return train_loader, val_loader

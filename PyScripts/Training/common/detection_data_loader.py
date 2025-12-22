@@ -11,6 +11,11 @@ import json
 import os
 from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
+import sys
+
+# 添加utils模块
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from utils import should_pin_memory
 
 try:
     import albumentations as A
@@ -427,7 +432,7 @@ class DetectionDataLoader:
             shuffle=True,
             num_workers=num_workers,
             collate_fn=self._collate_fn,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         val_loader = DataLoader(
@@ -436,7 +441,7 @@ class DetectionDataLoader:
             shuffle=False,
             num_workers=num_workers,
             collate_fn=self._collate_fn,
-            pin_memory=True
+            pin_memory=should_pin_memory()
         )
         
         return train_loader, val_loader
@@ -506,6 +511,6 @@ class DetectionDataLoader:
             images.append(image)
             targets.append(target)
         
-        # 检测模型需要图像列表，不是batch tensor
-        # ToTensor() 已将图像转换为 float [0, 1] 范围
+        # 保持images为列表格式，因为Faster R-CNN接受List[Tensor]以支持不同尺寸的图像
+        # targets保持为列表，因为每个图像的目标数量不同
         return images, targets

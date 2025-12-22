@@ -121,6 +121,7 @@
 							</Button>
 
                             <ListBox
+                                x:Name="ListBoxClassItem"
                                 MaxHeight="150"
                                 ItemsSource="{Binding ClassNames}"
                                 SelectedItem="{Binding SelectedClassName}"

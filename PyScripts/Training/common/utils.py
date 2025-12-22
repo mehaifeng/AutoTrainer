@@ -228,13 +228,27 @@ class ModelCheckpoint:
 
 
 def get_device() -> torch.device:
-    """获取训练设备"""
-    return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    """获取训练设备，支持CUDA, MPS (Apple Silicon), 和CPU"""
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    else:
+        return torch.device('cpu')
 
 
 def set_seed(seed: int = 42):
     """设置随机种子以保证可复现性"""
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        # MPS后端当前不支持deterministic模式，但可以设置随机种子
+        pass
+
+
+def should_pin_memory() -> bool:
+    """判断是否应该使用pin_memory，MPS设备不支持"""
+    return torch.cuda.is_available()

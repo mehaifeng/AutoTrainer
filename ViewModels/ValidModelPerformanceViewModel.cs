@@ -694,6 +694,26 @@ namespace AutoTrainer.ViewModels
         }
         
         /// <summary>
+        /// 验证Python虚拟环境是否有效（跨平台）
+        /// </summary>
+        private static bool IsValidPythonVenv(string venvPath)
+        {
+            if (!Directory.Exists(venvPath))
+                return false;
+            
+            // Windows: 检查 Scripts 文件夹
+            // Mac/Linux: 检查 bin 文件夹
+            if (OperatingSystem.IsWindows())
+            {
+                return Directory.Exists(Path.Combine(venvPath, "Scripts"));
+            }
+            else
+            {
+                return Directory.Exists(Path.Combine(venvPath, "bin"));
+            }
+        }
+        
+        /// <summary>
         /// 验证模型metadata是否包含必需的字段
         /// </summary>
         private async Task<(bool isValid, string errorMessage)> ValidateModelMetadataAsync(string modelPath)

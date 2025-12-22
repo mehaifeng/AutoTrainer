@@ -14,7 +14,8 @@ from .utils import (
     SystemMonitor, 
     ModelCheckpoint,
     get_device,
-    set_seed
+    set_seed,
+    should_pin_memory
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     'ModelCheckpoint',
     'get_device',
     'set_seed',
+    'should_pin_memory',
 ]
