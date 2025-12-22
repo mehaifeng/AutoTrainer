@@ -32,9 +32,9 @@ namespace AutoTrainer.ViewModels
             Optimizers = ["AdamW", "Adam", "SGD"];
             ValidationSetRates = [0.1f, 0.2f, 0.3f];
             SchedulingStrategies = ["ReduceLROnPlateau", "StepLR"];
-            LossFunctionTypes = ["CrossEntropyLoss", "BCELoss", "BCEWithLogitsLoss", "MSELoss", "L1Loss", "SmoothL1Loss", "KLDivLoss"];
-            Reductions = ["mean", "sum", "none"];
-            KLDivLoss_Reductions = ["mean", "sum", "none", "batchmean"];
+            LossFunctionTypes = ["CrossEntropyLoss", "BCEWithLogitsLoss", "KLDivLoss"];
+            Reductions = ["mean", "sum"];
+            KLDivLoss_Reductions = ["batchmean", "mean", "sum"];
             SelectedLearningRate = LearningRates[1];
             SelectedBatchSize = BatchSizes[1];
             SelectedValidationSetRate = ValidationSetRates[1];
@@ -64,167 +64,8 @@ namespace AutoTrainer.ViewModels
                 UpdateUIForTaskType();
                 return;
             }
-
-            if (e.PropertyName == "SelectedLossFunction" || e.PropertyName == "Weight" ||
-                e.PropertyName == "SelectedReduction" || e.PropertyName == "LabelSmoothing" ||
-                e.PropertyName == "Pos_weight" || e.PropertyName == "Beta" || e.PropertyName == "KLDivLoss_Reductions")
-            {
-                ClassifyLossConfig lossFunctionModel;
-
-                switch (SelectedLossFunction)
-                {
-                    case "CrossEntropyLoss":
-                        LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
-                        if (!string.IsNullOrEmpty(Weight))
-                        {
-                            lossFunctionModel = new ClassifyLossConfig
-                            {
-                                type = SelectedLossFunction,
-                                args = new Params
-                                {
-                                    weight = GetWeightArray(Weight),
-                                    pos_weight = null,
-                                    Beta = null,
-                                    label_smoothing = LabelSmoothing,
-                                    reduction = SelectedReduction
-                                }
-                            };
-                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                            {
-                                Formatting = Formatting.Indented,
-                                NullValueHandling = NullValueHandling.Ignore,
-                            });
-                        }
-                        break;
-                    case "BCELoss":
-                        LossFunctionDescribe = "二分类交叉熵损失函数";
-                        if (!string.IsNullOrEmpty(Weight))
-                        {
-                            lossFunctionModel = new ClassifyLossConfig
-                            {
-                                type = SelectedLossFunction,
-                                args = new Params
-                                {
-                                    weight = GetWeightArray(Weight),
-                                    pos_weight = null,
-                                    Beta = null,
-                                    label_smoothing = null,
-                                    reduction = SelectedReduction
-                                }
-                            };
-                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                            {
-                                Formatting = Formatting.Indented,
-                                NullValueHandling = NullValueHandling.Ignore,
-                            });
-                        }
-                        break;
-                    case "BCEWithLogitsLoss":
-                        LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
-                        if (!string.IsNullOrEmpty(Weight) && !string.IsNullOrEmpty(Pos_weight))
-                        {
-                            lossFunctionModel = new ClassifyLossConfig
-                            {
-                                type = SelectedLossFunction,
-                                args = new Params
-                                {
-                                    weight = GetWeightArray(Weight),
-                                    pos_weight = GetWeightArray(Pos_weight),
-                                    reduction = SelectedReduction,
-                                    Beta = null,
-                                    label_smoothing = null
-                                }
-                            };
-                            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                            {
-                                Formatting = Formatting.Indented,
-                                NullValueHandling = NullValueHandling.Ignore,
-                            });
-                        }
-                        break;
-                    case "MSELoss":
-                        LossFunctionDescribe = "均方误差损失函数，适用于回归任务";
-                        lossFunctionModel = new ClassifyLossConfig
-                        {
-                            type = SelectedLossFunction,
-                            args = new Params
-                            {
-                                weight = null,
-                                pos_weight = null,
-                                label_smoothing = null,
-                                Beta = null,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
-                        break;
-                    case "L1Loss":
-                        LossFunctionDescribe = "L1损失函数，适用于回归任务";
-                        lossFunctionModel = new ClassifyLossConfig
-                        {
-                            type = SelectedLossFunction,
-                            args = new Params
-                            {
-                                weight = null,
-                                pos_weight = null,
-                                label_smoothing = null,
-                                Beta = null,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
-                        break;
-                    case "SmoothL1Loss":
-                        LossFunctionDescribe = "平滑L1损失函数，适用于回归任务";
-                        lossFunctionModel = new ClassifyLossConfig
-                        {
-                            type = SelectedLossFunction,
-                            args = new Params
-                            {
-                                weight = null,
-                                pos_weight = null,
-                                label_smoothing = null,
-                                Beta = Beta,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
-                        break;
-                    case "KLDivLoss":
-                        LossFunctionDescribe = "KL散度损失函数，适用于分布预测任务";
-                        lossFunctionModel = new ClassifyLossConfig
-                        {
-                            type = SelectedLossFunction,
-                            args = new Params
-                            {
-                                weight = null,
-                                pos_weight = null,
-                                label_smoothing = null,
-                                Beta = null,
-                                reduction = SelectedReduction
-                            }
-                        };
-                        CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
-                        {
-                            Formatting = Formatting.Indented,
-                            NullValueHandling = NullValueHandling.Ignore,
-                        });
-                        break;
-                }   
-            }
         }
+        
         #region 可绑定属性
         /// <summary>
         /// 自定义模型名称
@@ -385,51 +226,103 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         [ObservableProperty]
         public ObservableCollection<string> lossFunctionTypes;
+        
         /// <summary>
         /// 损失函数描述
         /// </summary>
         [ObservableProperty]
         public string? lossFunctionDescribe;
+        
         /// <summary>
         /// 选择的损失函数
         /// </summary>
         [ObservableProperty]
         public string? selectedLossFunction;
+        
+        partial void OnSelectedLossFunctionChanged(string? value)
+        {
+            UpdateLossFunctionUI(value);
+        }
+        
         /// <summary>
         /// 权重
         /// </summary>
         [ObservableProperty]
         public string? weight;
+        
+        partial void OnWeightChanged(string? value)
+        {
+            UpdateCodePreview();
+        }
+        
         /// <summary>
         /// 正样本权重
         /// </summary>
         [ObservableProperty]
         public string? pos_weight;
+        
+        partial void OnPos_weightChanged(string? value)
+        {
+            UpdateCodePreview();
+        }
+        
         /// <summary>
         /// 标签平滑因子
         /// </summary>
         [ObservableProperty]
         public double? labelSmoothing;
+        
+        partial void OnLabelSmoothingChanged(double? value)
+        {
+            UpdateCodePreview();
+        }
+        
         /// <summary>
         /// 平滑L1损失函数的beta参数
         /// </summary>
         [ObservableProperty]
         public double? beta;
+        
+        partial void OnBetaChanged(double? value)
+        {
+            UpdateCodePreview();
+        }
+        
         /// <summary>
-        /// 损失计算方式
+        /// 损失计算方式集合
         /// </summary>
         [ObservableProperty]
         public ObservableCollection<string> reductions;
-        /// <summary>
-        /// KL散度损失函数的reduction参数
-        /// </summary>
-        [ObservableProperty]
-        public ObservableCollection<string> kLDivLoss_Reductions;
+
         /// <summary>
         /// 选择的损失计算方式
         /// </summary>
         [ObservableProperty]
         public string? selectedReduction;
+
+        partial void OnSelectedReductionChanged(string? value)
+        {
+            UpdateCodePreview();
+        }
+
+        /// <summary>
+        /// KL散度损失函数的reduction参数集合
+        /// </summary>
+        [ObservableProperty]
+        public ObservableCollection<string> kLDivLoss_Reductions;
+
+        /// <summary>
+        /// 选择的KL散度损失函数
+        /// </summary>
+        [ObservableProperty]
+        public string selectedKLDivLoss_Reduction;
+
+        partial void OnSelectedKLDivLoss_ReductionChanged(string value)
+        {
+            UpdateCodePreview();
+        }
+        
+
         /// <summary>
         /// 代码预览
         /// </summary>
@@ -770,6 +663,119 @@ namespace AutoTrainer.ViewModels
                 return [];
             }
         }
+        
+        /// <summary>
+        /// 更新损失函数UI（描述和reduction默认值）
+        /// </summary>
+        private void UpdateLossFunctionUI(string? lossType)
+        {
+            switch (lossType)
+            {
+                case "CrossEntropyLoss":
+                    LossFunctionDescribe = "标准多分类损失函数，最常用于图像分类任务";
+                    // 如果当前 reduction 不在 Reductions 集合中，重置为 mean
+                    if (SelectedReduction == null || !Reductions.Contains(SelectedReduction))
+                    {
+                        SelectedReduction = "mean";
+                    }
+                    break;
+                    
+                case "BCEWithLogitsLoss":
+                    LossFunctionDescribe = "二分类交叉熵损失函数，适用于二分类任务";
+                    // 如果当前 reduction 不在 Reductions 集合中，重置为 mean
+                    if (SelectedReduction == null || !Reductions.Contains(SelectedReduction))
+                    {
+                        SelectedReduction = "mean";
+                    }
+                    break;
+                    
+                case "KLDivLoss":
+                    LossFunctionDescribe = "KL散度损失函数，适用于分布预测任务";
+                    // 如果当前 reduction 不在 KLDivLoss_Reductions 集合中，重置为 batchmean
+                    if (SelectedKLDivLoss_Reduction == null || !KLDivLoss_Reductions.Contains(SelectedKLDivLoss_Reduction))
+                    {
+                        SelectedKLDivLoss_Reduction = "batchmean";
+                    }
+                    break;
+                    
+                default:
+                    LossFunctionDescribe = string.Empty;
+                    break;
+            }
+            
+            // 更新代码预览
+            UpdateCodePreview();
+        }
+        
+        /// <summary>
+        /// 更新损失函数代码预览
+        /// </summary>
+        private void UpdateCodePreview()
+        {
+            if (string.IsNullOrEmpty(SelectedLossFunction))
+                return;
+                
+            ClassifyLossConfig lossFunctionModel;
+            
+            switch (SelectedLossFunction)
+            {
+                case "CrossEntropyLoss":
+                    lossFunctionModel = new ClassifyLossConfig
+                    {
+                        type = SelectedLossFunction,
+                        args = new Params
+                        {
+                            weight = !string.IsNullOrEmpty(Weight) ? GetWeightArray(Weight) : null,
+                            pos_weight = null,
+                            Beta = null,
+                            label_smoothing = LabelSmoothing,
+                            reduction = SelectedReduction
+                        }
+                    };
+                    break;
+                    
+                case "BCEWithLogitsLoss":
+                    lossFunctionModel = new ClassifyLossConfig
+                    {
+                        type = SelectedLossFunction,
+                        args = new Params
+                        {
+                            weight = !string.IsNullOrEmpty(Weight) ? GetWeightArray(Weight) : null,
+                            pos_weight = !string.IsNullOrEmpty(Pos_weight) ? GetWeightArray(Pos_weight) : null,
+                            reduction = SelectedReduction,
+                            Beta = null,
+                            label_smoothing = null
+                        }
+                    };
+                    break;
+                    
+                case "KLDivLoss":
+                    lossFunctionModel = new ClassifyLossConfig
+                    {
+                        type = SelectedLossFunction,
+                        args = new Params
+                        {
+                            weight = null,
+                            pos_weight = null,
+                            label_smoothing = null,
+                            Beta = null,
+                            reduction = SelectedKLDivLoss_Reduction
+                        }
+                    };
+                    break;
+                    
+                default:
+                    return;
+            }
+            
+            // 生成JSON预览
+            CodePreview = JsonConvert.SerializeObject(lossFunctionModel, new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+            });
+        }
+        
         /// <summary>
         /// 保存配置
         /// </summary>
@@ -793,7 +799,7 @@ namespace AutoTrainer.ViewModels
                         "未检测到任何类别，请检查数据集配置",
                         ButtonEnum.Ok,
                         Icon.Error);
-                    await messageBox.ShowAsync();
+                    await messageBox.ShowWindowDialogAsync(MainWindow);
                     return;
                 }
             }
@@ -928,7 +934,7 @@ namespace AutoTrainer.ViewModels
                             $"模型输出目录中已存在同名文件: {modelBaseName}.pth 或 {modelBaseName}.pt\n继续保存配置并训练可能会覆盖旧文件。",
                             ButtonEnum.Ok,
                             Icon.Warning);
-                        await box.ShowAsync();
+                        await box.ShowWindowDialogAsync(MainWindow);
                     }
                 }
             }
@@ -1048,6 +1054,9 @@ namespace AutoTrainer.ViewModels
                     ClassifyAnnotationPath = null;
                     
                     Log.Information($"检测到ImageFolder格式，{validClasses.Count} 个类别: {string.Join(", ", validClasses)}");
+                    
+                    // 自动计算类别权重
+                    await CalculateAndSetClassWeights();
                 }
                 else
                 {
@@ -1084,7 +1093,7 @@ namespace AutoTrainer.ViewModels
                 ButtonEnum.Ok,
                 Icon.Warning);
             
-            await messageBox.ShowAsync();
+            await messageBox.ShowWindowDialogAsync(MainWindow);
         }
 
         /// <summary>
@@ -1111,7 +1120,7 @@ namespace AutoTrainer.ViewModels
                         "2. 至少有1张图片能在训练集中找到",
                         ButtonEnum.Ok,
                         Icon.Warning);
-                    await messageBox.ShowAsync();
+                    await messageBox.ShowWindowDialogAsync(MainWindow);
                     return;
                 }
 
@@ -1125,6 +1134,9 @@ namespace AutoTrainer.ViewModels
                 App.TrainModel.NumClasses = classNames.Count;
 
                 Log.Information($"从标注文件加载 {classNames.Count} 个类别，匹配 {imageCount} 张图片");
+                
+                // 自动计算类别权重
+                await CalculateAndSetClassWeights();
             }
             catch (Exception ex)
             {
@@ -1212,6 +1224,9 @@ namespace AutoTrainer.ViewModels
                     {
                         DetectedClassNames.Add(className);
                     }
+                    
+                    // 自动计算类别权重（使用async void包装）
+                    _ = CalculateAndSetClassWeights();
                 }
             }
             catch (Exception ex)
@@ -1288,6 +1303,124 @@ namespace AutoTrainer.ViewModels
             }
             
             return categories;
+        }
+
+        /// <summary>
+        /// 计算并设置类别权重
+        /// </summary>
+        private async Task CalculateAndSetClassWeights()
+        {
+            try
+            {
+                if (App.TrainModel?.TaskType != "classification")
+                    return;
+
+                Dictionary<string, int> classCounts = new();
+
+                // 情况1: ImageFolder格式
+                if (IsImageFolderFormat && !string.IsNullOrEmpty(ClassifyTrainSetPath))
+                {
+                    await Task.Run(() =>
+                    {
+                        var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".gif" };
+                        var temps = new List<string>(DetectedClassNames);
+                        foreach (var className in temps)
+                        {
+                            var classDir = Path.Combine(ClassifyTrainSetPath, className);
+                            if (Directory.Exists(classDir))
+                            {
+                                var count = Directory.EnumerateFiles(classDir, "*.*", SearchOption.AllDirectories)
+                                    .Count(f => imageExtensions.Contains(Path.GetExtension(f).ToLower()));
+                                classCounts[className] = count;
+                            }
+                        }
+                    });
+                }
+                // 情况2: 标注文件格式
+                else if (!string.IsNullOrEmpty(ClassifyAnnotationPath) && File.Exists(ClassifyAnnotationPath))
+                {
+                    await Task.Run(() =>
+                    {
+                        var lines = File.ReadAllLines(ClassifyAnnotationPath);
+                        foreach (var line in lines)
+                        {
+                            var parts = line.Trim().Split(new[] { ' ', '\t' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length == 2)
+                            {
+                                var className = parts[1];
+                                if (!classCounts.ContainsKey(className))
+                                    classCounts[className] = 0;
+                                classCounts[className]++;
+                            }
+                        }
+                    });
+                }
+                else
+                {
+                    return;
+                }
+
+                // 如果没有统计到数据，退出
+                if (classCounts.Count == 0)
+                {
+                    Log.Warning("无法统计类别样本数量");
+                    return;
+                }
+
+                // 计算权重（逆频率加权）
+                int totalSamples = classCounts.Values.Sum();
+                int numClasses = classCounts.Count;
+                var weights = new List<double>();
+                
+                var classNameList = DetectedClassNames.ToList();
+                foreach (var className in classNameList)
+                {
+                    if (classCounts.TryGetValue(className, out int count) && count > 0)
+                    {
+                        // weight = total_samples / (num_classes * class_count)
+                        double weight = (double)totalSamples / (numClasses * count);
+                        weights.Add(Math.Round(weight, 4));
+                    }
+                    else
+                    {
+                        weights.Add(1.0);
+                    }
+                }
+
+                // 根据损失函数类型填充不同字段
+                string weightsString = string.Join(",", weights);
+                
+                if (SelectedLossFunction == "BCEWithLogitsLoss")
+                {
+                    // BCEWithLogitsLoss: 填充到 pos_weight，weight 留空
+                    Pos_weight = weightsString;
+                    Weight = string.Empty;
+                    Log.Information($"自动计算类别权重完成 - 总样本数: {totalSamples}, 类别数: {numClasses}");
+                    Log.Information($"类别分布: {string.Join(", ", classCounts.Select(kv => $"{kv.Key}={kv.Value}"))}");
+                    Log.Information($"Pos_weight (正样本权重): {Pos_weight}");
+                }
+                else if (SelectedLossFunction == "CrossEntropyLoss")
+                {
+                    // CrossEntropyLoss: 填充到 weight
+                    Weight = weightsString;
+                    Pos_weight = string.Empty;
+                    Log.Information($"自动计算类别权重完成 - 总样本数: {totalSamples}, 类别数: {numClasses}");
+                    Log.Information($"类别分布: {string.Join(", ", classCounts.Select(kv => $"{kv.Key}={kv.Value}"))}");
+                    Log.Information($"Weight (类别权重): {Weight}");
+                }
+                else
+                {
+                    // 其他损失函数（如 KLDivLoss）不支持权重
+                    Weight = string.Empty;
+                    Pos_weight = string.Empty;
+                    Log.Information($"当前损失函数 {SelectedLossFunction} 不支持类别权重");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "计算类别权重时出错");
+            }
         }
 
         /// <summary>

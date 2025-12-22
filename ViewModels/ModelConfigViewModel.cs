@@ -212,7 +212,7 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         private async Task GetPython()
         {
-            var command = OperatingSystem.IsWindows() ? "where python3" : "which python3";
+            var command = OperatingSystem.IsWindows() ? "where python" : "which python3";
             var result = await CliWrapHelper.ExecuteLine(command);
             if (result.ExitCode == 0)
             {
@@ -722,7 +722,7 @@ namespace AutoTrainer.ViewModels
             StringBuilder sb = new StringBuilder();
             sb.Append($"cd {venvFolder}");
             sb.Append(" && ");
-            sb.Append($"python3 -m venv {venvName}");
+            sb.Append($"python -m venv {venvName}");
             var command = sb.ToString();
             var result = await CliWrapHelper.ExecuteLine(command, onOutputReceived:HandleOutput);
             if (result.ExitCode == 0)
@@ -738,7 +738,6 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         public async Task ExecutePy()
         {
-            ThemeManager.Toggle();
             if (IsCheckedVenv && !string.IsNullOrEmpty(PythonVenvPath))
             {
                 missingApps = [];
@@ -842,7 +841,7 @@ namespace AutoTrainer.ViewModels
                                 if (!string.IsNullOrEmpty(cudaVersion)) 
                                 { 
                                     string cuVersion = cudaVersion.Trim().Replace(".", "");
-                                    torchInstallCommand = $"pip3 install torch torchvision --index-url https://download.pytorch.org/whl/{cuVersion}";
+                                    torchInstallCommand = $"pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu{cuVersion}";
                                 }
                             }
                         }

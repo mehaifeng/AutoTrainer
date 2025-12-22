@@ -105,10 +105,37 @@ class BaseClassificationTrainer:
         """准备损失函数"""
         loss_config = self.cls_config.get('loss_function_config', {})
         loss_type = loss_config.get('type', 'CrossEntropyLoss')
+        args = loss_config.get('args', {})
         
         if loss_type == 'CrossEntropyLoss':
-            label_smoothing = loss_config.get('args', {}).get('label_smoothing', 0.0)
-            self.criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+            # 解析weight参数
+            weight = None
+            weight_str = args.get('weight', '')
+            if weight_str and isinstance(weight_str, str):
+                try:
+                    # 支持逗号分隔的权重字符串
+                    weight_list = [float(w.strip()) for w in weight_str.split(',') if w.strip()]
+                    if len(weight_list) == self.config_parser.num_classes:
+                        weight = torch.tensor(weight_list, dtype=torch.float32).to(self.device)
+                        StructuredLogger.info(f"使用类别权重: {weight_list}")
+                    else:
+                        StructuredLogger.warning(
+                            f"权重数量({len(weight_list)})与类别数({self.config_parser.num_classes})不匹配，忽略权重"
+                        )
+                except ValueError as e:
+                    StructuredLogger.warning(f"无法解析权重参数: {weight_str}, 错误: {e}")
+            
+            # 获取其他参数
+            label_smoothing = args.get('label_smoothing', 0.0)
+            reduction = args.get('reduction', 'mean')
+            
+            self.criterion = nn.CrossEntropyLoss(
+                weight=weight,
+                label_smoothing=label_smoothing,
+                reduction=reduction
+            )
+            
+            StructuredLogger.info(f"损失函数配置 - label_smoothing: {label_smoothing}, reduction: {reduction}")
         else:
             self.criterion = nn.CrossEntropyLoss()
             
