@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /.idea
 /.claude/settings.local.json
+.DS_Store
