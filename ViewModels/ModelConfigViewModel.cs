@@ -157,12 +157,37 @@ namespace AutoTrainer.ViewModels
                 var match = System.Text.RegularExpressions.Regex.Match(cudaResult.Output, @"CUDA Version:\s*(\d+\.\d+)");
                 if (match.Success)
                 {
-                    var cudaVersion = match.Groups[1].Value;
-                    string cuVersion = cudaVersion.Trim().Replace(".", "");
-                    if (!string.IsNullOrEmpty(cuVersion))
+                    var cudaVersionStr = match.Groups[1].Value;
+                    if (!string.IsNullOrEmpty(cudaVersionStr) && double.TryParse(cudaVersionStr, out double cudaVersion))
                     {
-                        torchPackages.Add($"torch --index-url https://download.pytorch.org/whl/{cuVersion}");
-                        torchPackages.Add($"torchvision --index-url https://download.pytorch.org/whl/{cuVersion}");
+                        // PyTorch 官方只提供特定 CUDA 版本的预构建包
+                        // CUDA 12.1+ 可使用 cu126
+                        // CUDA 12.8+ 可使用 cu128
+                        // CUDA 13.0+ 可使用 cu130
+                        string torchCudaVersion;
+                        if (cudaVersion >= 13.0)
+                        {
+                            torchCudaVersion = "cu130";
+                        }
+                        else if (cudaVersion >= 12.8)
+                        {
+                            torchCudaVersion = "cu128";
+                        }
+                        else if (cudaVersion >= 12.1)
+                        {
+                            torchCudaVersion = "cu126";
+                        }
+                        else
+                        {
+                            // CUDA 版本过低，使用 CPU 版本
+                            torchCudaVersion = null;
+                        }
+
+                        if (!string.IsNullOrEmpty(torchCudaVersion))
+                        {
+                            torchPackages.Add($"torch --index-url https://download.pytorch.org/whl/{torchCudaVersion}");
+                            torchPackages.Add($"torchvision --index-url https://download.pytorch.org/whl/{torchCudaVersion}");
+                        }
                     }
                 }
             }
@@ -830,18 +855,51 @@ namespace AutoTrainer.ViewModels
                     if (isTorchMissing)
                     {
                         var cudaVersionResult = await CliWrapHelper.ExecuteLine("nvidia-smi");
-                        string torchInstallCommand = "pip3 install torch torchvision"; 
+                        string torchInstallCommand = "pip3 install torch torchvision";
 
                         if (cudaVersionResult.ExitCode == 0 && !string.IsNullOrEmpty(cudaVersionResult.Output))
                         {
                             var match = System.Text.RegularExpressions.Regex.Match(cudaVersionResult.Output, @"CUDA Version:\s*(\d+\.\d+)");
                             if (match.Success)
                             {
-                                string cudaVersion = match.Groups[1].Value;
-                                if (!string.IsNullOrEmpty(cudaVersion)) 
-                                { 
-                                    string cuVersion = cudaVersion.Trim().Replace(".", "");
-                                    torchInstallCommand = $"pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu{cuVersion}";
+                                string cudaVersionStr = match.Groups[1].Value;
+                                if (!string.IsNullOrEmpty(cudaVersionStr) && double.TryParse(cudaVersionStr, out double cudaVersion))
+                                {
+                                    // PyTorch 官方只提供特定 CUDA 版本的预构建包
+                                    // CUDA 12.1+ 可使用 cu126
+                                    // CUDA 12.8+ 可使用 cu128
+                                    // CUDA 13.0+ 可使用 cu130
+                                    string torchCudaVersion;
+                                    if (cudaVersion >= 13.0)
+                                    {
+                                        torchCudaVersion = "cu130";
+                                    }
+                                    else if (cudaVersion >= 12.8)
+                                    {
+                                        torchCudaVersion = "cu128";
+                                    }
+                                    else if (cudaVersion >= 12.1)
+                                    {
+                                        torchCudaVersion = "cu126";
+                                    }
+                                    else
+                                    {
+                                        // CUDA 版本过低，使用 CPU 版本
+                                        torchCudaVersion = "cpu";
+                                    }
+
+                                    if (torchCudaVersion == "cpu")
+                                    {
+                                        torchInstallCommand = "pip3 install torch torchvision";
+                                        sb.AppendLine($"检测到 CUDA {cudaVersion}，低于 PyTorch 支持的最低版本 (12.1)，将安装 CPU 版本");
+                                        Outputs = sb.ToString();
+                                    }
+                                    else
+                                    {
+                                        torchInstallCommand = $"pip3 install torch torchvision --index-url https://download.pytorch.org/whl/{torchCudaVersion}";
+                                        sb.AppendLine($"检测到 CUDA {cudaVersion}，将安装 PyTorch {torchCudaVersion} 版本");
+                                        Outputs = sb.ToString();
+                                    }
                                 }
                             }
                         }
