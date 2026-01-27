@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AutoTrainer is a .NET 8.0 desktop application built with Avalonia UI that serves as a graphical user interface for training image classification and object detection models using PyTorch. The application manages the entire machine learning workflow, from environment setup and data annotation to model training, validation, and export.
+AutoTrainer is a .NET 10.0 desktop application built with Avalonia UI that serves as a graphical user interface for training image classification and object detection models using PyTorch. The application manages the entire machine learning workflow, from environment setup and data annotation to model training, validation, and export.
 
 **Key Technologies:**
-- **.NET 8.0** with Avalonia UI for the desktop interface
+- **.NET 10.0** with Avalonia UI for the desktop interface
 - **Python** with PyTorch and torchvision for machine learning backend
 - **CliWrap** (v3.10.0) for cross-platform command execution and process management
 - **CommunityToolkit.Mvvm** (v8.4.0) for MVVM pattern implementation
@@ -15,7 +15,7 @@ AutoTrainer is a .NET 8.0 desktop application built with Avalonia UI that serves
 - **LiveCharts.SkiaSharpView** for data visualization
 - **SixLabors.ImageSharp** and **SkiaSharp** for image processing
 - **Newtonsoft.Json** for JSON configuration handling
-- **Cross-platform support** (Windows, Linux, macOS)
+- **Cross-platform support** (Windows, Linux, macOS, Apple Silicon)
 
 ## Architecture
 
@@ -25,9 +25,15 @@ The project follows a hybrid architecture combining a .NET frontend with a Pytho
 - **Views/**: Avalonia XAML UI files organized by user controls
 - **ViewModels/**: MVVM view models inheriting from ViewModelBase
 - **Models/**: Data models and configuration classes
-- **Helpers/**: Utility classes including CliWrapHelper for Python execution
+- **Helpers/**: Utility classes including CliWrapHelper for Python execution and ThemeManager for theme switching
 - **Converters/**: XAML value converters
 - **Extension/**: Extension methods and utilities
+
+### Theme System
+- **App.axaml**: Centralized theme and style management using FluentTheme
+- **ThemeManager.cs**: Helper class for light/dark theme switching with methods like `SwitchToLight()`, `SwitchToDark()`, `Toggle()`, and `FollowSystem()`
+- **Dynamic resources**: All UI elements use `DynamicResource` bindings to respond to theme changes
+- **Style classes**: Predefined styles for buttons (primary, success, warning, danger), containers (card), and text (title, secondary)
 
 ### Backend (Python)
 - **PyScripts/**: Python scripts for ML operations
@@ -38,12 +44,13 @@ The project follows a hybrid architecture combining a .NET frontend with a Pytho
     - `Detection/`: Object detection training scripts
       - `base_detector.py`: Base class for detection trainers
       - `fasterrcnn_trainer.py`: Faster R-CNN trainer
-    - `common/utils.py`: Shared utilities including ModelCheckpoint
+    - `common/utils.py`: Shared utilities including ModelCheckpoint and device detection (CUDA/MPS/CPU)
+    - `common/logger.py`: Structured JSON logging for real-time progress monitoring
   - `Inference/`: Model validation and inference scripts
     - `Classification/`: Classification validators with base class architecture
     - `Detection/`: Detection validators with base class architecture
-  - `ModelConverter.py`: Model format conversion (ONNX, TensorFlow)
-  - `Utils/`: Utility scripts including ModelMetadataReader
+  - `ModelConverter.py`: Model format conversion (ONNX, TorchScript)
+  - `Utils/`: Utility scripts including ModelMetadataReader, ModelValidator, and ModelHelper
 
 ### Communication Bridge
 - **CliWrapHelper.cs**: Manages Python virtual environment activation and script execution using CliWrap library
@@ -100,13 +107,14 @@ AutoTrainer/
 
 ### Training Pipeline
 1. **Environment setup**: Python venv creation and package installation
-2. **Data preparation**: Image loading and preprocessing
-3. **Model configuration**: Select from torchvision models
+2. **Device detection**: Automatic detection of CUDA, MPS (Apple Silicon), or CPU
+3. **Data preparation**: Image loading and preprocessing
+4. **Model configuration**: Select from torchvision models
    - Classification: EfficientNet, MobileNetV3, ResNet, VGG, DenseNet, etc.
    - Detection: Faster R-CNN with various backbones (ResNet, MobileNetV3)
-4. **Training execution**: Real-time progress monitoring with JSON logging
-5. **Validation**: Performance evaluation with detailed metrics and visualization
-6. **Export**: Model conversion to ONNX/TensorFlow formats
+5. **Training execution**: Real-time progress monitoring with JSON logging
+6. **Validation**: Performance evaluation with detailed metrics and visualization
+7. **Export**: Model conversion to ONNX/TorchScript formats
 
 ## Development Workflow
 
@@ -192,36 +200,70 @@ When modifying ModelParam.json or adding new parameters:
 This branch focuses on UI improvements and refactoring of the training architecture.
 
 ### Recent Major Changes
-1. **Python Script Architecture Refactoring**
+1. **Theme System Refactoring (2025-12-22)**
+   - Complete UI theme system restructure with centralized management in App.axaml
+   - Added ThemeManager helper class for light/dark theme switching
+   - Removed redundant ControlStyles.axaml (120+ lines of unused code)
+   - All UI elements now use DynamicResource for automatic theme response
+   - New style classes: Button.primary/success/warning/danger, Border.card, TextBlock.title/secondary
+   - See `docs/Theme_Refactoring_Summary.md` for full details
+
+2. **Apple Silicon MPS Support**
+   - Added automatic device detection for CUDA, MPS (Apple Silicon), and CPU
+   - MPS backend support in all training and inference scripts
+   - Cross-platform compatibility improvements for macOS
+
+3. **Model Export Enhancement**
+   - ONNX and TorchScript export functionality
+   - Custom model naming support for better organization
+   - Model format conversion in ModelConverter.py
+
+4. **Loss Function Parameter Optimization**
+   - Improved loss function parameter handling across all trainers
+   - Better gradient clipping and anomaly detection
+
+5. **Python Script Architecture Refactoring**
    - Modular training scripts organized by task type (Classification/Detection)
    - Base class architecture for trainers and validators
    - Improved model metadata handling with ModelCheckpoint
 
-2. **Model Validation Improvements**
+6. **Model Validation Improvements**
    - Validators read model metadata (model_name, num_classes) for accurate architecture matching
    - COCO annotations now optional for detection validation
    - Classification validation shows confidence scores
 
-3. **NaN Loss Handling**
+7. **NaN Loss Handling**
    - Gradient clipping (max_norm=1.0) implemented in detection training
    - Automatic batch skipping for anomalous loss values
    - Comprehensive troubleshooting guide in `docs/NaN_Loss_Troubleshooting.md`
 
-4. **Training Log Optimization**
+8. **Training Log Optimization**
    - Removed log file creation - training metrics now streamed directly to UI
    - Real-time progress bar updates fixed
    - Reduced disk I/O and improved performance
+
+9. **Cross-Platform Compatibility**
+   - Fixed SkiaSharp compilation issues on Linux
+   - Improved venv scanning to prevent deadlocks
+   - Enhanced path handling for Windows, Linux, and macOS
+
+10. **Data Augmentation**
+    - Added data augmentation support for object detection training
+    - Improved training data loading and preprocessing
 
 ### Known Issues & Solutions
 - **Gradient Explosion in Detection**: Addressed with gradient clipping and learning rate adjustments
 - **Model Architecture Mismatch**: Fixed through metadata-based validation
 - **Progress Bar Not Updating**: Resolved by updating EpochState in progress/metrics handlers
+- **Theme Not Applied to Some Views**: Ongoing - some views still use hardcoded colors instead of DynamicResource
 
 ## Important Files for Claude
 
 ### Core Integration Files
 - `Helpers/CliWrapHelper.cs`: Bridge between .NET and Python - manages venv activation and script execution
+- `Helpers/ThemeManager.cs`: Theme management helper for light/dark mode switching
 - `ViewModels/TrainingViewModel.cs`: Handles training progress, JSON log parsing, and UI updates
+- `App.axaml`: Application resources, theme definitions, and global styles
 - `App.axaml.cs`: Application initialization and path configurations
 
 ### Configuration Templates
@@ -239,4 +281,6 @@ This branch focuses on UI improvements and refactoring of the training architect
 ### Documentation
 - `docs/README.md`: Chinese documentation with UI examples and future roadmap
 - `docs/NaN_Loss_Troubleshooting.md`: Comprehensive guide for gradient explosion issues
+- `docs/ThemeGuide.md`: Guide for using the theme system
+- `docs/Theme_Refactoring_Summary.md`: Summary of theme system refactoring (2025-12-22)
 - `copilot_edit_history.md`: Detailed history of recent changes and architectural decisions
