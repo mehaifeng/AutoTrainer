@@ -50,7 +50,8 @@ class BaseClassificationTrainer:
         self.early_stopping = None
         
         # 训练状态
-        self.best_acc = 0.0
+        self.best_loss = float('inf')
+        self.best_acc = 0.0  # 记录最佳损失对应的准确率
         self.best_epoch = 0
         self.start_time = None
         
@@ -328,19 +329,20 @@ class BaseClassificationTrainer:
                     lr=current_lr
                 )
                 
-                # 检查是否改进
-                improved = val_metrics['accuracy'] > self.best_acc
+                # 检查是否改进（基于验证损失）
+                improved = val_metrics['loss'] < self.best_loss
                 StructuredLogger.validation(epoch, val_metrics, improved)
-                
+
                 # 保存最佳模型
                 if improved:
-                    self.best_acc = val_metrics['accuracy']
+                    self.best_loss = val_metrics['loss']
+                    self.best_acc = val_metrics['accuracy']  # 同时记录准确率
                     self.best_epoch = epoch
                     save_path = checkpoint_manager.save(
                         self.model, epoch, val_metrics, is_best=True
                     )
                     StructuredLogger.checkpoint(
-                        epoch, save_path, 'best_accuracy', val_metrics
+                        epoch, save_path, 'best_loss', val_metrics
                     )
                     
                 # 学习率调度
@@ -360,7 +362,7 @@ class BaseClassificationTrainer:
                             epoch,
                             f"验证损失在{self.early_stopping.patience}个epoch内未改善",
                             self.best_epoch,
-                            {'accuracy': self.best_acc}
+                            {'loss': self.best_loss, 'accuracy': self.best_acc}
                         )
                         break
                         
@@ -383,7 +385,7 @@ class BaseClassificationTrainer:
             total_time = time.time() - self.start_time
             StructuredLogger.complete(
                 self.best_epoch,
-                {'accuracy': self.best_acc},
+                {'loss': self.best_loss, 'accuracy': self.best_acc},
                 final_path,
                 total_time
             )
