@@ -116,7 +116,7 @@ namespace AutoTrainer.ViewModels
         [ObservableProperty]
         private bool isRunningProgressBar = false;
         [ObservableProperty]
-        private bool isExcutingPyScript = false;
+        private bool isExecutingPyScript = false;
         [ObservableProperty]
         private bool isScanningVenv = false;
         [ObservableProperty]
@@ -770,7 +770,7 @@ namespace AutoTrainer.ViewModels
                 bool isVenvValid = await CliWrapHelper.IsVenvValid(PythonVenvPath);
                 if (isVenvValid)
                 {
-                    IsExcutingPyScript = true;
+                    IsExecutingPyScript = true;
                     App.PythonVenvPath = PythonVenvPath;
                     var sb = new StringBuilder();
                     var activateFile = OperatingSystem.IsWindows()? $"{PythonVenvPath}\\Scripts\\activate.bat" : $"source {PythonVenvPath}/bin/activate";
@@ -819,7 +819,7 @@ namespace AutoTrainer.ViewModels
                     {
                         await MessageBoxManager.GetMessageBoxStandard("错误", $"检查环境时发生错误：{ex.Message}", MsBox.Avalonia.Enums.ButtonEnum.Ok).ShowWindowDialogAsync(MainWindow);
                     }
-                    IsExcutingPyScript = false;
+                    IsExecutingPyScript = false;
                     Outputs = sb.ToString();
                 }
                 else
