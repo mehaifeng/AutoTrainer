@@ -106,8 +106,21 @@ public partial class DatasetAnnotationView : UserControl
             }
             else
             {
-                // 只是取消选择（切换到另一个标注或点击空白区域），只清除手柄
+                // 清除手柄
                 ClearAllHandles();
+
+                // 如果有新选中的标注，创建对应的手柄
+                if (_viewmodel.SelectedAnnotation != null)
+                {
+                    if (_viewmodel.SelectedAnnotation is RectangleModel rect)
+                    {
+                        CreateResizeHandles(rect);
+                    }
+                    else if (_viewmodel.SelectedAnnotation is PolygonModel polygon)
+                    {
+                        CreateVertexHandles(polygon);
+                    }
+                }
             }
 
             // 更新当前选中的标注 GUID

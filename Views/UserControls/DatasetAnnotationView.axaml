@@ -623,32 +623,14 @@
                     </Expander>
                             
                     <!--  标注列表  -->
-                    <Expander Header="标注列表" IsExpanded="True" IsVisible="{Binding HasSelectedAnnotation}" HorizontalAlignment="Stretch">  
+                    <Expander Header="标注列表" IsExpanded="True" HorizontalAlignment="Stretch">  
 					<ListBox
                         MaxHeight="200"
                         ItemsSource="{Binding CurrentImageAnnotations}"
                         SelectedItem="{Binding SelectedAnnotation}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0" Spacing="2">
-                                        <TextBlock FontWeight="Bold" Text="{Binding ClassName}" />
-                                        <TextBlock
-                                            FontSize="10"
-                                            Foreground="Gray"
-                                            Text="xxxx" />
-                                    </StackPanel>
-
-                                    <CheckBox
-                                        Grid.Column="1"
-                                        IsChecked="True"
-                                        ToolTip.Tip="显示/隐藏标注" />
-                                </Grid>
+                                <TextBlock FontWeight="Bold" Text="{Binding ClassName}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

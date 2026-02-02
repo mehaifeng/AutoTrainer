@@ -177,7 +177,7 @@ namespace AutoTrainer.ViewModels
         private NotificationMessageManager notifyManager;
 
         [ObservableProperty]
-        private ObservableCollection<string> _currentImageClasses = new();
+        private ObservableCollection<string> currentImageClasses = new();
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsNotBatchProcessing))]
