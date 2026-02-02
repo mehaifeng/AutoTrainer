@@ -28,6 +28,14 @@ public partial class DatasetAnnotationView : UserControl
     private Point _dragStartPoint;
     private Point _elementStartPosition;
     private List<Point>? _originalPolygonPoints;
+
+    // 调整手柄相关字段
+    private List<Control> _resizeHandles = new();
+    private List<Control> _vertexHandles = new();
+    private ResizeHandle? _currentResizeHandle = null;
+    private int? _selectedVertexIndex = null;
+    // 用于跟踪之前选中的标注，以便在删除时清除对应的手柄和标签
+    private string? _lastSelectedAnnotationGuid = null;
     public DatasetAnnotationView()
     {
         InitializeComponent();
@@ -40,6 +48,15 @@ public partial class DatasetAnnotationView : UserControl
         // 添加键盘事件处理（用于完成多边形绘制等）
         this.KeyDown += OnViewKeyDown;
         this.Focusable = true; // 确保能接收键盘事件
+
+        // 订阅标签更新事件
+        _viewmodel.OnAnnotationLabelUpdate += OnAnnotationLabelUpdate;
+
+        // 订阅标注元素创建事件，用于在加载标注时添加标签
+        _viewmodel.OnAnnotationElementCreated += OnAnnotationElementCreated;
+
+        // 订阅 SelectedAnnotation 变化，用于在删除标注时清除手柄和标签
+        _viewmodel.PropertyChanged += OnPropertyChanged;
 
         // 订阅 PointerWheelChanged 事件
         ImageScrollViewer.PointerWheelChanged += ScrollViewer_PointerWheelChanged;
@@ -66,6 +83,51 @@ public partial class DatasetAnnotationView : UserControl
         }
     }
 
+    /// <summary>
+    /// 处理 ViewModel 属性变化事件
+    /// </summary>
+    private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(_viewmodel.SelectedAnnotation))
+        {
+            // 检查之前选中的标注是否仍然存在
+            bool previousAnnotationStillExists = false;
+            if (_lastSelectedAnnotationGuid != null)
+            {
+                previousAnnotationStillExists = _viewmodel.CurrentImageAnnotations
+                    .Any(a => a.InstanceGuid == _lastSelectedAnnotationGuid);
+            }
+
+            // 如果之前选中的标注不再存在（被删除了），清除其手柄和标签
+            if (_lastSelectedAnnotationGuid != null && !previousAnnotationStillExists)
+            {
+                ClearAllHandles();
+                RemoveAnnotationLabel(_lastSelectedAnnotationGuid);
+            }
+            else
+            {
+                // 只是取消选择（切换到另一个标注或点击空白区域），只清除手柄
+                ClearAllHandles();
+            }
+
+            // 更新当前选中的标注 GUID
+            _lastSelectedAnnotationGuid = _viewmodel.SelectedAnnotation?.InstanceGuid;
+        }
+    }
+
+    /// <summary>
+    /// 移除指定标注的标签
+    /// </summary>
+    private void RemoveAnnotationLabel(string annotationGuid)
+    {
+        var label = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{annotationGuid}_label");
+        if (label != null)
+        {
+            AnnotationCanvas.Children.Remove(label);
+        }
+    }
+
 
     private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -89,14 +151,34 @@ public partial class DatasetAnnotationView : UserControl
         var canvas = sender as Canvas;
         var position = e.GetPosition(canvas);
 
-        // 首先检查是否点击了已存在的标注元素（用于拖动）
+        // 首先检查是否点击了已存在的标注元素（用于拖动或编辑）
         var hitElement = GetHitAnnotationElement(position);
         if (hitElement != null)
         {
+            // 清除所有手柄
+            ClearAllHandles();
+
             StartDragging(hitElement, position);
             _viewmodel?.OnAnnotationSelected?.Invoke(hitElement);
             e.Handled = true;
+
+            // 根据标注类型显示对应的手柄
+            if (hitElement is RectangleModel rect)
+            {
+                CreateResizeHandles(rect);
+            }
+            else if (hitElement is PolygonModel polygon)
+            {
+                CreateVertexHandles(polygon);
+            }
             return;
+        }
+
+        // 如果点击了空白区域，清除选择和手柄
+        if (_viewmodel.SelectedAnnotation != null)
+        {
+            ClearAllHandles();
+            _viewmodel.SelectedAnnotation = null;
         }
 
         switch (_viewmodel.CurrentTool)
@@ -196,11 +278,16 @@ public partial class DatasetAnnotationView : UserControl
         _viewmodel.IsDrawing = true;
         _viewmodel.drawingStartPoint = startPoint;
 
+        // 获取选定类别的颜色和名称
+        var selectedColor = _viewmodel.SelectedCategory?.Color ?? Colors.Red;
+        var selectedClassName = _viewmodel.SelectedCategory?.Name ?? "Default";
+
         // 创建矩形标注项
         _viewmodel.CurrentDrawingItem = new RectangleModel(startPoint.X, startPoint.Y, 0, 0)
         {
             AnnotationType = AnnotationToolEnum.Rectangle,
-            ClassName = _viewmodel.CurrentClassName
+            ClassName = selectedClassName,
+            DisplayColor = selectedColor
         };
 
         // 创建矩形UI元素
@@ -290,13 +377,18 @@ public partial class DatasetAnnotationView : UserControl
 
         _viewmodel.IsDrawingPolygon = true;
 
+        // 获取选定类别的颜色和名称
+        var selectedColor = _viewmodel.SelectedCategory?.Color ?? Colors.Blue;
+        var selectedClassName = _viewmodel.SelectedCategory?.Name ?? "Default";
+
         // 创建多边形标注项
         var points = new List<Point> { startPoint };
         _viewmodel.CurrentDrawingItem = new PolygonModel
         {
             AnnotationType = AnnotationToolEnum.Polygon,
             Points = points,
-            ClassName = _viewmodel.CurrentClassName
+            ClassName = selectedClassName,
+            DisplayColor = selectedColor
         };
         var polygon = (PolygonModel)_viewmodel.CurrentDrawingItem;
         // 创建多边形UI元素
@@ -379,11 +471,17 @@ public partial class DatasetAnnotationView : UserControl
     private void CreatePointAnnotation(Point clickPoint)
     {
         if (_viewmodel == null) return;
+
+        // 获取选定类别的颜色和名称
+        var selectedColor = _viewmodel.SelectedCategory?.Color ?? Colors.Green;
+        var selectedClassName = _viewmodel.SelectedCategory?.Name ?? "Default";
+
         // 创建点标注
         var pointAnnotation = new PointModel(clickPoint.X, clickPoint.Y)
         {
             AnnotationType = AnnotationToolEnum.Point,
-            ClassName = _viewmodel.CurrentClassName
+            ClassName = selectedClassName,
+            DisplayColor = selectedColor
         };
         // 创建点UI元素
         CreatePointElement(pointAnnotation);
@@ -405,10 +503,11 @@ public partial class DatasetAnnotationView : UserControl
 
     private void CreateRectangleElement(RectangleModel item)
     {
+        var color = item.DisplayColor;
         var rectangle = new Rectangle
         {
             Tag = item.InstanceGuid,
-            Stroke = Brushes.Red,
+            Stroke = new SolidColorBrush(color),
             StrokeThickness = 2,
             Fill = Brushes.Transparent,
             IsHitTestVisible = false
@@ -418,6 +517,9 @@ public partial class DatasetAnnotationView : UserControl
         Canvas.SetTop(rectangle, item.Y);
         rectangle.Width = item.Width;
         rectangle.Height = item.Height;
+
+        // 添加类别标签
+        AddCategoryLabel(item, color);
 
         AnnotationCanvas.Children.Add(rectangle);
         item.UIElement = rectangle;
@@ -460,17 +562,21 @@ public partial class DatasetAnnotationView : UserControl
     /// <param name="item"></param>
     private void CreatePolygonElement(PolygonModel item)
     {
+        var color = item.DisplayColor;
         var polygon = new Polygon
         {
             Tag = item.InstanceGuid,
-            Stroke = Brushes.Blue,
+            Stroke = new SolidColorBrush(color),
             StrokeThickness = 2,
-            Fill = new SolidColorBrush(Colors.Blue) { Opacity = 0.1 },
+            Fill = new SolidColorBrush(color) { Opacity = 0.1 },
             IsHitTestVisible = false,
         };
 
         // 设置多边形顶点
         polygon.Points = [.. item.Points];
+
+        // 添加类别标签
+        AddCategoryLabel(item, color);
 
         AnnotationCanvas.Children.Add(polygon);
         item.UIElement = polygon;
@@ -551,18 +657,22 @@ public partial class DatasetAnnotationView : UserControl
         if (item != null)
         {
             var point = (PointModel)item;
+            var color = item.DisplayColor;
             var ellipse = new Ellipse
             {
                 Tag = point.InstanceGuid,
                 Width = 4,
                 Height = 4,
-                Fill = Brushes.Green,
-                Stroke = Brushes.DarkGreen,
+                Fill = new SolidColorBrush(color),
+                Stroke = new SolidColorBrush(color),
                 StrokeThickness = 2,
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(ellipse, point.X - 4); // 居中
             Canvas.SetTop(ellipse, point.Y - 4);
+
+            // 添加类别标签
+            AddCategoryLabel(item, color);
 
             AnnotationCanvas.Children.Add(ellipse);
             point.UIElement = ellipse;
@@ -576,6 +686,125 @@ public partial class DatasetAnnotationView : UserControl
             AnnotationCanvas.Children.Remove(item.UIElement);
             item.UIElement = null;
         }
+
+        // 同时移除类别标签
+        var label = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{item.InstanceGuid}_label");
+        if (label != null)
+        {
+            AnnotationCanvas.Children.Remove(label);
+        }
+    }
+
+    /// <summary>
+    /// 添加类别标签
+    /// </summary>
+    private void AddCategoryLabel(AnnotationItem item, Color color)
+    {
+        if (string.IsNullOrEmpty(item.ClassName))
+            return;
+
+        // 检查是否已经存在该标签（避免重复添加）
+        var existingLabel = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{item.InstanceGuid}_label");
+        if (existingLabel != null)
+            return; // 标签已存在，不需要重复添加
+
+        var boundingBox = item.GetBoundingBox();
+
+        var textBlock = new TextBlock
+        {
+            Text = item.ClassName,
+            Foreground = new SolidColorBrush(color),
+            Background = new SolidColorBrush(Colors.White) { Opacity = 0.7 },
+            FontSize = 12,
+            FontWeight = FontWeight.Bold,
+            Padding = new Thickness(4, 2, 4, 2),
+            Tag = $"{item.InstanceGuid}_label",
+            IsHitTestVisible = false
+        };
+
+        Canvas.SetLeft(textBlock, boundingBox.X);
+        Canvas.SetTop(textBlock, boundingBox.Y - 20); // 在标注上方显示
+
+        AnnotationCanvas.Children.Add(textBlock);
+    }
+
+    /// <summary>
+    /// 更新标注标签位置
+    /// </summary>
+    private void UpdateAnnotationLabel(AnnotationItem item)
+    {
+        if (string.IsNullOrEmpty(item.ClassName))
+            return;
+
+        // 查找现有的标签
+        var label = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{item.InstanceGuid}_label");
+
+        if (label != null)
+        {
+            var boundingBox = item.GetBoundingBox();
+            Canvas.SetLeft(label, boundingBox.X);
+            Canvas.SetTop(label, boundingBox.Y - 20);
+        }
+    }
+
+    /// <summary>
+    /// 更新标注标签文本和颜色（用于类别切换）
+    /// </summary>
+    private void OnAnnotationLabelUpdate(AnnotationItem item)
+    {
+        // 查找现有的标签
+        var label = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{item.InstanceGuid}_label");
+
+        if (label != null)
+        {
+            // 更新文本
+            label.Text = item.ClassName ?? string.Empty;
+
+            // 更新颜色
+            label.Foreground = new SolidColorBrush(item.DisplayColor);
+        }
+    }
+
+    /// <summary>
+    /// 处理标注元素创建事件（用于在加载标注时添加标签）
+    /// 注意：此方法仅用于从已保存的数据加载标注时添加标签，
+    /// 新绘制的标注应通过 AddCategoryLabel 添加标签
+    /// </summary>
+    private void OnAnnotationElementCreated(AnnotationItem item)
+    {
+        // 检查是否已经存在该标签（避免重复添加）
+        var existingLabel = AnnotationCanvas.Children.OfType<TextBlock>()
+            .FirstOrDefault(l => l.Tag?.ToString() == $"{item.InstanceGuid}_label");
+
+        if (existingLabel != null)
+            return; // 标签已存在，不需要重复添加
+
+        if (string.IsNullOrEmpty(item.ClassName))
+            return;
+
+        var color = item.DisplayColor;
+        var boundingBox = item.GetBoundingBox();
+
+        var textBlock = new TextBlock
+        {
+            Text = item.ClassName,
+            Foreground = new SolidColorBrush(color),
+            Background = new SolidColorBrush(Colors.White) { Opacity = 0.7 },
+            FontSize = 12,
+            FontWeight = FontWeight.Bold,
+            Padding = new Thickness(4, 2, 4, 2),
+            Tag = $"{item.InstanceGuid}_label",
+            IsHitTestVisible = false
+        };
+
+        Canvas.SetLeft(textBlock, boundingBox.X);
+        Canvas.SetTop(textBlock, boundingBox.Y - 20);
+
+        AnnotationCanvas.Children.Add(textBlock);
     }
 
     private void CancelCurrentDrawing()
@@ -600,6 +829,9 @@ public partial class DatasetAnnotationView : UserControl
             _viewmodel.CurrentDrawingItem = null;
             _viewmodel.IsDrawingPolygon = false;
         }
+
+        // 清除所有手柄
+        ClearAllHandles();
     }
 
     #region 拖动功能相关方法
@@ -695,6 +927,13 @@ public partial class DatasetAnnotationView : UserControl
                     rect.X = _elementStartPosition.X + deltaX;
                     rect.Y = _elementStartPosition.Y + deltaY;
                     UpdateRectangleElement(_draggingItem);
+                    // 更新标签位置
+                    UpdateAnnotationLabel(_draggingItem);
+                    // 更新调整手柄位置
+                    if (_resizeHandles.Count > 0)
+                    {
+                        UpdateResizeHandlesPositions(rect);
+                    }
                 }
                 break;
 
@@ -704,15 +943,40 @@ public partial class DatasetAnnotationView : UserControl
                     point.X = _elementStartPosition.X + deltaX;
                     point.Y = _elementStartPosition.Y + deltaY;
                     UpdatePointElement(_draggingItem);
+                    // 更新标签位置
+                    UpdateAnnotationLabel(_draggingItem);
                 }
                 break;
 
-            case PolygonModel:
-                // 更新多边形数据模型模型所有位置
+            case PolygonModel polygon:
+                // 更新多边形数据模型所有位置
                 UpdatePolygonPosition(_draggingItem, deltaX, deltaY);
                 // 更新UI元素位置
                 UpdatePolygonElement(_draggingItem);
+                // 更新标签位置
+                UpdateAnnotationLabel(_draggingItem);
+                // 更新顶点手柄位置
+                if (_vertexHandles.Count > 0)
+                {
+                    UpdateAllVertexHandlesPositions(polygon);
+                }
                 break;
+        }
+    }
+
+    /// <summary>
+    /// 更新所有顶点手柄位置
+    /// </summary>
+    private void UpdateAllVertexHandlesPositions(PolygonModel polygon)
+    {
+        var handleSize = 10.0;
+
+        for (int i = 0; i < polygon.Points.Count && i < _vertexHandles.Count; i++)
+        {
+            var point = polygon.Points[i];
+            var handle = _vertexHandles[i];
+            Canvas.SetLeft(handle, point.X - handleSize / 2);
+            Canvas.SetTop(handle, point.Y - handleSize / 2);
         }
     }
 
@@ -778,6 +1042,348 @@ public partial class DatasetAnnotationView : UserControl
                 ploygon.Opacity = opacity;
                 ploygon.StrokeThickness = isDragging ? 3 : 2;
             }
+        }
+    }
+
+    #endregion
+
+    #region 调整大小和顶点编辑功能
+
+    /// <summary>
+    /// 创建矩形调整手柄
+    /// </summary>
+    private void CreateResizeHandles(RectangleModel rect)
+    {
+        ClearResizeHandles();
+        var handleSize = 8.0;
+        var bbox = rect.GetBoundingBox();
+
+        var positions = new Dictionary<HandleType, Point>
+        {
+            { HandleType.TopLeft, new Point(bbox.X, bbox.Y) },
+            { HandleType.Top, new Point(bbox.X + bbox.Width / 2, bbox.Y) },
+            { HandleType.TopRight, new Point(bbox.X + bbox.Width, bbox.Y) },
+            { HandleType.Right, new Point(bbox.X + bbox.Width, bbox.Y + bbox.Height / 2) },
+            { HandleType.BottomRight, new Point(bbox.X + bbox.Width, bbox.Y + bbox.Height) },
+            { HandleType.Bottom, new Point(bbox.X + bbox.Width / 2, bbox.Y + bbox.Height) },
+            { HandleType.BottomLeft, new Point(bbox.X, bbox.Y + bbox.Height) },
+            { HandleType.Left, new Point(bbox.X, bbox.Y + bbox.Height / 2) }
+        };
+
+        // 定义每个手柄对应的光标
+        var cursorMap = new Dictionary<HandleType, StandardCursorType>
+        {
+            { HandleType.TopLeft, StandardCursorType.TopLeftCorner },
+            { HandleType.Top, StandardCursorType.TopSide },
+            { HandleType.TopRight, StandardCursorType.TopRightCorner },
+            { HandleType.Right, StandardCursorType.RightSide },
+            { HandleType.BottomRight, StandardCursorType.BottomRightCorner },
+            { HandleType.Bottom, StandardCursorType.BottomSide },
+            { HandleType.BottomLeft, StandardCursorType.BottomLeftCorner },
+            { HandleType.Left, StandardCursorType.LeftSide }
+        };
+
+        foreach (var (type, pos) in positions)
+        {
+            var handle = new Rectangle
+            {
+                Width = handleSize,
+                Height = handleSize,
+                Fill = Brushes.White,
+                Stroke = Brushes.Blue,
+                StrokeThickness = 2,
+                Tag = new ResizeHandle(type, new Rect(pos.X - handleSize / 2, pos.Y - handleSize / 2, handleSize, handleSize)),
+                IsHitTestVisible = true,
+                ZIndex = 100,
+                Cursor = new Cursor(cursorMap[type])
+            };
+            Canvas.SetLeft(handle, pos.X - handleSize / 2);
+            Canvas.SetTop(handle, pos.Y - handleSize / 2);
+
+            handle.PointerPressed += OnResizeHandlePressed;
+            handle.PointerMoved += OnResizeHandleMoved;
+            handle.PointerReleased += OnResizeHandleReleased;
+
+            AnnotationCanvas.Children.Add(handle);
+            _resizeHandles.Add(handle);
+        }
+    }
+
+    /// <summary>
+    /// 创建多边形顶点手柄
+    /// </summary>
+    private void CreateVertexHandles(PolygonModel polygon)
+    {
+        ClearVertexHandles();
+        var handleSize = 10.0;
+
+        for (int i = 0; i < polygon.Points.Count; i++)
+        {
+            var point = polygon.Points[i];
+            var handle = new Ellipse
+            {
+                Width = handleSize,
+                Height = handleSize,
+                Fill = Brushes.White,
+                Stroke = Brushes.Blue,
+                StrokeThickness = 2,
+                Tag = i,
+                IsHitTestVisible = true,
+                ZIndex = 100,
+                Cursor = new Cursor(StandardCursorType.Hand)
+            };
+            Canvas.SetLeft(handle, point.X - handleSize / 2);
+            Canvas.SetTop(handle, point.Y - handleSize / 2);
+
+            handle.PointerPressed += OnVertexHandlePressed;
+            handle.PointerMoved += OnVertexHandleMoved;
+            handle.PointerReleased += OnVertexHandleReleased;
+
+            AnnotationCanvas.Children.Add(handle);
+            _vertexHandles.Add(handle);
+        }
+    }
+
+    /// <summary>
+    /// 清除调整手柄
+    /// </summary>
+    private void ClearResizeHandles()
+    {
+        foreach (var h in _resizeHandles)
+        {
+            h.PointerPressed -= OnResizeHandlePressed;
+            h.PointerMoved -= OnResizeHandleMoved;
+            h.PointerReleased -= OnResizeHandleReleased;
+            AnnotationCanvas.Children.Remove(h);
+        }
+        _resizeHandles.Clear();
+    }
+
+    /// <summary>
+    /// 清除顶点手柄
+    /// </summary>
+    private void ClearVertexHandles()
+    {
+        foreach (var h in _vertexHandles)
+        {
+            h.PointerPressed -= OnVertexHandlePressed;
+            h.PointerMoved -= OnVertexHandleMoved;
+            h.PointerReleased -= OnVertexHandleReleased;
+            AnnotationCanvas.Children.Remove(h);
+        }
+        _vertexHandles.Clear();
+    }
+
+    /// <summary>
+    /// 清除所有手柄
+    /// </summary>
+    private void ClearAllHandles()
+    {
+        ClearResizeHandles();
+        ClearVertexHandles();
+    }
+
+    /// <summary>
+    /// 调整手柄按下事件
+    /// </summary>
+    private void OnResizeHandlePressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Rectangle handle || handle.Tag is not ResizeHandle resizeHandle) return;
+
+        _currentResizeHandle = resizeHandle;
+        _isDragging = true;
+        _dragStartPoint = e.GetPosition(AnnotationCanvas);
+        _draggingItem = _viewmodel.SelectedAnnotation;
+
+        // 捕获光标，确保拖动连续性
+        e.Pointer.Capture(handle);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 调整手柄移动事件
+    /// </summary>
+    private void OnResizeHandleMoved(object? sender, PointerEventArgs e)
+    {
+        if (_currentResizeHandle == null || _viewmodel.SelectedAnnotation is not RectangleModel rect || _draggingItem == null) return;
+
+        var currentPos = e.GetPosition(AnnotationCanvas);
+        var deltaX = currentPos.X - _dragStartPoint.X;
+        var deltaY = currentPos.Y - _dragStartPoint.Y;
+
+        var handleType = _currentResizeHandle.Type;
+
+        // 根据手柄类型调整矩形
+        switch (handleType)
+        {
+            case HandleType.Right:
+                rect.Width = Math.Max(10, rect.Width + deltaX);
+                break;
+            case HandleType.Bottom:
+                rect.Height = Math.Max(10, rect.Height + deltaY);
+                break;
+            case HandleType.Left:
+                var newX = rect.X + deltaX;
+                if (newX >= 0)
+                {
+                    rect.Width = Math.Max(10, rect.Width - deltaX);
+                    rect.X = newX;
+                }
+                break;
+            case HandleType.Top:
+                var newY = rect.Y + deltaY;
+                if (newY >= 0)
+                {
+                    rect.Height = Math.Max(10, rect.Height - deltaY);
+                    rect.Y = newY;
+                }
+                break;
+            case HandleType.BottomRight:
+                rect.Width = Math.Max(10, rect.Width + deltaX);
+                rect.Height = Math.Max(10, rect.Height + deltaY);
+                break;
+            case HandleType.BottomLeft:
+                var newXBL = rect.X + deltaX;
+                if (newXBL >= 0)
+                {
+                    rect.Width = Math.Max(10, rect.Width - deltaX);
+                    rect.X = newXBL;
+                }
+                rect.Height = Math.Max(10, rect.Height + deltaY);
+                break;
+            case HandleType.TopRight:
+                var newYTR = rect.Y + deltaY;
+                if (newYTR >= 0)
+                {
+                    rect.Height = Math.Max(10, rect.Height - deltaY);
+                    rect.Y = newYTR;
+                }
+                rect.Width = Math.Max(10, rect.Width + deltaX);
+                break;
+            case HandleType.TopLeft:
+                var newXTL = rect.X + deltaX;
+                var newYTL = rect.Y + deltaY;
+                if (newXTL >= 0)
+                {
+                    rect.Width = Math.Max(10, rect.Width - deltaX);
+                    rect.X = newXTL;
+                }
+                if (newYTL >= 0)
+                {
+                    rect.Height = Math.Max(10, rect.Height - deltaY);
+                    rect.Y = newYTL;
+                }
+                break;
+        }
+
+        UpdateRectangleElement(rect);
+        UpdateResizeHandlesPositions(rect); // 更新手柄位置而不是重新创建
+        UpdateAnnotationLabel(rect); // 更新标签位置
+        _dragStartPoint = currentPos;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 调整手柄释放事件
+    /// </summary>
+    private void OnResizeHandleReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _currentResizeHandle = null;
+        _isDragging = false;
+        _draggingItem = null;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 顶点手柄按下事件
+    /// </summary>
+    private void OnVertexHandlePressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Ellipse handle || handle.Tag is not int index) return;
+
+        _selectedVertexIndex = index;
+        _isDragging = true;
+        _draggingItem = _viewmodel.SelectedAnnotation;
+
+        // 捕获光标，确保拖动连续性
+        e.Pointer.Capture(handle);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 顶点手柄移动事件
+    /// </summary>
+    private void OnVertexHandleMoved(object? sender, PointerEventArgs e)
+    {
+        if (_viewmodel.SelectedAnnotation is not PolygonModel polygon || _selectedVertexIndex == null) return;
+
+        var pos = e.GetPosition(AnnotationCanvas);
+        polygon.Points[_selectedVertexIndex.Value] = pos;
+
+        UpdatePolygonElement(polygon);
+        UpdateVertexHandlePosition(_selectedVertexIndex.Value, pos); // 更新手柄位置而不是重新创建
+        UpdateAnnotationLabel(polygon); // 更新标签位置
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 顶点手柄释放事件
+    /// </summary>
+    private void OnVertexHandleReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _selectedVertexIndex = null;
+        _isDragging = false;
+        _draggingItem = null;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// 更新矩形调整手柄位置（不重新创建）
+    /// </summary>
+    private void UpdateResizeHandlesPositions(RectangleModel rect)
+    {
+        var bbox = rect.GetBoundingBox();
+        var handleSize = 8.0;
+
+        var positions = new Dictionary<HandleType, Point>
+        {
+            { HandleType.TopLeft, new Point(bbox.X, bbox.Y) },
+            { HandleType.Top, new Point(bbox.X + bbox.Width / 2, bbox.Y) },
+            { HandleType.TopRight, new Point(bbox.X + bbox.Width, bbox.Y) },
+            { HandleType.Right, new Point(bbox.X + bbox.Width, bbox.Y + bbox.Height / 2) },
+            { HandleType.BottomRight, new Point(bbox.X + bbox.Width, bbox.Y + bbox.Height) },
+            { HandleType.Bottom, new Point(bbox.X + bbox.Width / 2, bbox.Y + bbox.Height) },
+            { HandleType.BottomLeft, new Point(bbox.X, bbox.Y + bbox.Height) },
+            { HandleType.Left, new Point(bbox.X, bbox.Y + bbox.Height / 2) }
+        };
+
+        foreach (var handle in _resizeHandles.OfType<Rectangle>())
+        {
+            if (handle.Tag is ResizeHandle resizeHandle)
+            {
+                if (positions.TryGetValue(resizeHandle.Type, out var pos))
+                {
+                    Canvas.SetLeft(handle, pos.X - handleSize / 2);
+                    Canvas.SetTop(handle, pos.Y - handleSize / 2);
+                    // 更新Bounds信息
+                    resizeHandle.Bounds = new Rect(pos.X - handleSize / 2, pos.Y - handleSize / 2, handleSize, handleSize);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新单个顶点手柄位置（不重新创建）
+    /// </summary>
+    private void UpdateVertexHandlePosition(int vertexIndex, Point newPosition)
+    {
+        var handleSize = 10.0;
+
+        if (vertexIndex >= 0 && vertexIndex < _vertexHandles.Count)
+        {
+            var handle = _vertexHandles[vertexIndex];
+            Canvas.SetLeft(handle, newPosition.X - handleSize / 2);
+            Canvas.SetTop(handle, newPosition.Y - handleSize / 2);
         }
     }
 

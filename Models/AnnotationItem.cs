@@ -23,6 +23,13 @@ namespace AutoTrainer.Models
         private string? className;
 
         /// <summary>
+        /// 显示颜色
+        /// </summary>
+        [ObservableProperty]
+        [property:JsonIgnore]
+        private Avalonia.Media.Color displayColor = Avalonia.Media.Colors.Red;
+
+        /// <summary>
         /// 是否被选中
         /// </summary>
         [JsonIgnore]

@@ -2,6 +2,7 @@
     x:Class="AutoTrainer.DatasetAnnotationView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
     xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
     xmlns:converter="using:AutoTrainer.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -38,6 +39,7 @@
 	</UserControl.Styles>
     <UserControl.Resources>
         <converter:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+        <converter:ColorToBrushConverter x:Key="ColorToBrushConverter" />
     </UserControl.Resources>
 	<Grid>
 		<notification:NotificationMessageContainer Manager="{Binding NotifyManager}" ZIndex="999"/>
@@ -124,29 +126,43 @@
                                 x:Name="ListBoxClassItem"
                                 MaxHeight="150"
                                 ItemsSource="{Binding ClassNames}"
-                                SelectedItem="{Binding SelectedClassName}"
+                                SelectedItem="{Binding SelectedCategory}"
 								CornerRadius="5">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="25" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock
-                                                Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                Text="{Binding .}" />
+                                            <!-- 颜色按钮 -->
                                             <Button
+                                                Grid.Column="0"
+                                                Width="26"
+                                                Height="26"
+                                                Margin="0,0,5,0"
+                                                Background="{Binding Color, Converter={StaticResource ColorToBrushConverter}}"
+                                                Command="{Binding $parent[UserControl].DataContext.ChangeCategoryColorCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="点击更改颜色"
+                                                CornerRadius="3"/>
+                                            <!-- 类别名称 -->
+                                            <TextBlock
                                                 Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding Name}" />
+                                            <!-- 删除按钮 -->
+                                            <Button
+                                                Grid.Column="2"
 												Width="26"
 												Height="26"
 												Background="{x:Null}"
-                                                Command="{Binding $parent[ListBox].DataContext.RemoveClassCommand}"
-                                                CommandParameter="{Binding .}"
+                                                Command="{Binding $parent[UserControl].DataContext.RemoveClassCommand}"
+                                                CommandParameter="{Binding}"
                                                 ToolTip.Tip="删除类别">
 												<!--删除图标-->
-												<iconPacks:PackIconMaterial 
+												<iconPacks:PackIconMaterial
 													Kind="CloseCircleOutline"/>
 											</Button>
                                         </Grid>
@@ -505,8 +521,14 @@
                             <ComboBox
 								Width="120"
                                 ItemsSource="{Binding ClassNames}"
-                                SelectedItem="{Binding SelectedClassForAction, Mode=TwoWay}"
-								ToolTip.Tip="选中标注框：为标注框设置类别&#x0a;未选中标注框：为整张图片添加分类"/>
+                                SelectedIndex="{Binding SelectedCategoryIndex}"
+								ToolTip.Tip="选中标注框：为标注框设置类别&#x0a;未选中标注框：为整张图片添加分类">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <TextBlock Text="边界框" Margin="0,10,0,10" IsVisible="{Binding HasSelectedAnnotation}"/>
                             <!--  坐标信息  -->
                             <Grid IsEnabled="{Binding HasSelectedAnnotation}" IsVisible="{Binding HasSelectedAnnotation}">

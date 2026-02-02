@@ -23,6 +23,7 @@ using MsBox.Avalonia;
 using Newtonsoft.Json;
 using Serilog;
 using SixLabors.ImageSharp;
+using ImageSharpColor = SixLabors.ImageSharp.Color;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Processing;
 using System;
@@ -94,10 +95,13 @@ namespace AutoTrainer.ViewModels
 
         // 类别管理
         [ObservableProperty]
-        private ObservableCollection<string> classNames = new();
+        private ObservableCollection<CategoryModel> classNames = new();
 
         [ObservableProperty]
-        private string selectedClassName = string.Empty;
+        private CategoryModel? selectedCategory;
+
+        [ObservableProperty]
+        private int selectedCategoryIndex = -1;
 
         [ObservableProperty]
         private string newClassName = string.Empty;
@@ -201,6 +205,8 @@ namespace AutoTrainer.ViewModels
 
         #region 事件和委托
         public Action<AnnotationItem>? OnAnnotationSelected;
+        public Action<AnnotationItem>? OnAnnotationLabelUpdate;
+        public Action<AnnotationItem>? OnAnnotationElementCreated;
         #endregion
 
         /// <summary>
@@ -243,10 +249,34 @@ namespace AutoTrainer.ViewModels
             }
         }
 
+        partial void OnSelectedCategoryIndexChanged(int value)
+        {
+            // 根据索引获取选中的类别
+            if (value >= 0 && value < ClassNames.Count)
+            {
+                var selectedCategory = ClassNames[value];
+                SelectedClassForAction = selectedCategory.Name;
+            }
+        }
+
         partial void OnSelectedClassForActionChanged(string? value)
         {
             if (string.IsNullOrEmpty(value))
+            {
+                SelectedCategoryIndex = -1;
                 return;
+            }
+
+            // 根据类别名称查找类别模型
+            var category = ClassNames.FirstOrDefault(c => c.Name == value);
+            if (category == null)
+            {
+                SelectedCategoryIndex = -1;
+                return;
+            }
+
+            // 同步更新索引
+            SelectedCategoryIndex = ClassNames.IndexOf(category);
 
             if (SelectedAnnotation != null)
             {
@@ -254,6 +284,8 @@ namespace AutoTrainer.ViewModels
                 if (SelectedAnnotation.ClassName != value)
                 {
                     SelectedAnnotation.ClassName = value;
+                    SelectedAnnotation.DisplayColor = category.Color;
+                    UpdateAnnotationColor(SelectedAnnotation);
                 }
             }
             else
@@ -269,6 +301,26 @@ namespace AutoTrainer.ViewModels
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 更新标注颜色
+        /// </summary>
+        public void UpdateAnnotationColor(AnnotationItem annotation)
+        {
+            if (annotation?.UIElement is Shape shape)
+            {
+                var brush = new SolidColorBrush(annotation.DisplayColor);
+                shape.Stroke = brush;
+
+                if (shape is Polygon polygon)
+                {
+                    polygon.Fill = new SolidColorBrush(annotation.DisplayColor) { Opacity = 0.1 };
+                }
+            }
+
+            // 触发标签更新
+            OnAnnotationLabelUpdate?.Invoke(annotation);
         }
 
         /// <summary>
@@ -327,7 +379,7 @@ namespace AutoTrainer.ViewModels
         private void SelectDetectionRectType()
         {
             IsCheckDetectionRectType = true;
-            NotifyManager.ShowInfo("已切换到识别框标签模式", 2);
+            //NotifyManager.ShowInfo("已切换到识别框标签模式", 2);
 
             // 如果有导入的COCO数据，重新处理标注
             ReprocessAnnotationsFromCOCOData();
@@ -340,7 +392,7 @@ namespace AutoTrainer.ViewModels
         private void SelectInstanceSegmentType()
         {
             IsCheckDetectionRectType = false;
-            NotifyManager.ShowInfo("已切换到实例分割标签模式", 2);
+            //NotifyManager.ShowInfo("已切换到实例分割标签模式", 2);
 
             // 如果有导入的COCO数据，重新处理标注
             ReprocessAnnotationsFromCOCOData();
@@ -437,7 +489,11 @@ namespace AutoTrainer.ViewModels
                     ClassNames.Clear();
                     foreach (var className in validClasses.OrderBy(c => c))
                     {
-                        ClassNames.Add(className);
+                        // 获取已使用的颜色
+                        var usedColors = ClassNames.Select(c => c.Color).ToHashSet();
+                        // 获取随机未使用的颜色
+                        var color = GetRandomUnusedColor(usedColors) ?? Avalonia.Media.Colors.Gray;
+                        ClassNames.Add(new CategoryModel(className, color));
                     }
 
                     // 注意：图片的类别已经在LoadImagesFromFolder中分配了
@@ -604,9 +660,13 @@ namespace AutoTrainer.ViewModels
         [RelayCommand]
         private void AddClass()
         {
-            if (!string.IsNullOrWhiteSpace(NewClassName) && !ClassNames.Contains(NewClassName))
+            if (!string.IsNullOrWhiteSpace(NewClassName) && !ClassNames.Any(c => c.Name == NewClassName))
             {
-                ClassNames.Add(NewClassName);
+                // 获取已使用的颜色
+                var usedColors = ClassNames.Select(c => c.Color).ToHashSet();
+                // 获取随机未使用的颜色
+                var color = GetRandomUnusedColor(usedColors) ?? Avalonia.Media.Colors.Gray;
+                ClassNames.Add(new CategoryModel(NewClassName, color));
                 NewClassName = string.Empty;
             }
         }
@@ -614,26 +674,101 @@ namespace AutoTrainer.ViewModels
         /// <summary>
         /// 移除类别
         /// </summary>
-        /// <param name="className"></param>
+        /// <param name="category"></param>
         [RelayCommand]
-        private void RemoveClass(string className)
+        private void RemoveClass(CategoryModel category)
         {
-            if (ClassNames.Contains(className) && ClassNames.Count >= 1)
+            if (ClassNames.Contains(category) && ClassNames.Count >= 1)
             {
-                ClassNames.Remove(className);
+                ClassNames.Remove(category);
 
                 // 如果删除的是当前选中的类别，切换到第一个
-                if (SelectedClassName == className)
+                if (SelectedCategory == category)
                 {
-                    SelectedClassName = ClassNames.FirstOrDefault() ?? string.Empty;
+                    SelectedCategory = ClassNames.FirstOrDefault();
                 }
 
                 // 更新现有标注中使用该类别的项
-                foreach (var annotation in CurrentImageAnnotations.Where(a => a.ClassName == className))
+                var defaultCategoryName = SelectedCategory?.Name ?? "Default";
+                foreach (var annotation in CurrentImageAnnotations.Where(a => a.ClassName == category.Name))
                 {
-                    annotation.ClassName = SelectedClassName;
+                    annotation.ClassName = defaultCategoryName;
                 }
             }
+        }
+
+        /// <summary>
+        /// 更改类别颜色
+        /// </summary>
+        /// <param name="category"></param>
+        [RelayCommand]
+        private void ChangeCategoryColor(CategoryModel category)
+        {
+            // 获取所有已使用的颜色（除了当前类别的颜色）
+            var usedColors = ClassNames
+                .Where(c => c.Name != category.Name)
+                .Select(c => c.Color)
+                .ToHashSet();
+
+            // 获取随机的新颜色（确保不重复）
+            var newColor = GetRandomUnusedColor(usedColors);
+            if (newColor.HasValue)
+            {
+                category.Color = newColor.Value;
+
+                // 更新当前图片中该类别所有标注的颜色
+                foreach (var annotation in CurrentImageAnnotations.Where(a => a.ClassName == category.Name))
+                {
+                    annotation.DisplayColor = category.Color;
+                    UpdateAnnotationColor(annotation);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取随机未使用的颜色
+        /// </summary>
+        private Avalonia.Media.Color? GetRandomUnusedColor(HashSet<Avalonia.Media.Color> usedColors)
+        {
+            var allColors = GetAllColors();
+            var availableColors = allColors.Where(c => !usedColors.Contains(c)).ToList();
+
+            if (availableColors.Count == 0)
+                return null;
+
+            var random = new Random();
+            return availableColors[random.Next(availableColors.Count)];
+        }
+
+        /// <summary>
+        /// 获取所有可用的颜色
+        /// </summary>
+        private Avalonia.Media.Color[] GetAllColors()
+        {
+            return new Avalonia.Media.Color[]
+            {
+                // 基础颜色
+                Avalonia.Media.Colors.Red, Avalonia.Media.Colors.Blue, Avalonia.Media.Colors.Green,
+                Avalonia.Media.Colors.Orange, Avalonia.Media.Colors.Purple, Avalonia.Media.Colors.Cyan,
+                Avalonia.Media.Colors.Magenta, Avalonia.Media.Colors.Yellow, Avalonia.Media.Colors.Lime,
+                Avalonia.Media.Colors.Pink, Avalonia.Media.Colors.Teal, Avalonia.Media.Colors.Indigo,
+                Avalonia.Media.Colors.Gray, Avalonia.Media.Colors.Brown, Avalonia.Media.Colors.Olive,
+                Avalonia.Media.Colors.Maroon,
+
+                // 扩展颜色
+                Avalonia.Media.Color.Parse("#FF6B6B"), Avalonia.Media.Color.Parse("#4ECDC4"),
+                Avalonia.Media.Color.Parse("#45B7D1"), Avalonia.Media.Color.Parse("#FFA07A"),
+                Avalonia.Media.Color.Parse("#98D8C8"), Avalonia.Media.Color.Parse("#F7DC6F"),
+                Avalonia.Media.Color.Parse("#BB8FCE"), Avalonia.Media.Color.Parse("#85C1E9"),
+                Avalonia.Media.Color.Parse("#F8B500"), Avalonia.Media.Color.Parse("#00CED1"),
+                Avalonia.Media.Color.Parse("#FF69B4"), Avalonia.Media.Color.Parse("#32CD32"),
+                Avalonia.Media.Color.Parse("#FFD700"), Avalonia.Media.Color.Parse("#FF4500"),
+                Avalonia.Media.Color.Parse("#9370DB"), Avalonia.Media.Color.Parse("#3CB371"),
+                Avalonia.Media.Color.Parse("#FF6347"), Avalonia.Media.Color.Parse("#7B68EE"),
+                Avalonia.Media.Color.Parse("#00FA9A"), Avalonia.Media.Color.Parse("#DC143C"),
+                Avalonia.Media.Color.Parse("#00BFFF"), Avalonia.Media.Color.Parse("#FF1493"),
+                Avalonia.Media.Color.Parse("#1E90FF"), Avalonia.Media.Color.Parse("#32CD32")
+            };
         }
 
         /// <summary>
@@ -924,19 +1059,25 @@ namespace AutoTrainer.ViewModels
                     var selectedFile = files[0].TryGetLocalPath();
                     if (string.IsNullOrEmpty(selectedFile)) return;
 
-                    var (successCount, errorCount, newClasses) = AnnotationFileHelper.ImportClassifications(selectedFile, ImageList, ClassNames);
+                    // 将 CategoryModel 转换为字符串列表用于辅助方法
+                    var classNamesList = new ObservableCollection<string>(ClassNames.Select(c => c.Name));
+                    var (successCount, errorCount, newClasses) = AnnotationFileHelper.ImportClassifications(selectedFile, ImageList, classNamesList);
 
                     if (successCount == -1)
                     {
                         NotifyManager.ShowError("读取文件失败");
                     }
 
-                    //向主集合添加新类
+                    //向主集合添加新类（转换为 CategoryModel）
                     foreach (var newClass in newClasses)
                     {
-                        if (!ClassNames.Contains(newClass))
+                        if (!ClassNames.Any(c => c.Name == newClass))
                         {
-                            ClassNames.Add(newClass);
+                            // 获取已使用的颜色
+                            var usedColors = ClassNames.Select(c => c.Color).ToHashSet();
+                            // 获取随机未使用的颜色
+                            var color = GetRandomUnusedColor(usedColors) ?? Avalonia.Media.Colors.Gray;
+                            ClassNames.Add(new CategoryModel(newClass, color));
                         }
                     }
 
@@ -1266,6 +1407,9 @@ namespace AutoTrainer.ViewModels
         /// <param name="annotationItem"></param>
         private void UpdateUI(AnnotationItem annotationItem)
         {
+            var color = annotationItem.DisplayColor;
+            var colorBrush = new SolidColorBrush(color);
+
             switch (annotationItem)
             {
                 case RectangleModel rectModel:
@@ -1273,7 +1417,7 @@ namespace AutoTrainer.ViewModels
                         var rect = new Avalonia.Controls.Shapes.Rectangle
                         {
                             Tag = rectModel.InstanceGuid,
-                            Stroke = Avalonia.Media.Brushes.Red,
+                            Stroke = colorBrush,
                             StrokeThickness = 2,
                             Width = rectModel.Width,
                             Height = rectModel.Height
@@ -1290,7 +1434,8 @@ namespace AutoTrainer.ViewModels
                         {
                             Tag = polygonModel.InstanceGuid,
                             StrokeThickness = 1,
-                            Stroke = Avalonia.Media.Brushes.Blue,
+                            Stroke = colorBrush,
+                            Fill = new SolidColorBrush(color) { Opacity = 0.1 },
                             Points = polygonModel.Points
                         };
                         polygonModel.UIElement = poloygen;
@@ -1304,7 +1449,8 @@ namespace AutoTrainer.ViewModels
                             Tag = pointModel.InstanceGuid,
                             Width = 4,
                             Height = 4,
-                            Stroke = Avalonia.Media.Brushes.DarkGreen,
+                            Fill = colorBrush,
+                            Stroke = colorBrush,
                             StrokeThickness = 2,
                         };
                         Canvas.SetLeft(point, pointModel.X - 4);
@@ -1314,6 +1460,9 @@ namespace AutoTrainer.ViewModels
                     }
                     break;
             }
+
+            // 触发回调以添加标签
+            OnAnnotationElementCreated?.Invoke(annotationItem);
         }
 
         /// <summary>
@@ -1874,9 +2023,13 @@ namespace AutoTrainer.ViewModels
                     categoryIdMap[category.Id] = category.Name;
 
                     // 添加新类别到类别列表
-                    if (!ClassNames.Contains(category.Name))
+                    if (!ClassNames.Any(c => c.Name == category.Name))
                     {
-                        Dispatcher.UIThread.Invoke(() => ClassNames.Add(category.Name));
+                        // 获取已使用的颜色
+                        var usedColors = ClassNames.Select(c => c.Color).ToHashSet();
+                        // 获取随机未使用的颜色
+                        var color = GetRandomUnusedColor(usedColors) ?? Avalonia.Media.Colors.Gray;
+                        Dispatcher.UIThread.Invoke(() => ClassNames.Add(new CategoryModel(category.Name, color)));
                     }
                 }
 
@@ -1949,6 +2102,7 @@ namespace AutoTrainer.ViewModels
             if (_lastImportedCocoDataset == null)
             {
                 NotifyManager.ShowWarning("没有已导入的COCO标注数据");
+                return;
             }
 
             try

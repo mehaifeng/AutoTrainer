@@ -50,9 +50,12 @@
         
         <!-- 通知组件样式 -->
 		<StyleInclude Source="avares://Notification.Avalonia/Themes/Generic.xaml"/>
-        
+
         <!-- 图标库样式 -->
 		<StyleInclude Source="avares://IconPacks.Avalonia.Material/Material.axaml" />
+
+        <!-- 颜色选择器样式 -->
+		<StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
         
         <!-- 自定义实用样式类 -->
         
