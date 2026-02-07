@@ -30,6 +30,12 @@
     <None Update="Configs\AvailableModels.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Configs\FlexibleRequirements.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Configs\ModelParam.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Configs\Requirements.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -154,11 +160,23 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Views\UserControls\DatasetAnnotationView.axaml.cs">
+    <Compile Update="Views\UserControls\Setup\SetupView.axaml.cs">
+      <DependentUpon>SetupView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Annotation\DatasetAnnotationView.axaml.cs">
       <DependentUpon>DatasetAnnotationView.axaml</DependentUpon>
     </Compile>
-    <Compile Update="Views\UserControls\TrainingView.axaml.cs">
+    <Compile Update="Views\UserControls\Training\TrainingView.axaml.cs">
       <DependentUpon>TrainingView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Training\TrainingParametersView.axaml.cs">
+      <DependentUpon>TrainingParametersView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Export\ModelExportView.axaml.cs">
+      <DependentUpon>ModelExportView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Validation\ModelValidationView.axaml.cs">
+      <DependentUpon>ModelValidationView.axaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
