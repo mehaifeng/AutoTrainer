@@ -18,23 +18,23 @@
 		        Title="AutoTrainer">
 			<TabControl SelectedIndex="{Binding SelectTabIndex}" AutoScrollToSelectedItem="True" Theme="{StaticResource ScrollableTabControl}">
 				<TabControl.Items>
-					<TabItem Header="模型">
-						<local:ModelConfigView />
+					<TabItem Header="环境设置">
+						<local:SetupView />
 					</TabItem>
-					<TabItem Header="训练集">
+					<TabItem Header="数据标注">
 						<local:DatasetAnnotationView/>
 					</TabItem>
-					<TabItem Header="参数配置">
-						<local:ParameterConfigView/>
+					<TabItem Header="训练参数">
+						<local:TrainingParametersView/>
 					</TabItem>
-					<TabItem Header="训练">
+					<TabItem Header="训练执行">
 						<local:TrainingView/>
 					</TabItem>
-					<TabItem Header="进阶验证">
-						<userControls:ValidModelPerformanceView/>
+					<TabItem Header="模型验证">
+						<userControls:ModelValidationView/>
 					</TabItem>
-					<TabItem Header="导出">
-						<local:ConvertToExportView/>
+					<TabItem Header="模型导出">
+						<local:ModelExportView/>
 					</TabItem>
 				</TabControl.Items>
 			</TabControl>

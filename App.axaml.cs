@@ -19,9 +19,10 @@ namespace AutoTrainer
     {
         #region ViewModels
         public static MainWindowViewModel MainVM { get; } = new();
-        public static ModelConfigViewModel ModelConfigVM { get; } = new();
-        public static TrainingViewModel TrainingVM { get; } = new();
-        public static ValidModelPerformanceViewModel ValidationVM { get; } = new();
+        public static SetupViewModel SetupVM { get; } = new();
+        public static TrainingViewModel TrainingExecutionVM { get; } = new();
+        public static TrainingParametersViewModel TrainingParametersVM { get; } = new();
+        public static ModelValidationViewModel ModelValidationVM { get; } = new();
         #endregion
 
 
