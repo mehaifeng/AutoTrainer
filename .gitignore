@@ -363,3 +363,22 @@ MigrationBackup/
 FodyWeavers.xsd
 /.idea
 /.claude/settings.local.json
+.DS_Store
+
+# AutoTrainer 运行时生成的数据文件夹
+DataSet/
+Downloads/
+Logs/
+Models/
+runs/
+Runtime/
+Venvs/
+
+# 虚拟环境
+venv/
+.venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo

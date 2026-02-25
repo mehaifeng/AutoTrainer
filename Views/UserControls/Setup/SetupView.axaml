@@ -1,0 +1,405 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:AutoTrainer.ViewModels"
+			 xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+             xmlns:app="clr-namespace:AutoTrainer"
+			 mc:Ignorable="d"
+			 d:DesignWidth="1200"
+			 d:DesignHeight="850"
+			 x:Name="ModelTabItem"
+             x:Class="AutoTrainer.SetupView"
+			 x:DataType="vm:SetupViewModel"
+             DataContext="{x:Static app:App.SetupVM}">
+	<UserControl.Styles>
+		<Style Selector="iconPacks|PackIconMaterial.spinning">
+			<Style.Animations>
+				<Animation Duration="0:0:1" IterationCount="Infinite">
+					<KeyFrame Cue="0%">
+						<Setter Property="(RotateTransform.Angle)" Value="0"/>
+					</KeyFrame>
+					<KeyFrame Cue="100%">
+						<Setter Property="(RotateTransform.Angle)" Value="360"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+	</UserControl.Styles>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width=".33*"/>
+			<ColumnDefinition Width=".67*"/>
+		</Grid.ColumnDefinitions>
+		<Border Grid.Column="0" Padding="10" Margin="5,5,0,5" BorderThickness="1" CornerRadius="5" BorderBrush="Black">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="90"/>
+				</Grid.RowDefinitions>
+				<Grid Grid.Row="0">
+					<Grid.RowDefinitions>
+						<RowDefinition Height="80"/>
+						<RowDefinition Height="80"/>
+						<RowDefinition Height="50"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height=".6*"/>
+						<RowDefinition Height=".4*"/>
+					</Grid.RowDefinitions>
+					<!--python路径 python path-->
+					<StackPanel Grid.Row="0" Margin="5">
+						<TextBlock Text="Python路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+						<TextBox
+							HorizontalAlignment="Stretch"
+							IsEnabled="{Binding IsEnablePythonConfigView}"
+							Text="{Binding PythonPath}"
+							Watermark="Python可执行文件路径" />
+					</StackPanel>
+					<!--python虚拟环境 python venv path-->
+					<StackPanel Grid.Row="1" Margin="5">
+						<TextBlock Text="Venv路径" Margin="0,0,0,5" FontSize="12" FontWeight="SemiBold"/>
+						<ComboBox
+							IsEditable="True"
+							HorizontalAlignment="Stretch"
+							VerticalContentAlignment="Center"
+							IsEnabled="{Binding IsEnablePythonConfigView}"
+							Text="{Binding PythonVenvPath}" 
+							SelectedItem="{Binding PythonVenvPath,UpdateSourceTrigger=PropertyChanged}"
+							ItemsSource="{Binding PythonVenvPaths}"
+							ToolTip.Tip="虚拟环境路径"/>
+					</StackPanel>
+					<!--虚拟环境搜索和创建 Venv-CreateVenv-->
+					<StackPanel
+						Grid.Row="2"
+						IsEnabled="{Binding IsEnablePythonConfigView}"
+						Orientation="Horizontal"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Center">
+						<Button
+							Command="{Binding ScanningVenvCommand}"
+							Margin="10,0,0,0"
+							ToolTip.Tip="搜索Venv环境"
+							VerticalAlignment="Center"
+							Height="30"
+							Width="70"
+							FontSize="12">
+							<Button.Content>
+								<Panel>
+									<!-- 默认文本 -->
+									<StackPanel Orientation="Horizontal" IsVisible="{Binding !IsScanningVenv}">
+										<iconPacks:PackIconMaterial Kind="FolderSearchOutline"  VerticalAlignment="Center"/>
+										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
+									</StackPanel>
+									<!-- Loading图标 -->
+									<iconPacks:PackIconMaterial 
+										Kind="Loading" 
+										Margin="0,0,10,0"
+										Width="10"
+										Height="10"
+										HorizontalAlignment="Center"
+										Classes="spinning"
+										RenderTransformOrigin="10,10"
+										IsVisible="{Binding IsScanningVenv}"/>
+								</Panel>
+							</Button.Content>
+						</Button>
+						<Button
+							Command="{Binding CreateVenvCommand}"
+							Margin="10,0,0,0"
+							VerticalAlignment="Center"
+							Height="30"
+							Width="70"
+							ToolTip.Tip="创建Venv环境"
+							FontSize="12">
+							<Button.Content>
+								<Panel>
+									<!-- 默认文本 -->
+									<StackPanel Orientation="Horizontal" IsVisible="{Binding IsEnablePythonConfigView}">
+										<iconPacks:PackIconMaterial Kind="PlusCircleOutline" VerticalAlignment="Center"/>
+										<TextBlock Margin="5,0,0,0" Text="Venv" VerticalAlignment="Center"/>
+									</StackPanel>
+								<!-- Loading图标 -->
+									<iconPacks:PackIconMaterial
+										Kind="Loading"
+										Margin="0,0,10,0"
+										Width="10"
+										Height="10"
+										Classes="spinning"
+										HorizontalAlignment="Center"
+										RenderTransformOrigin="10,10"
+										IsVisible="{Binding !IsEnablePythonConfigView}"/>
+								</Panel>
+							</Button.Content>
+						</Button>
+						<!--环境诊断按钮-->
+						<Button
+							Command="{Binding RunDiagnosticsCommand}"
+							ToolTip.Tip="运行环境诊断"
+							VerticalAlignment="Center"
+							Margin="10,0,0,0"
+							Height="30"
+							Width="100"
+							FontSize="12">
+							<Button.Content>
+								<Panel>
+									<StackPanel Orientation="Horizontal" IsVisible="{Binding !IsRunningDiagnostics}">
+										<iconPacks:PackIconMaterial Kind="Stethoscope" VerticalAlignment="Center"/>
+										<TextBlock Margin="5,0,0,0" Text="环境诊断" VerticalAlignment="Center"/>
+									</StackPanel>
+									<iconPacks:PackIconMaterial
+										Kind="Loading"
+										Margin="0,0,10,0"
+										Width="10"
+										Height="10"
+										Classes="spinning"
+										RenderTransformOrigin="10,10"
+										IsVisible="{Binding IsRunningDiagnostics}"/>
+								</Panel>
+							</Button.Content>
+						</Button>
+					</StackPanel>
+					<!--Dynamic Scanning Folder-->
+					<TextBlock
+						Grid.Row="3"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Text="{Binding ScanningFolder}"
+						IsVisible="{Binding IsScanningVenv}"/>
+					<!--Pip list-->
+					<Grid Grid.Row="4" Margin="5" RowDefinitions="Auto,*">
+						<TextBlock
+							Grid.Row="0"
+							Text="软件包列表"
+							Margin="0,0,0,5"
+							FontSize="12"
+							FontWeight="SemiBold"/>
+						<TextBox
+							Grid.Row="1"
+							Text="{Binding PipApps}"
+							TextWrapping="Wrap"
+							AcceptsReturn="True"/>
+					</Grid>
+					<!--requirements-->
+					<Grid Grid.Row="5" Margin="5,10,5,5" RowDefinitions="Auto,*">
+						<TextBlock
+							Grid.Row="0"
+							Text="软件包需求"
+							Margin="0,0,0,5"
+							FontSize="12"
+							FontWeight="SemiBold"/>
+						<TextBox
+							Grid.Row="1"
+							Classes="outline"
+							Text="{Binding Requirements}"
+							IsReadOnly="True"
+							AcceptsReturn="True"
+							TextWrapping="Wrap"/>
+					</Grid>
+				</Grid>
+				<!--Enviroment State-->
+				<StackPanel
+					Grid.Row="1"
+					Margin="0,15,0,0"
+					Orientation="Vertical">
+					<TextBlock
+						HorizontalAlignment="Center"
+						Margin="0,0,0,10"
+						Text="{Binding EnvironmentState}"
+						Foreground="{Binding StateForeground}"/>
+					<Button
+						Width="160"
+						Height="30"
+						Margin="0,0,0,10"
+						IsVisible="{Binding IsVisibleInstallMissing}"
+						Command="{Binding InstallMissingAppCommand}"
+						Classes="outline"
+						HorizontalAlignment="Center"
+						HorizontalContentAlignment="Center"
+						Content="安装缺失的软件包"
+						Foreground="Red"/>
+					<ProgressBar
+						Margin="0,0,0,10"
+						Height="10"
+						Width="35"
+						IsIndeterminate="{Binding IsRunningProgressBar}"
+						IsVisible="{Binding IsVisibleProgressBar}"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+		<Border Grid.Column="1">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height=".75*"/>
+					<RowDefinition Height="1"/>
+					<RowDefinition Height=".25*"/>
+				</Grid.RowDefinitions>
+				<!--选择任务类型 和 选择预训练模型 模型介绍-->
+				<Grid Grid.Row="0">
+					<Border BorderBrush="Black" BorderThickness="1" Margin="5" CornerRadius="5">
+						<Grid
+						HorizontalAlignment="Center"
+						VerticalAlignment="Center"
+						Margin="10">
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="*"/>
+							</Grid.RowDefinitions>
+							<Grid 
+								Grid.Row="0"
+								Margin="0,5,0,10">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition/>
+									<ColumnDefinition/>
+									<ColumnDefinition/>
+								</Grid.ColumnDefinitions>
+								<!--任务类型选择-->
+								<Grid Grid.Column="0" RowDefinitions="Auto,Auto" >
+									<TextBlock 
+										Grid.Row="0"
+										Text="任务类型"
+										FontSize="12"
+										FontWeight="SemiBold"/>
+									<ComboBox
+										Grid.Row="1"
+										IsEnabled="{Binding !IsTaskTypeChanging}"
+										HorizontalAlignment="Left"
+										VerticalAlignment="Bottom"
+										SelectedItem="{Binding SelectedTaskType}"
+										ItemsSource="{Binding TaskTypes}"
+										DisplayMemberBinding="{Binding Name}">
+									</ComboBox>
+								</Grid>
+								<!--选择预训练模型Combobox-->
+								<Grid Grid.Column="1" RowDefinitions="Auto,Auto" Margin="10,0,0,0">
+									<TextBlock
+										Text="选择预训练模型" FontSize="12" FontWeight="SemiBold"/>
+									<ComboBox
+										Grid.Row="1"
+										IsEnabled="{Binding !IsTaskTypeChanging}"
+										Width="200"
+										HorizontalAlignment="Left"
+										VerticalAlignment="Bottom"
+										SelectedItem="{Binding SelectModel}"
+										ItemsSource="{Binding ModelList}">
+										<Interaction.Behaviors>
+											<EventTriggerBehavior EventName="SelectionChanged">
+												<InvokeCommandAction Command="{Binding SelectModelToShowCommand}"/>
+											</EventTriggerBehavior>
+										</Interaction.Behaviors>
+									</ComboBox>	
+								</Grid>
+								<!--选择本地模型 Select Local Weight-->
+								<Button
+									Grid.Column="2"
+									IsVisible="{Binding IsVisibleIntroduce}"
+									VerticalAlignment="Bottom"
+									HorizontalAlignment="Left"
+									Command="{Binding SelectLocalModelCommand}"
+									Content="选择本地权重"
+									Margin="10,0,0,0"/>
+								<!--选择本地模型名称 Selected Local Weight Name-->
+								<SelectableTextBlock
+									Grid.Column="3"
+									Text="{Binding SelectedLocalWeightText}"
+									IsVisible="{Binding IsVisibleIntroduce}"
+									FontSize="14"
+									VerticalAlignment="Bottom"
+									Margin="10,0,0,0"
+									HorizontalAlignment="Left"/>
+								<!--下一步 Next Step-->
+								<Button
+									Grid.Column="4"
+									Command="{Binding GoToNextTabCommand}"
+									CommandParameter="{Binding ElementName=ModelTabItem}"
+									HorizontalAlignment="Right"
+									VerticalAlignment="Bottom"
+									IsVisible="{Binding IsVisibleIntroduce}">
+									<StackPanel Orientation="Horizontal">
+										<TextBlock
+											Margin="0,0,10,0"
+											FontSize="16"
+											VerticalAlignment="Center"
+											Text="下一步"/>
+										<iconPacks:PackIconMaterial
+											Width="16"
+											Height="16"
+											VerticalAlignment="Center"
+											Kind="ChevronRight" />
+									</StackPanel>
+								</Button>
+							</Grid>
+							<!--用于加载预训练模型进度条 Load PreTrained Model Information ProgressBar-->
+							<ProgressBar
+								Grid.Row="1"
+								Margin="0,30,0,0"
+								HorizontalAlignment="Center"
+								IsVisible="{Binding IsLoadingModelList}"
+								IsIndeterminate="{Binding IsLoadingModelList}"
+								Height="10"
+								Width="35"/>
+							<!--预训练模型介绍文本-->
+							<TextBox
+								Grid.Row="1"
+								IsVisible="{Binding IsVisibleIntroduce}"
+								CornerRadius="5"
+								AcceptsReturn="True"
+								TextWrapping="Wrap"
+								MinHeight="100"
+								Text="{Binding SelectModelIntroduce}" />
+						</Grid>
+					</Border>
+				</Grid>
+				<GridSplitter Grid.Row="1" Height="2" VerticalAlignment="Center"/>
+				<!--输出文本框和执行按钮-->
+				<Border Grid.Row="2">
+					<Grid>
+						<!--输出-->
+						<TextBox
+							x:Name="Outout_tb"
+							FontFamily="Consolas"
+							AcceptsReturn="True"
+							TextWrapping="Wrap"
+							MinHeight="80"
+							CornerRadius="5"
+							Margin="5,0,5,2"
+							Text="{Binding Outputs}"
+							TextChanged="Outout_tb_TextChanged"
+							BorderThickness="1"/>
+						<!--Start Execute-->
+						<Button
+							HorizontalAlignment="Right"
+							VerticalAlignment="Bottom"
+							HorizontalContentAlignment="Center"
+							IsEnabled="{Binding !IsExecutingPyScript}"
+							Margin="0,10,20,10"
+							Height="30"
+							Width="60"
+							Command="{Binding ExecutePyCommand}">
+							<Panel>
+								<iconPacks:PackIconMaterial
+									Width="16"
+									Height="16"
+									VerticalAlignment="Center"
+									Kind="Play"
+									IsVisible="{Binding !IsExecutingPyScript}"/>
+								<!-- 默认文本 -->
+								<iconPacks:PackIconMaterial
+									Width="10"
+									Height="10"
+									Margin="0,0,10,0"
+									Classes="spinning"
+									Kind="Loading"
+									RenderTransformOrigin="10,10"
+									HorizontalAlignment="Center"
+									IsVisible="{Binding IsExecutingPyScript}">
+								</iconPacks:PackIconMaterial>
+							</Panel>
+						</Button>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
+	</Grid>
+</UserControl>

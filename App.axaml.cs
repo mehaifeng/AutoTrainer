@@ -1,7 +1,13 @@
 using AutoTrainer.Models;
+using AutoTrainer.Models.Crop;
+using AutoTrainer.Models.Dataset;
+using AutoTrainer.Models.Logging;
+using AutoTrainer.Models.Training;
+using AutoTrainer.Models.Annotation;
 using AutoTrainer.ViewModels;
 using AutoTrainer.Views;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
@@ -10,11 +16,21 @@ using Serilog;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using AutoTrainer.Helpers;
 
 namespace AutoTrainer
 {
     public partial class App : Application
     {
+        #region ViewModels
+        public static MainWindowViewModel MainVM { get; } = new();
+        public static SetupViewModel SetupVM { get; } = new();
+        public static TrainingViewModel TrainingExecutionVM { get; } = new();
+        public static TrainingParametersViewModel TrainingParametersVM { get; } = new();
+        public static ModelValidationViewModel ModelValidationVM { get; } = new();
+        #endregion
+
+
         public override void Initialize()
         {
             Log.Information("初始化 AutoTrainer 应用程序");
@@ -29,11 +45,19 @@ namespace AutoTrainer
                 TrainModel = new TrainModel
                 {
                     ModelOutputPath = ModelOutputFolderPath,
-                    PyTrainLogOutputPath = PyTrainLogsFolderPath,
-                    MutationDataPath = MutationDataPath,
+                    // Initialize the new configuration structure
+                    Classification = new ClassificationConfig
+                    {
+                        DataAugmentation = new DataAugmentationConfig(),
+                        LossFunction = new ClassifyLossConfig()
+                    },
+                    Detection = new DetectionConfig
+                    {
+                        DetectionLoss = new DetectionLossConfig()
+                    }
                 };
-                Log.Debug("TrainModel 初始化完成，路径 - 模型输出: {ModelOutput}, Python训练日志: {PyTrainLogs}, 变异数据: {MutationData}",
-                    ModelOutputFolderPath, PyTrainLogsFolderPath, MutationDataPath);
+                Log.Debug("TrainModel 初始化完成，路径 - 模型输出: {ModelOutput}, Python训练日志: {PyTrainLogs}",
+                    ModelOutputFolderPath, PyTrainLogsFolderPath);
 
                 string osDescription = RuntimeInformation.OSDescription;
                 string osArchitecture = RuntimeInformation.OSArchitecture.ToString();
@@ -65,7 +89,7 @@ namespace AutoTrainer
         #region 全局变量
         public static string PythonVenvPath { get; set; } = string.Empty;
         public static string ConfigFolderPath = Path.Combine(Environment.CurrentDirectory, "Configs");
-        public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "Models");
+        public static string ModelOutputFolderPath = Path.Combine(Environment.CurrentDirectory, "runs");
         public static string PyTrainLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "PyTrain");
         public static string PyClassifyLogFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "PyClassify");
         public static string AppLogsFolderPath = Path.Combine(Environment.CurrentDirectory, "Logs", "AppLogs");
@@ -122,7 +146,7 @@ namespace AutoTrainer
                 // Line below is needed to remove Avalonia data validation.
                 // Without this line you will get duplicate validations from both Avalonia and CT
                 BindingPlugins.DataValidators.RemoveAt(0);
-                desktop.MainWindow = new SelectTrainingTypeView();
+                desktop.MainWindow = new MainWindow();
             }
             base.OnFrameworkInitializationCompleted();
         }

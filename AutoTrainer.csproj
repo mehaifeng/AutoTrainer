@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <!--<BuiltInComInteropSupport>true</BuiltInComInteropSupport>-->
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -14,19 +14,65 @@
 
   <ItemGroup>
     <AvaloniaXaml Remove="CmdHelper\**" />
+    <AvaloniaXaml Remove="Logs\**" />
     <Compile Remove="CmdHelper\**" />
+    <Compile Remove="Logs\**" />
     <EmbeddedResource Remove="CmdHelper\**" />
+    <EmbeddedResource Remove="Logs\**" />
     <None Remove="CmdHelper\**" />
+    <None Remove="Logs\**" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Assets\ImageClassify.webp" />
     <None Remove="Assets\ValuePredict.webp" />
     <None Remove="nul" />
+    <None Update="Configs\AvailableModels.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Configs\FlexibleRequirements.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Configs\ModelParam.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Configs\Requirements.yaml">
+    <None Update="Configs\Requirements.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\ClassificationValidator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Classification\efficientnet_converter.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Classification\mobilenet_converter.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Classification\resnet_converter.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Classification\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\common\base_converter.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\common\utils.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\common\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\convert_model.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Detection\fasterrcnn_converter.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\Detection\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Conversion\ModelConverter.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="PyScripts\DetectionModelHelper.py">
@@ -35,7 +81,34 @@
     <None Update="PyScripts\DetectionTrainer.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="PyScripts\ImageClassifier.py">
+    <None Update="PyScripts\DetectionValidator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\ClassificationValidator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\DetectionValidator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Classification\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Classification\base_classifier_validator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Classification\efficientnet_validator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Classification\mobilenet_validator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Detection\base_detector_validator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Detection\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Inference\Detection\fasterrcnn_validator.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="PyScripts\ModelConverter.py">
@@ -56,43 +129,54 @@
   </ItemGroup>-->
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
+    <PackageReference Include="Avalonia" Version="11.3.9" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.9" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.9" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.9" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.9" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.8" />
-    <PackageReference Include="CliWrap" Version="3.9.0" />
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.3.9" />
+    <PackageReference Include="CliWrap" Version="3.10.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="IconPacks.Avalonia.Material" Version="1.3.1" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc5" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
       <PackageReference Include="MessageBox.Avalonia" Version="3.3.0" />
     <PackageReference Include="Minio" Version="7.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Notification.Avalonia" Version="2.2.0" />
     <PackageReference Include="PanAndZoom" Version="11.3.6" />
-    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog" Version="4.3.1-dev-02395" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.1-dev-02315" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
-    <PackageReference Include="Xaml.Behaviors.Avalonia" Version="11.3.6.6" />
-    <PackageReference Include="Xaml.Behaviors.Interactivity" Version="11.3.6.6" />
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2-preview.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+    <PackageReference Include="Xaml.Behaviors.Avalonia" Version="11.3.8.2" />
+    <PackageReference Include="Xaml.Behaviors.Interactivity" Version="11.3.8.2" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.3.9" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Views\SelectTrainingTypeView.axaml.cs">
-      <DependentUpon>SelectTrainingTypeView.axaml</DependentUpon>
+    <Compile Update="Views\UserControls\Setup\SetupView.axaml.cs">
+      <DependentUpon>SetupView.axaml</DependentUpon>
     </Compile>
-    <Compile Update="Views\UserControls\DatasetAnnotationView.axaml.cs">
+    <Compile Update="Views\UserControls\Annotation\DatasetAnnotationView.axaml.cs">
       <DependentUpon>DatasetAnnotationView.axaml</DependentUpon>
     </Compile>
-    <Compile Update="Views\UserControls\TrainingView.axaml.cs">
+    <Compile Update="Views\UserControls\Training\TrainingView.axaml.cs">
       <DependentUpon>TrainingView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Training\TrainingParametersView.axaml.cs">
+      <DependentUpon>TrainingParametersView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Export\ModelExportView.axaml.cs">
+      <DependentUpon>ModelExportView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\UserControls\Validation\ModelValidationView.axaml.cs">
+      <DependentUpon>ModelValidationView.axaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
@@ -103,5 +187,63 @@
     <None Update="PyScripts\testdevice.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="PyScripts\Training\Classification\base_classifier.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Classification\efficientnet_trainer.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Classification\mobilenet_trainer.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Classification\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\config_parser.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\data_loader.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\detection_data_loader.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\logger.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\metrics.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\utils.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\common\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Detection\base_detector.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Detection\fasterrcnn_trainer.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Training\Detection\__init__.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Utils\DetectionModelHelper.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Utils\ModelHelper.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Utils\ModelMetadataReader.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="PyScripts\Utils\ModelValidator.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="docs\" />
   </ItemGroup>
 </Project>

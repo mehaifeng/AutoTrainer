@@ -1,0 +1,92 @@
+{
+  "base": {
+    "pip": [
+      "setuptools>=65.0.0",
+      "wheel>=0.40.0",
+      "pip>=23.0.0"
+    ]
+  },
+  "core": {
+    "all": [
+      "numpy>=1.24.0,<2.0.0",
+      "scipy>=1.10.0",
+      "pillow>=9.0.0",
+      "matplotlib>=3.7.0",
+      "scikit-learn>=1.3.0",
+      "pandas>=2.0.0",
+      "tqdm>=4.65.0",
+      "albumentations>=1.3.0",
+      "onnx>=1.14.0",
+      "onnxruntime",
+      "onnxscript",
+      "psutil>=5.9.0",
+      "sympy>=1.12",
+      "six>=1.16.0"
+    ],
+    "windows": [
+      "opencv-python>=4.8.0"
+    ],
+    "linux": [
+      "opencv-python>=4.8.0"
+    ],
+    "darwin": [
+      "opencv-python>=4.8.0"
+    ]
+  },
+  "ml": {
+    "cpu": {
+      "torch": "torch>=2.0.0,<3.0.0",
+      "torchvision": "torchvision>=0.15.0,<1.0.0",
+      "tensorflow": "tensorflow>=2.13.0"
+    },
+    "cuda": {
+      "cu118": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu118",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu118"
+      },
+      "cu121": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu121",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu121"
+      },
+      "cu124": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu124",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu124"
+      },
+      "cu126": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu126",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu126"
+      },
+      "cu128": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu128",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu128"
+      },
+      "cu130": {
+        "torch": "torch --index-url https://download.pytorch.org/whl/cu130",
+        "torchvision": "torchvision --index-url https://download.pytorch.org/whl/cu130"
+      }
+    }
+  },
+  "optional": {
+    "development": [
+      "jupyter>=1.0.0",
+      "ipython>=8.0.0",
+      "ipykernel>=6.0.0"
+    ],
+    "visualization": [
+      "seaborn>=0.12.0",
+      "plotly>=5.0.0"
+    ],
+    "optimization": [
+      "onnxslim",
+      "tensorrt",
+      "openvino"
+    ]
+  },
+  "notes": [
+    "使用版本范围（>=X.Y.Z）而非固定版本以提高兼容性",
+    "PyTorch自动选择CUDA版本：根据系统检测的CUDA版本选择合适的预编译包",
+    "平台特定包：windows/linux/darwin分别配置",
+    "cu118对应CUDA 11.8，cu121对应CUDA 12.1，以此类推",
+    "onnxscript是PyTorch 2.0+导出ONNX的必需依赖"
+  ]
+}

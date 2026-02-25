@@ -1,0 +1,711 @@
+<UserControl
+    x:Class="AutoTrainer.DatasetAnnotationView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+    xmlns:notification="clr-namespace:Avalonia.Notification.Controls;assembly=Notification.Avalonia"
+    xmlns:converter="using:AutoTrainer.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:AutoTrainer.Models"
+    xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+	xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
+    xmlns:vm="using:AutoTrainer.ViewModels"
+    x:Name="DataAnnotationView"
+    d:DesignHeight="850"
+    d:DesignWidth="1300"
+    x:DataType="vm:DatasetAnnotationViewModel"
+    mc:Ignorable="d">
+	<Interaction.Behaviors>
+		<EventTrigger EventName="Loaded">
+			<InvokeCommandAction Command="{Binding LoadedCommand}"/>
+		</EventTrigger>
+	</Interaction.Behaviors>
+	<UserControl.Styles>
+		<Style Selector="Button">
+			<Setter Property="Width" Value="150"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Expander">
+			<Setter Property="Background" Value="{x:Null}"/>
+		</Style>
+		<Style Selector="iconPacks|PackIconMaterial">
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Height" Value="16"/>
+			<Setter Property="Width" Value="16"/>
+		</Style>
+	</UserControl.Styles>
+    <UserControl.Resources>
+        <converter:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+        <converter:ColorToBrushConverter x:Key="ColorToBrushConverter" />
+    </UserControl.Resources>
+	<Grid>
+		<notification:NotificationMessageContainer Manager="{Binding NotifyManager}" ZIndex="999"/>
+        <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width=".25*" />
+            <!--  左侧工具栏  -->
+            <ColumnDefinition Width="*" />
+            <!--  主图像区域  -->
+            <ColumnDefinition Width=".25*" />
+            <!--  右侧属性面板  -->
+        </Grid.ColumnDefinitions>
+
+        <!--  左侧工具栏  -->
+        <Border
+            Grid.Column="0"
+            BorderThickness="0,0,1,0">
+            <ScrollViewer>
+                <StackPanel Margin="10" Spacing="10">
+                    <!--  标注模式选择  -->
+                    <Expander Header="标注模式" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="8">
+                            <RadioButton
+                                Command="{Binding SelectManualModeCommand}"
+                                Content="手动标注"
+                                IsChecked="True"
+                                ToolTip.Tip="逐张手动标注图片" />
+                            <RadioButton
+                                Command="{Binding SelectAIModeCommand}"
+                                Content="智能辅助"
+                                ToolTip.Tip="AI辅助预标注" />
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  标注工具  -->
+                    <Expander Header="标注工具" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="8">
+                            <RadioButton
+                                Command="{Binding SelectRectangleToolCommand}"
+                                Content="矩形框"
+                                GroupName="AnnotationTools"
+                                IsChecked="True"
+                                ToolTip.Tip="绘制矩形标注框" />
+                            <RadioButton
+                                Command="{Binding SelectPolygonToolCommand}"
+                                Content="多边形"
+                                GroupName="AnnotationTools"
+                                ToolTip.Tip="绘制多边形标注区域" />
+                            <RadioButton
+                                Command="{Binding SelectPointToolCommand}"
+                                Content="点标注"
+                                GroupName="AnnotationTools"
+                                ToolTip.Tip="关键点标注" />
+                            <Separator/>
+
+                            <Button
+								Width="150"
+                                Command="{Binding ClearAllAnnotationsCommand}"
+                                CommandParameter="{Binding ElementName=AnnotationCanvas}"
+                                ToolTip.Tip="清除当前图片所有标注">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="DeleteForeverOutline"/>
+									<TextBlock Text="清除该图全部标注"/>
+								</StackPanel>
+							</Button>
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  类别管理  -->
+                    <Expander Header="类别管理" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="8">
+                            <TextBox Text="{Binding NewClassName}" Watermark="输入新类别名称" />
+                            <!--  Text="{Binding NewClassName}"  -->
+
+                            <Button
+                                Command="{Binding AddClassCommand}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="Plus" />
+									<TextBlock Text="添加类别"/>
+								</StackPanel>
+							</Button>
+
+                            <ListBox
+                                x:Name="ListBoxClassItem"
+                                MaxHeight="150"
+                                ItemsSource="{Binding ClassNames}"
+                                SelectedItem="{Binding SelectedCategory}"
+								CornerRadius="5">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="25" />
+                                            </Grid.ColumnDefinitions>
+                                            <!-- 颜色按钮 -->
+                                            <Button
+                                                Grid.Column="0"
+                                                Width="26"
+                                                Height="26"
+                                                Margin="0,0,5,0"
+                                                Background="{Binding Color, Converter={StaticResource ColorToBrushConverter}}"
+                                                Command="{Binding $parent[UserControl].DataContext.ChangeCategoryColorCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="点击更改颜色"
+                                                CornerRadius="3"/>
+                                            <!-- 类别名称 -->
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding Name}" />
+                                            <!-- 删除按钮 -->
+                                            <Button
+                                                Grid.Column="2"
+												Width="26"
+												Height="26"
+												Background="{x:Null}"
+                                                Command="{Binding $parent[UserControl].DataContext.RemoveClassCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="删除类别">
+												<!--删除图标-->
+												<iconPacks:PackIconMaterial
+													Kind="CloseCircleOutline"/>
+											</Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  数据管理  -->
+                    <Expander Header="数据管理" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="8">
+                            <Button
+                                Command="{Binding ImportImageFolderCommand}"
+                                CommandParameter="{Binding ElementName=DataAnnotationView}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="ImageMultipleOutline" />
+									<TextBlock Text="导入图片目录"/>
+								</StackPanel>
+							</Button>
+                            <Button
+                                Command="{Binding ImportClassesAnnotationsCommand}"
+                                CommandParameter="{Binding ElementName=DataAnnotationView}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="ImageEditOutline" />
+									<TextBlock Text="导入分类标签"/>
+								</StackPanel>
+							</Button>
+                            <Button
+                                Command="{Binding ImportCOCOFileCommand}"
+                                CommandParameter="{Binding ElementName=DataAnnotationView}"
+                                IsEnabled="{Binding IsCocoFunctionsEnabled}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="ImageEditOutline" />
+									<TextBlock Text="导入COCO标注"/>
+								</StackPanel>
+							</Button>
+                            <Button
+                                Command="{Binding ExportCOCOFileCommand}"
+								CommandParameter="{Binding ElementName=DataAnnotationView}"
+                                IsEnabled="{Binding IsCocoFunctionsEnabled}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="FileExportOutline" />
+									<TextBlock Text="导出COCO标注"/>
+								</StackPanel>
+							</Button>
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  统计信息  -->
+                    <Expander Header="统计信息" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="5" Orientation="Vertical">
+                            <TextBlock Text="{Binding TotalImageCount, StringFormat='总图片数: {0}'}" />
+                            <TextBlock Text="{Binding AnnotatedImageCount, StringFormat='已标注: {0}'}" />
+                            <TextBlock Text="{Binding TotalAnnotationCount, StringFormat='标注框总数: {0}'}" />
+                        </StackPanel>
+                    </Expander>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!--  主图像区域  -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50" />
+                <!--  顶部工具栏  -->
+                <RowDefinition Height="*" />
+                <!--  图像显示区  -->
+                <RowDefinition Height="120" />
+                <!--  底部缩略图  -->
+            </Grid.RowDefinitions>
+
+            <!--  顶部工具栏  -->
+            <Border
+                Grid.Row="0">
+                <Grid Margin="10,10,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  左侧按钮组  -->
+                    <StackPanel
+                        Grid.Column="0"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Command="{Binding PreviousImageCommand}"
+                            IsEnabled="{Binding CanGoPrevious}"
+                            ToolTip.Tip="上一张图片">
+							<iconPacks:PackIconMaterial
+								Kind="ChevronLeft"
+								Width="15"
+								Height="15"/>
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Command="{Binding NextImageCommand}"
+                            IsEnabled="{Binding CanGoNext}"
+                            ToolTip.Tip="下一张图片">
+							<iconPacks:PackIconMaterial
+								Kind="ChevronRight"
+								Width="15"
+								Height="15"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!--  中间图片信息  -->
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="10,0,10,0"
+                        HorizontalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="10">
+						<!--导入的COCO标注类型选择-->
+						<Grid
+							ColumnDefinitions="*,10,*">
+						    <RadioButton
+								Command="{Binding SelectDetectionRectTypeCommand}"
+								IsChecked="{Binding IsCheckDetectionRectType}"
+							    Content="识别框标签"
+							    GroupName="InputCOCOAnnotationType"/>
+						    <RadioButton
+								Grid.Column="2"
+								Command="{Binding SelectInstanceSegmentTypeCommand}"
+								IsChecked="{Binding !IsCheckDetectionRectType}"
+							    Content="实例分割标签"
+							    GroupName="InputCOCOAnnotationType"/>
+						</Grid>
+						<TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="Bold"
+                            Text="{Binding CurrentImageSize}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding ElementName=ImageZoomBorder, Path=ZoomX, StringFormat='缩放: {0:F0}%'}" />
+                    </StackPanel>
+
+                    <!--  右侧按钮组  -->
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="10">
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Command="{Binding UndoCommand}"
+                            IsEnabled="{Binding CanUndo}"
+                            ToolTip.Tip="撤销">
+							<iconPacks:PackIconMaterial
+								Kind="Undo"/>
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Command="{Binding RedoCommand}"
+                            IsEnabled="{Binding CanRedo}"
+                            ToolTip.Tip="重做">
+							<iconPacks:PackIconMaterial
+								Kind="Redo"/>
+                        </Button>
+
+                        <Button
+                            Width="60"
+                            Height="30"
+                            Command="{Binding SaveCurrentAnnotationCommand}"
+                            ToolTip.Tip="保存当前标注或分类">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+								<iconPacks:PackIconMaterial Kind="Check"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--  图像显示区域  -->
+            <Border
+                x:Name="ImageBorder"
+				BorderBrush="LightGray"
+				BorderThickness="1"
+				CornerRadius="5"
+				Margin="5"
+                Grid.Row="1">
+                <paz:ZoomBorder
+                    x:Name="ImageZoomBorder"
+					ScrollViewer.HorizontalScrollBarVisibility="Auto"
+					ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    ClipToBounds="True"
+                    Focusable="True"
+                    Stretch="None"
+                    ZoomSpeed="1.2">
+                    <Grid>
+                        <!--  主图像  -->
+                        <Image
+                            x:Name="MainImage"
+                            Width="{Binding CurrentImage.PixelSize.Width}"
+                            Height="{Binding CurrentImage.PixelSize.Height}"
+                            Source="{Binding CurrentImage}" />
+                        <!--  标注层  -->
+                        <Canvas
+                            x:Name="AnnotationCanvas"
+                            Width="{Binding CurrentImage.PixelSize.Width}"
+                            Height="{Binding CurrentImage.PixelSize.Height}"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            IsVisible="True" />
+                    </Grid>
+                </paz:ZoomBorder>
+            </Border>
+
+            <!--  底部缩略图导航  -->
+            <Border Grid.Row="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+					<Grid Grid.Row="0">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<TextBlock
+							Grid.Column="0"
+	                        Margin="10,5"
+	                        HorizontalAlignment="Left"
+	                        FontWeight="Bold"
+	                        Text="图片导航" />
+						<ProgressBar
+							Grid.Column="1"
+							Height="6"
+							Value="{Binding ProgressValue}"
+							Maximum="{Binding ProgressMax}"
+							Margin="0,5,10,0"/>
+						<TextBlock
+							Grid.Column="2"
+							Margin="10,5,10,0"
+							Text="{Binding ProgressValue, StringFormat=已完成:{}{0}}"/>
+						<TextBlock
+							Grid.Column="3"
+							Margin="5,0"
+							Text="{Binding ImageList.Count,StringFormat=总计{}{0}张}"/>
+					</Grid>
+					<ScrollViewer 
+						x:Name="ImageScrollViewer" 
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+                        <ListBox
+                            Margin="10,0,10,10"
+							CornerRadius="5"
+                            ItemsSource="{Binding ImageList}"
+                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                            ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                            SelectedIndex="{Binding CurrentImageIndex}"
+                            SelectionMode="Single">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Width="80"
+                                            Height="60"
+                                            BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBrushConverter}}"
+                                            BorderThickness="2"
+                                            CornerRadius="3"
+                                            Cursor="Hand">
+                                            <Grid Margin="3">
+                                                <Image
+                                                    Source="{Binding Thumbnail}"
+                                                    Stretch="UniformToFill"
+                                                    ZIndex="0" />
+                                                <!--  标注状态指示  -->
+                                                <Border
+                                                    Width="16"
+                                                    Height="16"
+                                                    Margin="2"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Background="Green"
+                                                    CornerRadius="8"
+                                                    IsVisible="{Binding IsAnnotated}"
+                                                    ZIndex="1">
+                                                    <Path
+                                                        Width="12"
+                                                        Height="12"
+                                                        Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"
+                                                        Fill="White"/>
+                                                </Border>
+                                                <!--  选中遮罩  -->
+                                                <Border
+                                                    Background="Blue"
+                                                    IsVisible="{Binding IsSelected}"
+                                                    Opacity="0.5"
+                                                    ZIndex="2" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                        </ListBox>
+					</ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!--  右侧属性面板  -->
+        <Border
+            Grid.Column="2"
+            BorderThickness="1,0,0,0">
+            <ScrollViewer>
+                <StackPanel Margin="10" Spacing="10">
+
+                    <!-- 训练集路径 -->
+					<StackPanel Orientation="Vertical" Spacing="8">
+						<Grid RowDefinitions="*,5,*">
+							<Label Content="训练集路径："/>
+							<SelectableTextBlock
+                                Grid.Row="2"
+                                Text="{Binding TrainDatasetPath}"
+                                ToolTip.Tip="{Binding TrainDatasetPath}"/>
+						</Grid>
+					</StackPanel>
+					
+                    <!--  图片信息  -->
+                    <Expander Header="图片信息" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}" TextWrapping="Wrap" />
+                            <!--  Text="{Binding CurrentImageFileName, StringFormat='文件名: {0}'}"  -->
+
+                            <TextBlock Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}" />
+                            <!--  Text="{Binding CurrentImageSize, StringFormat='尺寸: {0}'}"  -->
+
+                            <TextBlock Text="{Binding CurrentImageAnnotations.Count, StringFormat='标注数: {0}'}" />
+                            <!--  Text="{Binding CurrentImageAnnotationCount, StringFormat='标注数: {0}'}"  -->
+
+                            <TextBlock Text="{Binding CurrentImage.Dpi, StringFormat='状态: {0}'}" />
+                            <!--  Text="{Binding CurrentImageStatus, StringFormat='状态: {0}'}"  -->
+                        </StackPanel>
+                    </Expander>
+
+                    <!--  当前标注信息  -->
+                    <Expander Header="当前标注" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Grid.Column="0" Spacing="8">
+                            <TextBlock Text="选择类别" FontSize="12" Margin="0,0,0,2"/>
+                            <ComboBox
+								Width="120"
+                                ItemsSource="{Binding ClassNames}"
+                                SelectedIndex="{Binding SelectedCategoryIndex}"
+								ToolTip.Tip="选中标注框：为标注框设置类别&#x0a;未选中标注框：为整张图片添加分类">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="边界框" Margin="0,10,0,10" IsVisible="{Binding HasSelectedAnnotation}"/>
+                            <!--  坐标信息  -->
+                            <Grid IsEnabled="{Binding HasSelectedAnnotation}" IsVisible="{Binding HasSelectedAnnotation}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                            
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="X:" />
+                                <NumericUpDown
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.X, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="Y:" />
+                                <NumericUpDown
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Y}" />
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="W:" />
+                                <NumericUpDown
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Minimum="1"
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Width}" />
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="0,0,5,0"
+                                    VerticalAlignment="Center"
+                                    Text="H:" />
+                                <NumericUpDown
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Minimum="1"
+                                    Value="{Binding SelectedAnnotation.BoundingBoxInfo.Height}"/>
+                            </Grid>
+                            
+                            <Button
+                                Command="{Binding DeleteSelectedAnnotationCommand}"
+                                CommandParameter="{Binding ElementName=AnnotationCanvas}"
+                                Content="删除标注"
+                                IsEnabled="{Binding HasSelectedAnnotation}"
+                                IsVisible="{Binding HasSelectedAnnotation}"/>
+                        </StackPanel>
+                    </Expander>
+                            
+                    <!--  图像分类列表  -->
+                    <Expander Header="图像分类列表" IsExpanded="True" IsVisible="{Binding HasNoSelectedAnnotation}" HorizontalAlignment="Stretch">
+                        <ListBox
+                            MaxHeight="200"
+                            ItemsSource="{Binding CurrentImageClasses}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding .}" />
+                                        <Button
+                                            Grid.Column="1"
+                                            Width="20"
+                                            Height="20"
+                                            
+                                            Content="×"
+                                            Command="{Binding $parent[ListBox].DataContext.RemoveImageClassCommand}"
+                                            CommandParameter="{Binding .}"
+                                            ToolTip.Tip="删除分类" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Expander>
+                            
+                    <!--  标注列表  -->
+                    <Expander Header="标注列表" IsExpanded="True" HorizontalAlignment="Stretch">  
+					<ListBox
+                        MaxHeight="200"
+                        ItemsSource="{Binding CurrentImageAnnotations}"
+                        SelectedItem="{Binding SelectedAnnotation}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock FontWeight="Bold" Text="{Binding ClassName}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+
+                    <!--  快捷操作  -->
+                    <Expander Header="快捷操作" IsExpanded="True" HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="8">
+                            <CheckBox
+                                x:Name="Chk_ApplyAsTemplate"
+                                HorizontalAlignment="Center"
+                                Content="作为模板应用至全体图片"
+                                IsChecked="{Binding IsApplyAsTemplate}" />
+                            <Button
+								Width="150">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="FolderSearchOutline" />
+									<TextBlock Text="在资源管理器查看"/>
+								</StackPanel>
+							</Button>
+							<Button
+	                            Width="150"
+	                            Command="{Binding SaveAllAnnotationsCommand}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="ContentSaveAllOutline" />
+									<TextBlock Text="保存全部图片标注"/>
+								</StackPanel>
+							</Button>
+							<Button
+								Width="150"
+								
+								Command="{Binding BatchCreateDatasetCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="TextBoxPlusOutline" />
+                                    <TextBlock Text="批生成分类数据集"/>
+                                </StackPanel>
+                            </Button>
+							<Button
+								Width="150"
+                                
+                                Command="{Binding CroppingImgAsDataSetCommand}">
+								<StackPanel Orientation="Horizontal" Spacing="5">
+									<iconPacks:PackIconMaterial Kind="Crop" IsVisible="{Binding IsShowCroppingText}"/>
+								    <TextBlock IsVisible="{Binding IsShowCroppingText}" Text="裁剪并生成数据集"/>
+								</StackPanel>
+							</Button>
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!--  加载遮罩  -->
+        <Border
+            Grid.ColumnSpan="3"
+            Background="White"
+            IsVisible="{Binding IsLoading}"
+            Opacity="0.8">
+            <!--  IsVisible="{Binding IsLoading}"  -->
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="10">
+                <Path
+                    Width="32"
+                    Height="32"
+                    Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z">
+                    <Path.RenderTransform>
+                        <RotateTransform Angle="0"/>
+                    </Path.RenderTransform>
+                </Path>
+                <TextBlock HorizontalAlignment="Center" Text="处理中..." />
+            </StackPanel>
+        </Border>
+
+    </Grid>
+	</Grid>
+</UserControl>
