@@ -2015,6 +2015,8 @@ namespace AutoTrainer.ViewModels
                 // 创建图像ID到文件名的映射
                 var imageIdMap = new Dictionary<int, string>();
                 var categoryIdMap = new Dictionary<int, string>();
+                // 创建类别名称到颜色的映射
+                var categoryColorMap = new Dictionary<string, Avalonia.Media.Color>();
 
                 // 构建图像映射
                 foreach (var image in cocoDataset.Images)
@@ -2034,7 +2036,14 @@ namespace AutoTrainer.ViewModels
                         var usedColors = ClassNames.Select(c => c.Color).ToHashSet();
                         // 获取随机未使用的颜色
                         var color = GetRandomUnusedColor(usedColors) ?? Avalonia.Media.Colors.Gray;
+                        categoryColorMap[category.Name] = color;
                         Dispatcher.UIThread.Invoke(() => ClassNames.Add(new CategoryModel(category.Name, color)));
+                    }
+                    else
+                    {
+                        // 类别已存在，使用现有颜色
+                        var existingCategory = ClassNames.First(c => c.Name == category.Name);
+                        categoryColorMap[category.Name] = existingCategory.Color;
                     }
                 }
 
@@ -2071,7 +2080,7 @@ namespace AutoTrainer.ViewModels
                                 continue;
 
                             var className = categoryIdMap[cocoAnnotation.CategoryId];
-                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className);
+                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className, categoryColorMap);
 
                             if (annotationItem != null)
                             {
@@ -2115,6 +2124,8 @@ namespace AutoTrainer.ViewModels
                 // 创建图像ID到文件名的映射
                 var imageIdMap = new Dictionary<int, string>();
                 var categoryIdMap = new Dictionary<int, string>();
+                // 创建类别名称到颜色的映射
+                var categoryColorMap = new Dictionary<string, Avalonia.Media.Color>();
 
                 // 重新构建映射
                 foreach (var image in _lastImportedCocoDataset?.Images)
@@ -2125,6 +2136,16 @@ namespace AutoTrainer.ViewModels
                 foreach (var category in _lastImportedCocoDataset.Categories)
                 {
                     categoryIdMap[category.Id] = category.Name;
+                    // 从现有类别列表中获取颜色
+                    var existingCategory = ClassNames.FirstOrDefault(c => c.Name == category.Name);
+                    if (existingCategory != null)
+                    {
+                        categoryColorMap[category.Name] = existingCategory.Color;
+                    }
+                    else
+                    {
+                        categoryColorMap[category.Name] = Avalonia.Media.Colors.Red;
+                    }
                 }
 
                 // 按图像分组标注
@@ -2159,7 +2180,7 @@ namespace AutoTrainer.ViewModels
                                 continue;
 
                             var className = categoryIdMap[cocoAnnotation.CategoryId];
-                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className);
+                            var annotationItem = ConvertCOCOAnnotationToInternal(cocoAnnotation, className, categoryColorMap);
 
                             if (annotationItem != null)
                             {
@@ -2199,12 +2220,16 @@ namespace AutoTrainer.ViewModels
         /// </summary>
         /// <param name="cocoAnnotation">COCO标注对象</param>
         /// <param name="className">类别名称</param>
+        /// <param name="categoryColorMap">类别颜色映射</param>
         /// <returns>内部标注模型</returns>
-        private AnnotationItem? ConvertCOCOAnnotationToInternal(Annotation cocoAnnotation, string className)
+        private AnnotationItem? ConvertCOCOAnnotationToInternal(Annotation cocoAnnotation, string className, Dictionary<string, Avalonia.Media.Color> categoryColorMap)
         {
             try
             {
                 AnnotationItem annotationItem;
+
+                // 获取类别对应的颜色
+                var color = categoryColorMap.TryGetValue(className, out var categoryColor) ? categoryColor : Avalonia.Media.Colors.Red;
 
                 if (IsCheckDetectionRectType)
                 {
@@ -2223,7 +2248,8 @@ namespace AutoTrainer.ViewModels
                         Y = y,
                         Width = width,
                         Height = height,
-                        ClassName = className
+                        ClassName = className,
+                        DisplayColor = color
                     };
                 }
                 else
@@ -2253,7 +2279,8 @@ namespace AutoTrainer.ViewModels
                     annotationItem = new PolygonModel
                     {
                         Points = [..points],
-                        ClassName = className
+                        ClassName = className,
+                        DisplayColor = color
                     };
                 }
 
