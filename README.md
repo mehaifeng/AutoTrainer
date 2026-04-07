@@ -110,11 +110,6 @@ AutoTrainer 是一个功能强大的桌面应用程序，旨在简化图像分�
    dotnet run --project AutoTrainer.csproj
    ```
 
-<!-- 快速开始 GIF 占位 -->
-<p align="center">
-  <img src="docs/images/quickstart.gif" alt="快速开始演示" width="600"/>
-</p>
-
 ---
 
 ## 项目结构
@@ -141,23 +136,6 @@ AutoTrainer/
 
 ---
 
-## 功能演示
-
-### 训练流程演示
-
-<!-- 训练流程 GIF 占位 -->
-<p align="center">
-  <img src="docs/images/training_workflow.gif" alt="训练流程演示" width="800"/>
-</p>
-
-### 标注流程演示
-
-<!-- 标注流程 GIF 占位 -->
-<p align="center">
-  <img src="docs/images/annotation_workflow.gif" alt="标注流程演示" width="800"/>
-</p>
-
----
 
 ## 路线图
 
